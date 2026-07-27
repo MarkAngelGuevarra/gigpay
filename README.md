@@ -41,11 +41,10 @@ Our vision is a world where anyone, anywhere, can work freely and get paid their
 
 ## 🔗 Smart Contract Architecture
 
-**Important:** The GigPay escrow contract is currently deployed on the Stellar Testnet, with Mainnet migration and arbitration architecture scheduled for the upcoming Instaward 30-Day Sprint.
+**Important:** The GigPay escrow contract logic is currently prototyped on the Stellar Testnet. The upcoming Instaward 30-Day Sprint focuses strictly on writing comprehensive unit tests, refining the Soroban contract, and completing a full end-to-end Testnet integration with the Freighter wallet. Mainnet deployment and arbitration architecture are reserved for future work.
 
-- **Development Network:** Stellar Testnet
-- **Production Network:** Stellar Mainnet (Pending deployment)
-- **Source Code Location:** `/contracts/gigpay_escrow/src/lib.rs` (Note: MVP frontend utilizes mock SDK implementations to trigger authentic Freighter signature UX).
+- **Target Network:** Stellar Testnet
+- **Source Code Location:** `/contracts/gigpay_escrow/src/lib.rs` (Note: Current MVP frontend utilizes mock SDK implementations, which will be replaced with real Soroban contract calls during the sprint).
 
 ## 🚀 Running Locally
 
