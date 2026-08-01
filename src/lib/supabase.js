@@ -5,4 +5,22 @@ const isLocalhost = typeof window !== 'undefined' && window.location.hostname ==
 const supabaseUrl = isLocalhost ? 'http://localhost:5173/api/supabase' : 'https://gulshfticoirrpuohdxk.supabase.co';
 const supabaseAnonKey = 'sb_publishable_uimxpjAcUVlf4mqite3pZg_zhrrzy3Y';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Custom fetcher with auto-fallback to proxy to prevent "Failed to fetch" when Windows Antivirus blocks .supabase.co on Vercel
+const customFetch = async (url, options) => {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    console.warn("Direct Supabase fetch failed (likely blocked by Antivirus or firewall). Retrying via /api/supabase proxy...", error);
+    if (typeof url === 'string' && url.includes('supabase.co')) {
+      const proxyUrl = url.replace('https://gulshfticoirrpuohdxk.supabase.co', '/api/supabase');
+      return await fetch(proxyUrl, options);
+    }
+    throw error;
+  }
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: customFetch
+  }
+})
