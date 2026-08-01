@@ -12,19 +12,34 @@ export const AuthProvider = ({ children }) => {
   const [publicKey, setPublicKey] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
+    // Safety timeout in case network delays Supabase response on Vercel
+    const timeoutId = setTimeout(() => {
+      if (mounted) setIsLoading(false);
+    }, 2500);
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       setIsLoading(false);
+    }).catch((err) => {
+      console.error("Supabase session fetch error:", err);
+      if (mounted) setIsLoading(false);
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email, password, metadata) => {
@@ -63,7 +78,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading, signUp, signIn, signOut, publicKey, connectWallet }}>
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
