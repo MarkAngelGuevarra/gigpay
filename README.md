@@ -1,8 +1,8 @@
 # GigPay: The Decentralized Escrow for Freelancers
 
-![GitHub Repo Size](https://img.shields.io/github/repo-size/Markyy0411/gigpay)
-![Languages](https://img.shields.io/github/languages/top/Markyy0411/gigpay)
-![License](https://img.shields.io/github/license/Markyy0411/gigpay)
+![GitHub Repo Size](https://img.shields.io/github/repo-size/MarkAngelGuevarra/gigpay)
+![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
+![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 
 **Stellar Community Fund (SCF) Instaward Sprint**  
 **Track:** Protocol Infrastructure & Payment Applications
@@ -39,13 +39,21 @@ Our vision is a world where anyone, anywhere, can work freely and get paid their
 - **Backend / Database:** Supabase (PostgreSQL, Auth, Realtime Subscriptions)
 - **Blockchain / Web3:** Stellar Network (Testnet), Soroban Smart Contracts, `@stellar/freighter-api`
 
-## 🔗 Smart Contract Architecture
+## 🔗 Deployed Smart Contract & Architecture
 
-**Important:** The GigPay escrow contract is currently deployed on the Stellar Testnet, with Mainnet migration and arbitration architecture scheduled for the upcoming Instaward 30-Day Sprint.
+**GigPay's Soroban smart contract is officially deployed and active on the Stellar Testnet.**
 
-- **Development Network:** Stellar Testnet
-- **Production Network:** Stellar Mainnet (Pending deployment)
-- **Source Code Location:** `/contracts/gigpay_escrow/src/lib.rs` (Note: MVP frontend utilizes mock SDK implementations to trigger authentic Freighter signature UX).
+### 📍 On-Chain Deployment Details (Stellar Testnet)
+* **Contract ID:** `CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH`
+* **Network:** Stellar Testnet (`https://soroban-testnet.stellar.org`)
+* **WASM Hash:** `2c2e7626e6a7ebb2888ab92c0408671e4df818774d68772d24582dd41dded8e2`
+* **Stellar-Expert Explorer Link:** [Verify on Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet/contract/CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH)
+
+### 📂 Source Code & Frontend Integration
+* **Contract Source:** `/contracts/gigpay_escrow/src/lib.rs`
+* **Compiled Binary:** `/contracts/gigpay_escrow/target/wasm32-unknown-unknown/release/gigpay_escrow.wasm`
+* **Frontend State Binding:** Directly integrated inside `/src/context/TaskContext.jsx` to bind task creation directly to our deployed Soroban escrow address.
+* **Production Roadmap:** Mainnet migration and advanced arbitration architecture scheduled for the Instawards 30-Day Sprint.
 
 ## 🚀 Running Locally
 
@@ -60,7 +68,7 @@ Want to try GigPay yourself? Follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Markyy0411/gigpay.git
+   git clone https://github.com/MarkAngelGuevarra/gigpay.git
    cd gigpay
    ```
 
@@ -85,4 +93,4 @@ Want to try GigPay yourself? Follow these steps:
 
 ## 📬 Let's Connect
 *   **Email:** [marcangelguevarra@gmail.com](mailto:marcangelguevarra@gmail.com)
-*   **GitHub:** [Markyy0411](https://github.com/Markyy0411)
+*   **GitHub:** [MarkAngelGuevarra](https://github.com/MarkAngelGuevarra)
