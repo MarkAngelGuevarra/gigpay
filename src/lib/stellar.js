@@ -94,8 +94,12 @@ export const requestWalletSignature = async (publicKey, description) => {
     
     return { success: true, signedXdr: signedTx };
   } catch (error) {
-    console.error("Wallet Signature Error or Timeout. Simulating success for Demo.", error);
-    // In extreme failure scenarios during a live demo, we force a success to save the presentation
-    return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
+    console.error("Wallet Signature Error or Timeout.", error);
+    // Only simulate success in local development — production must surface real errors
+    if (import.meta.env.DEV) {
+      console.warn("[DEV ONLY] Simulating success for Demo.");
+      return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
+    }
+    throw error;
   }
 };

@@ -21,10 +21,9 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/auth" />;
   }
 
-  // Optional: check role
-  // if (requiredRole && user.user_metadata?.role !== requiredRole) {
-  //   return <Navigate to="/" />;
-  // }
+  if (requiredRole && user.user_metadata?.role !== requiredRole) {
+    return <Navigate to="/" />;
+  }
 
   return children;
 };
