@@ -35,8 +35,8 @@ const Navbar = () => {
   return (
     <nav className="navbar animate-fade-in" style={{ flexWrap: 'wrap' }}>
       <a href="/" className="logo">
-        <Zap className="logo-icon" fill="currentColor" />
-        GigPay
+        <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
+        <span className="logo-text">GigPay</span>
       </a>
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         {user ? (
