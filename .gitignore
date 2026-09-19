@@ -33,3 +33,7 @@ bundle.js
 
 # Temp files
 temp_downloaded_sow.txt
+
+# Rust target
+target/
+contracts/**/target/

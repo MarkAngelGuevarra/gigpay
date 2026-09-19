@@ -78,4 +78,15 @@ impl GigPayEscrow {
         task.is_approved = true;
         env.storage().instance().set(&DataKey::Task(task_id), &task);
     }
+
+    /// Read task details from storage
+    pub fn get_task(env: Env, task_id: u32) -> Task {
+        env.storage()
+            .instance()
+            .get(&DataKey::Task(task_id))
+            .unwrap()
+    }
 }
+
+#[cfg(test)]
+mod test;
