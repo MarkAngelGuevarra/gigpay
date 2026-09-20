@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature } from '../lib/stellar';
+import { requestWalletSignature, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
 
 const TaskContext = createContext();
 
@@ -31,7 +31,7 @@ export const TaskProvider = ({ children }) => {
             amount: '500',
             status: 'Available',
             client_id: user?.id || 'demo-client-uuid-001',
-            contract_id: 'CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH',
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID,
             created_at: new Date().toISOString()
           },
           {
@@ -41,7 +41,7 @@ export const TaskProvider = ({ children }) => {
             status: 'In Progress',
             client_id: user?.id || 'demo-client-uuid-001',
             freelancer_id: 'demo-freelancer-uuid-002',
-            contract_id: 'CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH',
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID,
             created_at: new Date().toISOString()
           }
         ]);
@@ -102,7 +102,7 @@ export const TaskProvider = ({ children }) => {
             amount: task.amount,
             status: 'Available',
             client_id: user.id,
-            contract_id: 'CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH'
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID
           }]);
 
         if (error) throw error;
@@ -114,7 +114,7 @@ export const TaskProvider = ({ children }) => {
           amount: task.amount,
           status: 'Available',
           client_id: user.id,
-          contract_id: 'CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH',
+          contract_id: GIGPAY_ESCROW_CONTRACT_ID,
           created_at: new Date().toISOString()
         };
         setTasks((prev) => [newTask, ...prev]);
