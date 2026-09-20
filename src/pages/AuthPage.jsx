@@ -238,6 +238,78 @@ const AuthPage = () => {
             {isLogin ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
+
+        {/* Tester & Reviewer Quick-Fill */}
+        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ fontSize: '0.75rem', color: '#00f2fe', textAlign: 'center', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
+            ⚡ Tester & Reviewer Credentials
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(true);
+                setEmail('client@gigpay.tech');
+                setPassword('password123');
+              }}
+              style={{
+                flex: 1,
+                padding: '0.6rem 0.5rem',
+                borderRadius: '0.5rem',
+                border: '1px solid rgba(0, 242, 254, 0.3)',
+                background: 'rgba(0, 242, 254, 0.06)',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 242, 254, 0.15)';
+                e.currentTarget.style.borderColor = 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 242, 254, 0.06)';
+                e.currentTarget.style.borderColor = 'rgba(0, 242, 254, 0.3)';
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#00f2fe' }}>👤 Client Tester</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>client@gigpay.tech</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(true);
+                setEmail('freelancer@gigpay.tech');
+                setPassword('password123');
+              }}
+              style={{
+                flex: 1,
+                padding: '0.6rem 0.5rem',
+                borderRadius: '0.5rem',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                background: 'rgba(139, 92, 246, 0.06)',
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)';
+                e.currentTarget.style.borderColor = 'var(--secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.06)';
+                e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#c084fc' }}>🛠️ Freelancer Tester</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>freelancer@gigpay.tech</div>
+            </button>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.6rem' }}>
+            Default Password: <code style={{ color: '#00f2fe', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>password123</code>
+          </div>
+        </div>
       </div>
     </div>
   );
