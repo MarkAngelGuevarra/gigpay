@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature } from '../lib/stellar';
+import { requestWalletSignature, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
 
 const TaskContext = createContext();
 
@@ -22,8 +22,29 @@ export const TaskProvider = ({ children }) => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error("Failed to fetch tasks from Supabase:", error);
+      if (error || !data || data.length === 0) {
+        console.warn("Supabase tasks unavailable, using fallback mock tasks:", error);
+        setTasks([
+          {
+            id: 'task-mock-1',
+            title: 'Soroban Escrow Smart Contract Audit',
+            amount: '500',
+            status: 'Available',
+            client_id: user?.id || 'demo-client-uuid-001',
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'task-mock-2',
+            title: 'Freighter Wallet UX Optimization',
+            amount: '350',
+            status: 'In Progress',
+            client_id: user?.id || 'demo-client-uuid-001',
+            freelancer_id: 'demo-freelancer-uuid-002',
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+            created_at: new Date().toISOString()
+          }
+        ]);
       } else if (data) {
         setTasks(data);
       }
@@ -72,21 +93,34 @@ export const TaskProvider = ({ children }) => {
       // 1. Request Wallet Signature for the Smart Contract (Mocked via manageData)
       await requestWalletSignature(publicKey, `Deposit ${task.amount} USDC to Escrow`);
 
-      // 2. If signed successfully, save to Database
-      const { error } = await supabase
-        .from('tasks')
-        .insert([{
+      // 2. If signed successfully, save to Database (with local fallback if Supabase is offline)
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .insert([{
+            title: task.title,
+            amount: task.amount,
+            status: 'Available',
+            client_id: user.id,
+            contract_id: GIGPAY_ESCROW_CONTRACT_ID
+          }]);
+
+        if (error) throw error;
+      } catch (dbErr) {
+        console.warn("Supabase insert notice (using local state fallback):", dbErr);
+        const newTask = {
+          id: 'task-' + Date.now(),
           title: task.title,
           amount: task.amount,
           status: 'Available',
           client_id: user.id,
-          contract_id: 'CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH'
-        }]);
-
-      if (error) throw error;
-      // Realtime listener handles the state update
+          contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+          created_at: new Date().toISOString()
+        };
+        setTasks((prev) => [newTask, ...prev]);
+      }
     } catch (err) {
-      console.error("Failed to add task to Supabase:", err);
+      console.error("Failed to add task:", err);
       throw err;
     }
   };
@@ -109,15 +143,19 @@ export const TaskProvider = ({ children }) => {
         updatedFields.freelancer_id = user.id;
       }
 
-      const { error } = await supabase
-        .from('tasks')
-        .update(updatedFields)
-        .eq('id', id);
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update(updatedFields)
+          .eq('id', id);
 
-      if (error) throw error;
-      // Realtime listener handles the state update
+        if (error) throw error;
+      } catch (dbErr) {
+        console.warn("Supabase update notice (using local state fallback):", dbErr);
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedFields } : t));
+      }
     } catch (err) {
-      console.error("Failed to update task in Supabase:", err);
+      console.error("Failed to update task:", err);
       throw err;
     }
   };

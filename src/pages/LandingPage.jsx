@@ -55,6 +55,28 @@ const LandingPage = () => {
           zIndex: -1, pointerEvents: 'none'
         }} />
 
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '0.4rem 1rem',
+            borderRadius: '999px',
+            background: 'rgba(0, 242, 254, 0.08)',
+            border: '1px solid rgba(0, 242, 254, 0.25)',
+            marginBottom: '1.5rem',
+            boxShadow: '0 0 20px rgba(0, 242, 254, 0.15)'
+          }}
+        >
+          <img src="/logo.png" alt="GigPay" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#00f2fe', letterSpacing: '0.5px' }}>
+            Powered by Stellar Soroban · SCF Instaward 2026
+          </span>
+        </motion.div>
+
         <motion.h1 
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
