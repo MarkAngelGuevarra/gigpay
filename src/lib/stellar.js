@@ -17,6 +17,26 @@ const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "htt
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
 
 export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
+export const SOROBAN_RPC_URL = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+export const STELLAR_NETWORK_PASSPHRASE = PASSPHRASE;
+export const STELLAR_NETWORK_NAME = NETWORK;
+
+// Initialize Soroban RPC Client for Protocol 22 Smart Contract Invocations
+export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
+
+/**
+ * Checks connection health of the Soroban Testnet RPC endpoint.
+ * Returns healthy status or graceful fallback details if RPC is slow.
+ */
+export const checkSorobanRpcHealth = async () => {
+  try {
+    const health = await withTimeout(sorobanServer.getHealth(), 5000);
+    return { status: health.status || 'HEALTHY', rpcUrl: SOROBAN_RPC_URL };
+  } catch (err) {
+    console.warn("[Soroban RPC Health] Warning or timeout:", err.message);
+    return { status: 'DEGRADED', error: err.message, rpcUrl: SOROBAN_RPC_URL };
+  }
+};
 
 /**
  * Checks if the user has Freighter installed and connected.
