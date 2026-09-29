@@ -2,12 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getAccountBalance } from '../lib/stellar';
 
 const Navbar = () => {
   const { user, signOut, publicKey, connectWallet } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [balance, setBalance] = useState(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (publicKey) {
+      setIsLoadingBalance(true);
+      getAccountBalance(publicKey)
+        .then((res) => {
+          if (isMounted) {
+            setBalance(res.balance);
+            setIsLoadingBalance(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setIsLoadingBalance(false);
+        });
+    } else {
+      setBalance(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [publicKey]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -68,9 +93,48 @@ const Navbar = () => {
               </span>
             )}
             {publicKey ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--accent)' }}>
-                <span style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                {/* Live Testnet Network & Balance Pill */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: '#93c5fd'
+                }}>
+                  <Globe size={14} style={{ color: '#60a5fa' }} />
+                  <span style={{ fontWeight: '600' }}>Testnet</span>
+                  {balance !== null && (
+                    <span style={{
+                      marginLeft: '0.3rem',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '4px',
+                      color: '#ffffff',
+                      fontWeight: '700'
+                    }}>
+                      {isLoadingBalance ? '...' : `${balance} XLM`}
+                    </span>
+                  )}
+                </div>
+
+                {/* Connected Wallet Address Pill */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--accent)'
+                }}>
+                  <span style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
+                </div>
               </div>
             ) : (
               <button className="btn btn-primary" onClick={handleConnect}>Connect Wallet</button>
