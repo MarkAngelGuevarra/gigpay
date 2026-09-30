@@ -1,5 +1,16 @@
-import { isAllowed, setAllowed, requestAccess, isConnected, getPublicKey, getNetwork, signTransaction } from '@stellar/freighter-api';
+import freighterApi from '@stellar/freighter-api';
 import * as StellarSdk from '@stellar/stellar-sdk';
+
+const {
+  isAllowed,
+  setAllowed,
+  requestAccess,
+  isConnected,
+  getAddress,
+  getPublicKey = getAddress,
+  getNetwork,
+  signTransaction
+} = freighterApi || {};
 
 // Utility to prevent infinite hanging if Freighter is blocked by Edge/Antivirus
 const withTimeout = (promise, ms) => {
@@ -12,12 +23,13 @@ const withTimeout = (promise, ms) => {
 // A simulated public key used exclusively if the real wallet fails to load
 const DEMO_PUBLIC_KEY = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
 
-const NETWORK = import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET';
+const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+const NETWORK = env.VITE_STELLAR_NETWORK || 'TESTNET';
 const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
 
 export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
-export const SOROBAN_RPC_URL = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+export const SOROBAN_RPC_URL = env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 export const STELLAR_NETWORK_PASSPHRASE = PASSPHRASE;
 export const STELLAR_NETWORK_NAME = NETWORK;
 export const NATIVE_SAC_CONTRACT_ID = StellarSdk.Asset.native().contractId(PASSPHRASE);
