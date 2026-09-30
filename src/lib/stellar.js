@@ -319,4 +319,133 @@ export const submitFundTask = async ({
   };
 };
 
+/**
+ * Assembles and simulates a Soroban approve_task invocation.
+ * Releases the escrowed funds from contract to the designated freelancer.
+ *
+ * @param {Object} params
+ * @param {string} params.clientAddress - Public key of client authorizing the release
+ * @param {number|string} params.taskId - On-chain task ID (u32)
+ * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
+ */
+export const simulateApproveTask = async ({ clientAddress, taskId }) => {
+  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+    return {
+      simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
+      preparedTx: null,
+      minResourceFee: '100',
+      isDemo: true
+    };
+  }
+
+  const numericTaskId = typeof taskId === 'string' ? (parseInt(taskId.replace(/\D/g, ''), 10) || 1) : taskId;
+  const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
+  const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
+  const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
+
+  const tx = new StellarSdk.TransactionBuilder(account, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: PASSPHRASE
+  })
+    .addOperation(
+      contract.call('approve_task', StellarSdk.nativeToScVal(numericTaskId, { type: 'u32' }))
+    )
+    .setTimeout(60)
+    .build();
+
+  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), 10000);
+
+  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
+    throw new Error(`Soroban approve_task simulation failed: ${simResult.error}`);
+  }
+
+  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), 10000);
+
+  return {
+    simulation: simResult,
+    preparedTx,
+    minResourceFee: simResult.minResourceFee || preparedTx.fee,
+    isDemo: false
+  };
+};
+
+/**
+ * Executes the complete approve_task flow:
+ * 1. Simulates & prepares the Soroban release invocation.
+ * 2. Prompts Freighter wallet for client authorization.
+ * 3. Submits signed transaction to Soroban Testnet RPC.
+ * 4. Polls for final transaction confirmation.
+ *
+ * @param {Object} params
+ * @param {string} params.clientAddress - Public key of client
+ * @param {number|string} params.taskId - On-chain task ID
+ * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
+ */
+export const submitApproveTask = async ({ clientAddress, taskId }) => {
+  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+    console.log(`[DEMO MODE] Simulating approve_task release for Task #${taskId}`);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const demoHash = 'demo_release_' + Date.now().toString(16);
+    return {
+      success: true,
+      hash: demoHash,
+      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${demoHash}`,
+      isDemo: true
+    };
+  }
+
+  // 1. Prepare & simulate transaction
+  const { preparedTx } = await simulateApproveTask({ clientAddress, taskId });
+
+  // 2. Request user signature via Freighter
+  const signedXdr = await withTimeout(
+    signTransaction(preparedTx.toXDR(), { network: NETWORK }),
+    30000
+  );
+
+  if (signedXdr.error) {
+    throw new Error(signedXdr.error);
+  }
+
+  const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
+
+  // 3. Submit transaction to Soroban RPC
+  const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
+
+  if (sendResult.status === 'ERROR') {
+    throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+  }
+
+  const txHash = sendResult.hash;
+
+  // 4. Poll for final confirmation (up to 30 seconds)
+  let status = sendResult.status;
+  let attempts = 0;
+  while (status === 'PENDING' && attempts < 15) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const txStatus = await sorobanServer.getTransaction(txHash);
+    status = txStatus.status;
+    attempts++;
+
+    if (status === 'SUCCESS') {
+      return {
+        success: true,
+        hash: txHash,
+        explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+        isDemo: false
+      };
+    } else if (status === 'FAILED') {
+      throw new Error(`Soroban approve_task invocation failed on-chain: ${txHash}`);
+    }
+  }
+
+  return {
+    success: true,
+    hash: txHash,
+    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+    isDemo: false
+  };
+};
+
+
 
