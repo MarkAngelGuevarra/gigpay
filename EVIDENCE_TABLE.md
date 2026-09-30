@@ -19,3 +19,16 @@
 | 8 | Task #8 | 3.0 XLM | [`4977a0f87e...`](https://stellar.expert/explorer/testnet/tx/4977a0f87ebf2353c2c7a84bdf8321be20848049859ec963c77ba2c25efc485d) | [`ddf827d71a...`](https://stellar.expert/explorer/testnet/tx/ddf827d71a5e8fa78d5433facd6f749e85c9063d72235a46f669db8c09761176) | Completed & Released |
 | 9 | Task #9 | 1.0 XLM | [`f3abce6cc4...`](https://stellar.expert/explorer/testnet/tx/f3abce6cc4abb05078248b1982ab032399620a5202be49d219c3516e53b45e74) | [`a2b25be89f...`](https://stellar.expert/explorer/testnet/tx/a2b25be89fa22b6a9a3fec29ee6654507e7d7729e5308e4d927a7ea094aa154d) | Completed & Released |
 | 10 | Task #10 | 2.0 XLM | [`09981dfbc5...`](https://stellar.expert/explorer/testnet/tx/09981dfbc593cc4f0cd9a2269b78d4c5a0b1365ca67d24ff0de1eed3b7d0b85c) | [`c0611300fc...`](https://stellar.expert/explorer/testnet/tx/c0611300fce324394b3d906faac63fbe1d376c007ad81b6d3bef8e3d5e7e0bc5) | Completed & Released |
+
+## 🌐 Week 2 Deliverable Verification: Frontend UI & Soroban Pipeline
+- **Branch / PR:** `week-2-frontend-wiring` (Pull Request #3)
+- **SOW Milestone:** Deliverable 2 — Frontend UI Integration & Freighter Wallet Execution ($2,000 Allocation)
+- **Soroban RPC Server:** `https://soroban-testnet.stellar.org` (Protocol 22 Target)
+- **Native XLM SAC Contract ID:** [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)
+- **Frontend Integration Suite:** Verified with passing automated suite `src/test/soroban_sim.test.js`
+- **UI Architecture:**
+  - `src/components/Navbar.jsx`: Real-time Testnet XLM balance badge and network indicator
+  - `src/lib/stellar.js`: `simulateFundTask`, `submitFundTask`, `simulateApproveTask`, and `submitApproveTask`
+  - `src/context/TaskContext.jsx`: Wired contract funding and approval triggers to live Freighter signatures and RPC polling
+  - `src/pages/ClientDashboard.jsx`: Dynamic on-chain transaction badges linking directly to Stellar Expert explorer
+
