@@ -241,6 +241,45 @@ export const simulateFundTask = async ({
  * @param {string} [params.tokenAddress] - SAC token contract
  * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
  */
+/**
+ * Normalizes blockchain and Freighter wallet error messages for clean user presentation.
+ * 
+ * @param {Error|Object|string} error 
+ * @returns {string} Human-friendly error description
+ */
+export const formatStellarError = (error) => {
+  if (!error) return "Unknown transaction error occurred.";
+  const msg = typeof error === 'string' ? error : error.message || JSON.stringify(error);
+
+  if (msg.includes("TIMEOUT")) {
+    return "Wallet request timed out. Please unlock Freighter and try again.";
+  }
+  if (msg.includes("User declined") || msg.includes("User rejected") || msg.includes("declined")) {
+    return "Transaction signing was rejected in Freighter.";
+  }
+  if (msg.includes("HostError") || msg.includes("UnreachableCodeReached")) {
+    return "Soroban contract condition failed (e.g. task already completed or unauthorized).";
+  }
+  if (msg.includes("insufficient_balance") || msg.includes("balance")) {
+    return "Insufficient Testnet XLM balance to fund this escrow.";
+  }
+  return msg;
+};
+
+/**
+ * Executes the complete fund_task flow:
+ * 1. Simulates & prepares the Soroban invocation transaction.
+ * 2. Prompts Freighter wallet for user signature.
+ * 3. Submits signed transaction to Soroban Testnet RPC.
+ * 4. Polls for final on-chain transaction confirmation.
+ *
+ * @param {Object} params
+ * @param {string} params.clientAddress - Public key of client
+ * @param {string} [params.freelancerAddress] - Public key of freelancer
+ * @param {number|string} params.amount - Escrow amount in XLM
+ * @param {string} [params.tokenAddress] - SAC token contract
+ * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
+ */
 export const submitFundTask = async ({
   clientAddress,
   freelancerAddress = DEFAULT_FREELANCER_TESTNET_ADDRESS,
@@ -260,63 +299,68 @@ export const submitFundTask = async ({
     };
   }
 
-  // 1. Prepare & simulate transaction
-  const { preparedTx } = await simulateFundTask({
-    clientAddress,
-    freelancerAddress,
-    amount,
-    tokenAddress
-  });
+  try {
+    // 1. Prepare & simulate transaction
+    const { preparedTx } = await simulateFundTask({
+      clientAddress,
+      freelancerAddress,
+      amount,
+      tokenAddress
+    });
 
-  // 2. Request user signature via Freighter
-  const signedXdr = await withTimeout(
-    signTransaction(preparedTx.toXDR(), { network: NETWORK }),
-    30000
-  );
+    // 2. Request user signature via Freighter
+    const signedXdr = await withTimeout(
+      signTransaction(preparedTx.toXDR(), { network: NETWORK }),
+      30000
+    );
 
-  if (signedXdr.error) {
-    throw new Error(signedXdr.error);
-  }
-
-  const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
-
-  // 3. Submit transaction to Soroban RPC
-  const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
-
-  if (sendResult.status === 'ERROR') {
-    throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
-  }
-
-  const txHash = sendResult.hash;
-
-  // 4. Poll for final confirmation (up to 30 seconds)
-  let status = sendResult.status;
-  let attempts = 0;
-  while (status === 'PENDING' && attempts < 15) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const txStatus = await sorobanServer.getTransaction(txHash);
-    status = txStatus.status;
-    attempts++;
-
-    if (status === 'SUCCESS') {
-      return {
-        success: true,
-        hash: txHash,
-        explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-        isDemo: false
-      };
-    } else if (status === 'FAILED') {
-      throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
+    if (signedXdr.error) {
+      throw new Error(signedXdr.error);
     }
-  }
 
-  // Return submitted state even if RPC polling lagged
-  return {
-    success: true,
-    hash: txHash,
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-    isDemo: false
-  };
+    const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
+
+    // 3. Submit transaction to Soroban RPC
+    const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
+
+    if (sendResult.status === 'ERROR') {
+      throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+    }
+
+    const txHash = sendResult.hash;
+
+    // 4. Poll for final confirmation (up to 30 seconds)
+    let status = sendResult.status;
+    let attempts = 0;
+    while (status === 'PENDING' && attempts < 15) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const txStatus = await sorobanServer.getTransaction(txHash);
+      status = txStatus.status;
+      attempts++;
+
+      if (status === 'SUCCESS') {
+        return {
+          success: true,
+          hash: txHash,
+          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+          isDemo: false
+        };
+      } else if (status === 'FAILED') {
+        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
+      }
+    }
+
+    // Return submitted state even if RPC polling lagged
+    return {
+      success: true,
+      hash: txHash,
+      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      isDemo: false
+    };
+  } catch (error) {
+    console.error("[submitFundTask] Error:", error);
+    throw new Error(formatStellarError(error));
+  }
 };
 
 /**
@@ -394,57 +438,62 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
     };
   }
 
-  // 1. Prepare & simulate transaction
-  const { preparedTx } = await simulateApproveTask({ clientAddress, taskId });
+  try {
+    // 1. Prepare & simulate transaction
+    const { preparedTx } = await simulateApproveTask({ clientAddress, taskId });
 
-  // 2. Request user signature via Freighter
-  const signedXdr = await withTimeout(
-    signTransaction(preparedTx.toXDR(), { network: NETWORK }),
-    30000
-  );
+    // 2. Request user signature via Freighter
+    const signedXdr = await withTimeout(
+      signTransaction(preparedTx.toXDR(), { network: NETWORK }),
+      30000
+    );
 
-  if (signedXdr.error) {
-    throw new Error(signedXdr.error);
-  }
-
-  const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
-
-  // 3. Submit transaction to Soroban RPC
-  const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
-
-  if (sendResult.status === 'ERROR') {
-    throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
-  }
-
-  const txHash = sendResult.hash;
-
-  // 4. Poll for final confirmation (up to 30 seconds)
-  let status = sendResult.status;
-  let attempts = 0;
-  while (status === 'PENDING' && attempts < 15) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const txStatus = await sorobanServer.getTransaction(txHash);
-    status = txStatus.status;
-    attempts++;
-
-    if (status === 'SUCCESS') {
-      return {
-        success: true,
-        hash: txHash,
-        explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-        isDemo: false
-      };
-    } else if (status === 'FAILED') {
-      throw new Error(`Soroban approve_task invocation failed on-chain: ${txHash}`);
+    if (signedXdr.error) {
+      throw new Error(signedXdr.error);
     }
-  }
 
-  return {
-    success: true,
-    hash: txHash,
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-    isDemo: false
-  };
+    const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
+
+    // 3. Submit transaction to Soroban RPC
+    const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
+
+    if (sendResult.status === 'ERROR') {
+      throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+    }
+
+    const txHash = sendResult.hash;
+
+    // 4. Poll for final confirmation (up to 30 seconds)
+    let status = sendResult.status;
+    let attempts = 0;
+    while (status === 'PENDING' && attempts < 15) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const txStatus = await sorobanServer.getTransaction(txHash);
+      status = txStatus.status;
+      attempts++;
+
+      if (status === 'SUCCESS') {
+        return {
+          success: true,
+          hash: txHash,
+          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+          isDemo: false
+        };
+      } else if (status === 'FAILED') {
+        throw new Error(`Soroban approve_task invocation failed on-chain: ${txHash}`);
+      }
+    }
+
+    return {
+      success: true,
+      hash: txHash,
+      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      isDemo: false
+    };
+  } catch (error) {
+    console.error("[submitApproveTask] Error:", error);
+    throw new Error(formatStellarError(error));
+  }
 };
 
 
