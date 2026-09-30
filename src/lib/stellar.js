@@ -20,6 +20,8 @@ export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5X
 export const SOROBAN_RPC_URL = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 export const STELLAR_NETWORK_PASSPHRASE = PASSPHRASE;
 export const STELLAR_NETWORK_NAME = NETWORK;
+export const NATIVE_SAC_CONTRACT_ID = StellarSdk.Asset.native().contractId(PASSPHRASE);
+export const DEFAULT_FREELANCER_TESTNET_ADDRESS = 'GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3';
 
 // Initialize Soroban RPC Client for Protocol 22 Smart Contract Invocations
 export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
@@ -159,3 +161,69 @@ export const requestWalletSignature = async (publicKey, description) => {
     throw error;
   }
 };
+
+/**
+ * Assembles and simulates a Soroban fund_task invocation.
+ * Converts amount to stroops (7 decimals) and builds Soroban host function call.
+ * 
+ * @param {Object} params
+ * @param {string} params.clientAddress - Public key of client funding the escrow
+ * @param {string} [params.freelancerAddress] - Public key of freelancer (defaults to testnet QA recipient)
+ * @param {number|string} params.amount - Amount of tokens (e.g. 1.5 XLM)
+ * @param {string} [params.tokenAddress] - SAC contract address (defaults to native XLM SAC)
+ * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
+ */
+export const simulateFundTask = async ({
+  clientAddress,
+  freelancerAddress = DEFAULT_FREELANCER_TESTNET_ADDRESS,
+  amount,
+  tokenAddress = NATIVE_SAC_CONTRACT_ID
+}) => {
+  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+    return {
+      simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
+      preparedTx: null,
+      minResourceFee: '100',
+      isDemo: true
+    };
+  }
+
+  const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
+  const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
+  const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
+
+  // Convert decimal amount to 7-decimal Stroops (i128 BigInt)
+  const stroops = BigInt(Math.round(parseFloat(amount) * 10_000_000));
+
+  const tx = new StellarSdk.TransactionBuilder(account, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: PASSPHRASE
+  })
+    .addOperation(
+      contract.call(
+        'fund_task',
+        StellarSdk.nativeToScVal(clientAddress, { type: 'address' }),
+        StellarSdk.nativeToScVal(freelancerAddress, { type: 'address' }),
+        StellarSdk.nativeToScVal(tokenAddress, { type: 'address' }),
+        StellarSdk.nativeToScVal(stroops, { type: 'i128' })
+      )
+    )
+    .setTimeout(60)
+    .build();
+
+  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), 10000);
+
+  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
+    throw new Error(`Soroban simulation failed: ${simResult.error}`);
+  }
+
+  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), 10000);
+
+  return {
+    simulation: simResult,
+    preparedTx,
+    minResourceFee: simResult.minResourceFee || preparedTx.fee,
+    isDemo: false
+  };
+};
+
