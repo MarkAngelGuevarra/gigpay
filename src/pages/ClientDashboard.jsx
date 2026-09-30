@@ -147,9 +147,23 @@ const ClientDashboard = () => {
                       </button>
                     </div>
                   )}
-                  {task.status === 'Completed' && (
-                    <a href={`https://stellar.expert/explorer/${(import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET').toLowerCase()}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', textDecoration: 'none' }}>
-                      Tx: 9a2f...88c <ExternalLink size={12} />
+                  {task.tx_hash ? (
+                    <a 
+                      href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.8rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
+                    >
+                      On-Chain Tx: {task.tx_hash.slice(0, 6)}...{task.tx_hash.slice(-4)} <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <a 
+                      href={`https://stellar.expert/explorer/testnet/contract/${task.contract_id || 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3'}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}
+                    >
+                      Contract: CAUU2O...7RD3 <ExternalLink size={11} />
                     </a>
                   )}
                   {task.status === 'Disputed' && (
