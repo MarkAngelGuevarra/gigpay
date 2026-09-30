@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
 
 const TaskContext = createContext();
 
@@ -90,8 +90,14 @@ export const TaskProvider = ({ children }) => {
   const addTask = async (task) => {
     if (!user || !publicKey) throw new Error("Wallet not connected");
     try {
-      // 1. Request Wallet Signature for the Smart Contract (Mocked via manageData)
-      await requestWalletSignature(publicKey, `Deposit ${task.amount} USDC to Escrow`);
+      // 1. Execute live Soroban fund_task invocation via Freighter & Testnet RPC
+      const fundResult = await submitFundTask({
+        clientAddress: publicKey,
+        amount: task.amount
+      });
+
+      const txHash = fundResult?.hash || null;
+      const explorerUrl = fundResult?.explorerUrl || null;
 
       // 2. If signed successfully, save to Database (with local fallback if Supabase is offline)
       try {
@@ -115,9 +121,15 @@ export const TaskProvider = ({ children }) => {
           status: 'Available',
           client_id: user.id,
           contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+          tx_hash: txHash,
+          explorer_url: explorerUrl,
           created_at: new Date().toISOString()
         };
         setTasks((prev) => [newTask, ...prev]);
+      }
+
+      if (fundResult?.explorerUrl && !fundResult?.isDemo) {
+        addToast(`Escrow funded on Testnet! Tx: ${txHash.slice(0, 10)}...`, "success");
       }
     } catch (err) {
       console.error("Failed to add task:", err);
