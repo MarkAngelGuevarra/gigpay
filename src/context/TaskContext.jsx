@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, submitApproveTask, GIGPAY_ESCROW_CONTRACT_ID } from '../lib/stellar';
 
 const TaskContext = createContext();
 
@@ -143,9 +143,16 @@ export const TaskProvider = ({ children }) => {
       const taskToUpdate = tasks.find(t => t.id === id);
       if (!taskToUpdate) return;
       
-      // Request signature based on the action
-      const actionDesc = newStatus === 'Completed' ? 'Release Funds' : 'Accept Escrow Work';
-      await requestWalletSignature(publicKey, `${actionDesc}: Task ${id.slice(0, 8)}`);
+      let releaseResult = null;
+      if (newStatus === 'Completed') {
+        releaseResult = await submitApproveTask({
+          clientAddress: publicKey,
+          taskId: id
+        });
+      } else {
+        const actionDesc = 'Accept Escrow Work';
+        await requestWalletSignature(publicKey, `${actionDesc}: Task ${id.slice(0, 8)}`);
+      }
 
       const updatedFields = { 
         status: newStatus 
@@ -165,6 +172,10 @@ export const TaskProvider = ({ children }) => {
       } catch (dbErr) {
         console.warn("Supabase update notice (using local state fallback):", dbErr);
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedFields } : t));
+      }
+
+      if (releaseResult?.explorerUrl && !releaseResult?.isDemo) {
+        addToast(`Escrow released on Testnet! Tx: ${releaseResult.hash.slice(0, 10)}...`, "success");
       }
     } catch (err) {
       console.error("Failed to update task:", err);
