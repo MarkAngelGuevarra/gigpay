@@ -4,10 +4,11 @@
 ## 1. On-Chain Development & Deployment (Stellar Testnet)
 GigPay has successfully migrated its core business logic from off-chain architecture to on-chain Soroban Smart Contracts.
 *   **Status:** Deployed and Active
-*   **Contract ID:** `CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH`
-*   **Network:** Stellar Testnet (`https://soroban-testnet.stellar.org`)
-*   **WASM Hash:** `2c2e7626e6a7ebb2888ab92c0408671e4df818774d68772d24582dd41dded8e2`
-*   **Explorer Verification:** [View on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH)
+*   **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
+*   **Network:** Stellar Testnet (Protocol 22)
+*   **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
+*   **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
+*   **Explorer Verification:** [View on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
 
 ## 2. Frontend & Application Integration
 The consumer-facing Web2/Web3 hybrid application is fully integrated with the Stellar ecosystem.

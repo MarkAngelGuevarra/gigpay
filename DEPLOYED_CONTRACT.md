@@ -2,15 +2,16 @@
 
 This document provides definitive on-chain verification of the **GigPay Soroban Smart Contract** deployed on the official Stellar Testnet for the SCF Instawards Sprint.
 
-## 📍 Live Deployment Verification
-- **Contract Address (ID):** `CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH`
-- **Network:** Stellar Testnet
-- **WASM Hash:** `2c2e7626e6a7ebb2888ab92c0408671e4df818774d68772d24582dd41dded8e2`
-- **Deployer Account:** `GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3`
-- **Creation Timestamp:** 1783207752
-- **Explorer Verification Link:** [Stellar Expert Testnet Explorer](https://stellar.expert/explorer/testnet/contract/CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH)
+## 📍 Live Deployment Verification (Protocol 22)
+- **Contract Address (ID):** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
+- **Network:** Stellar Testnet (Protocol 22)
+- **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
+- **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
+- **Deployment Transaction:** [`d90e6e47...`](https://stellar.expert/explorer/testnet/tx/d90e6e47231356cc87c03c3207d166345b0b86705afbd8682be365e7a179cc39)
+- **Explorer Verification Link:** [Stellar Expert Testnet Explorer](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
+- **Stellar Lab Verification:** [Stellar Lab Contract](https://lab.stellar.org/r/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
 
 ## 📁 Code Repository Mapping
-1. **Rust Smart Contract:** located at `contracts/gigpay_escrow/src/lib.rs`
-2. **Compiled WASM Binary:** located at `contracts/gigpay_escrow/target/wasm32-unknown-unknown/release/gigpay_escrow.wasm`
-3. **Frontend Connection:** Configured in `src/context/TaskContext.jsx`, which links newly created escrow tasks directly to the deployed contract address (`CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH`).
+1. **Rust Smart Contract:** located at `contracts/gigpay_escrow/src/lib.rs` (Protocol 22, 4/4 passing unit tests)
+2. **Compiled WASM Binary:** located at `contracts/gigpay_escrow/target/wasm32v1-none/release/gigpay_escrow.wasm`
+3. **Frontend Connection:** Configured in `src/lib/stellar.js` and `src/context/TaskContext.jsx`, referencing `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`.

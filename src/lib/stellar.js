@@ -16,6 +16,8 @@ const NETWORK = import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET';
 const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
 
+export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
+
 /**
  * Checks if the user has Freighter installed and connected.
  * If Freighter is broken or blocked, it instantly falls back to a Demo Mode.

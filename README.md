@@ -44,15 +44,17 @@ Our vision is a world where anyone, anywhere, can work freely and get paid their
 **GigPay's Soroban smart contract is officially deployed and active on the Stellar Testnet.**
 
 ### 📍 On-Chain Deployment Details (Stellar Testnet)
-* **Contract ID:** `CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH`
-* **Network:** Stellar Testnet (`https://soroban-testnet.stellar.org`)
-* **WASM Hash:** `2c2e7626e6a7ebb2888ab92c0408671e4df818774d68772d24582dd41dded8e2`
-* **Stellar-Expert Explorer Link:** [Verify on Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet/contract/CBRTDAFRUCLVRVYTDMRYM26RPMXC67VO7VMY7ZNVBBR2NVARLOF2KYMH)
+* **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
+* **Network:** Stellar Testnet (Protocol 22)
+* **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
+* **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
+* **Deployment Transaction:** [`d90e6e47...`](https://stellar.expert/explorer/testnet/tx/d90e6e47231356cc87c03c3207d166345b0b86705afbd8682be365e7a179cc39)
+* **Stellar-Expert Explorer Link:** [Verify on Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
 
 ### 📂 Source Code & Frontend Integration
 * **Contract Source:** `/contracts/gigpay_escrow/src/lib.rs`
-* **Compiled Binary:** `/contracts/gigpay_escrow/target/wasm32-unknown-unknown/release/gigpay_escrow.wasm`
-* **Frontend State Binding:** Directly integrated inside `/src/context/TaskContext.jsx` to bind task creation directly to our deployed Soroban escrow address.
+* **Compiled Binary:** `/contracts/gigpay_escrow/target/wasm32v1-none/release/gigpay_escrow.wasm`
+* **Frontend State Binding:** Directly integrated inside `/src/context/TaskContext.jsx` and `/src/lib/stellar.js` to bind task creation directly to our deployed Soroban escrow address.
 * **Production Roadmap:** Mainnet migration and advanced arbitration architecture scheduled for the Instawards 30-Day Sprint.
 
 ## 🚀 Running Locally
