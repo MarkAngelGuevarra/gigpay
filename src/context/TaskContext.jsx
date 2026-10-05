@@ -93,6 +93,7 @@ export const TaskProvider = ({ children }) => {
       // 1. Execute live Soroban fund_task invocation via Freighter & Testnet RPC
       const fundResult = await submitFundTask({
         clientAddress: publicKey,
+        freelancerAddress: task.freelancer_wallet || undefined,
         amount: task.amount
       });
 
