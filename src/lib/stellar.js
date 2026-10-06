@@ -354,6 +354,64 @@ export const checkBalanceSufficiency = async (clientAddress, amount) => {
 };
 
 /**
+ * Polls the Soroban RPC for transaction finality using an exponential backoff schedule.
+ * Mitigates network latency, prevents RPC rate-limiting, and catches temporary transport errors.
+ *
+ * @param {string} txHash - Transaction hash to query
+ * @param {Object} [options]
+ * @param {number} [options.maxAttempts=8] - Maximum number of polling retries
+ * @param {number} [options.initialDelayMs=1500] - Initial delay in milliseconds
+ * @param {number} [options.backoffMultiplier=1.5] - Exponential multiplier per attempt
+ * @param {number} [options.maxDelayMs=5000] - Maximum delay ceiling
+ * @returns {Promise<{ status: string, hash: string, explorerUrl: string, attempts: number }>}
+ */
+export const pollSorobanTransactionWithBackoff = async (
+  txHash,
+  {
+    maxAttempts = 8,
+    initialDelayMs = 1500,
+    backoffMultiplier = 1.5,
+    maxDelayMs = 5000
+  } = {}
+) => {
+  let attempts = 0;
+  let currentDelay = initialDelayMs;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    await new Promise((resolve) => setTimeout(resolve, currentDelay));
+
+    try {
+      const txStatus = await sorobanServer.getTransaction(txHash);
+      if (txStatus.status === 'SUCCESS') {
+        return {
+          status: 'SUCCESS',
+          hash: txHash,
+          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+          attempts
+        };
+      } else if (txStatus.status === 'FAILED') {
+        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
+      }
+    } catch (queryErr) {
+      if (queryErr.message.includes("failed on-chain")) {
+        throw queryErr;
+      }
+      console.warn(`[Soroban RPC Poll] Attempt ${attempts}/${maxAttempts} transient notice:`, queryErr.message);
+    }
+
+    currentDelay = Math.min(Math.round(currentDelay * backoffMultiplier), maxDelayMs);
+  }
+
+  return {
+    status: 'SUBMITTED',
+    hash: txHash,
+    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+    attempts
+  };
+};
+
+/**
  * Executes the complete fund_task flow:
  * 1. Simulates & prepares the Soroban invocation transaction.
  * 2. Prompts Freighter wallet for user signature.
@@ -407,7 +465,7 @@ export const submitFundTask = async ({
       tokenAddress
     });
 
-    // 2. Request user signature via Freighter
+    // 4. Request user signature via Freighter
     const signedXdr = await withTimeout(
       signTransaction(preparedTx.toXDR(), { network: NETWORK }),
       30000
@@ -419,7 +477,7 @@ export const submitFundTask = async ({
 
     const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
 
-    // 3. Submit transaction to Soroban RPC
+    // 5. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
 
     if (sendResult.status === 'ERROR') {
@@ -428,32 +486,13 @@ export const submitFundTask = async ({
 
     const txHash = sendResult.hash;
 
-    // 4. Poll for final confirmation (up to 30 seconds)
-    let status = sendResult.status;
-    let attempts = 0;
-    while (status === 'PENDING' && attempts < 15) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const txStatus = await sorobanServer.getTransaction(txHash);
-      status = txStatus.status;
-      attempts++;
+    // 6. Resilient polling with exponential backoff
+    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
 
-      if (status === 'SUCCESS') {
-        return {
-          success: true,
-          hash: txHash,
-          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-          isDemo: false
-        };
-      } else if (status === 'FAILED') {
-        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
-      }
-    }
-
-    // Return submitted state even if RPC polling lagged
     return {
       success: true,
       hash: txHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      explorerUrl: pollResult.explorerUrl,
       isDemo: false
     };
   } catch (error) {
@@ -562,31 +601,13 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
 
     const txHash = sendResult.hash;
 
-    // 4. Poll for final confirmation (up to 30 seconds)
-    let status = sendResult.status;
-    let attempts = 0;
-    while (status === 'PENDING' && attempts < 15) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const txStatus = await sorobanServer.getTransaction(txHash);
-      status = txStatus.status;
-      attempts++;
-
-      if (status === 'SUCCESS') {
-        return {
-          success: true,
-          hash: txHash,
-          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-          isDemo: false
-        };
-      } else if (status === 'FAILED') {
-        throw new Error(`Soroban approve_task invocation failed on-chain: ${txHash}`);
-      }
-    }
+    // 4. Resilient polling with exponential backoff
+    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
 
     return {
       success: true,
       hash: txHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      explorerUrl: pollResult.explorerUrl,
       isDemo: false
     };
   } catch (error) {
