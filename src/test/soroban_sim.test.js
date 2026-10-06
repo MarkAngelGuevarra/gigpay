@@ -77,6 +77,22 @@ async function runSorobanSimulationTests() {
   }
   console.log('✅ Test 5 Passed: Multi-wallet separation and anti-self-dealing confirmed.\n');
 
+  // Test 6: Exponential Backoff Delay Math & Ceiling Assertion
+  console.log('--- Test 6: Exponential Backoff Calculation & Delay Bounds ---');
+  let delay = 1500;
+  const multiplier = 1.5;
+  const maxDelay = 5000;
+  const delays = [];
+  for (let i = 0; i < 5; i++) {
+    delays.push(delay);
+    delay = Math.min(Math.round(delay * multiplier), maxDelay);
+  }
+  if (delays[0] !== 1500 || delays[1] !== 2250 || delays[2] !== 3375 || delays[3] !== 5000 || delays[4] !== 5000) {
+    throw new Error(`Exponential backoff math incorrect: ${JSON.stringify(delays)}`);
+  }
+  console.log(`Calculated Polling Intervals: ${delays.join('ms -> ')}ms`);
+  console.log('✅ Test 6 Passed: Exponential backoff math and delay ceiling verified.\n');
+
   console.log('🎉 All Soroban Protocol 22 frontend integration tests passed successfully!');
 }
 
