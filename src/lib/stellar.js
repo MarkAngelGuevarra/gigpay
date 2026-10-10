@@ -148,8 +148,22 @@ export const requestWalletSignature = async (publicKey, description) => {
       return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
     }
 
+    let account;
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
-    const account = await server.loadAccount(publicKey);
+    try {
+      account = await withTimeout(server.loadAccount(publicKey), 5000);
+    } catch (loadErr) {
+      if (NETWORK === 'TESTNET' && (loadErr?.response?.status === 404 || loadErr?.message?.includes("404"))) {
+        try {
+          await withTimeout(fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`), 5000);
+          account = await withTimeout(server.loadAccount(publicKey), 5000);
+        } catch {
+          account = new StellarSdk.Account(publicKey, "0");
+        }
+      } else {
+        account = new StellarSdk.Account(publicKey, "0");
+      }
+    }
     
     const transaction = new StellarSdk.TransactionBuilder(account, {
       fee: StellarSdk.BASE_FEE,
@@ -164,10 +178,17 @@ export const requestWalletSignature = async (publicKey, description) => {
 
     const xdr = transaction.toXDR();
     
-    // Request real signature, but timeout if the popup freezes again
-    const signedTx = await withTimeout(signTransaction(xdr, { network: NETWORK }), 30000);
+    // Explicitly pass networkPassphrase so Freighter knows this is on Stellar Testnet
+    const signedTx = await withTimeout(
+      signTransaction(xdr, { 
+        network: NETWORK, 
+        networkPassphrase: PASSPHRASE,
+        accountToSign: publicKey 
+      }), 
+      30000
+    );
     
-    if (signedTx.error) {
+    if (signedTx?.error) {
       throw new Error(signedTx.error);
     }
     
@@ -475,16 +496,24 @@ export const submitFundTask = async ({
     });
 
     // 4. Request user signature via Freighter
-    const signedXdr = await withTimeout(
-      signTransaction(preparedTx.toXDR(), { network: NETWORK }),
+    const signResult = await withTimeout(
+      signTransaction(preparedTx.toXDR(), { 
+        network: NETWORK, 
+        networkPassphrase: PASSPHRASE,
+        accountToSign: clientAddress 
+      }),
       30000
     );
 
-    if (signedXdr.error) {
-      throw new Error(signedXdr.error);
+    if (signResult?.error) {
+      throw new Error(signResult.error);
     }
 
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
+    const rawXdr = typeof signResult === 'string'
+      ? signResult
+      : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
+
+    const signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
 
     // 5. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
@@ -590,16 +619,24 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
     const { preparedTx } = await simulateApproveTask({ clientAddress, taskId });
 
     // 2. Request user signature via Freighter
-    const signedXdr = await withTimeout(
-      signTransaction(preparedTx.toXDR(), { network: NETWORK }),
+    const signResult = await withTimeout(
+      signTransaction(preparedTx.toXDR(), { 
+        network: NETWORK, 
+        networkPassphrase: PASSPHRASE,
+        accountToSign: clientAddress 
+      }),
       30000
     );
 
-    if (signedXdr.error) {
-      throw new Error(signedXdr.error);
+    if (signResult?.error) {
+      throw new Error(signResult.error);
     }
 
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
+    const rawXdr = typeof signResult === 'string'
+      ? signResult
+      : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
+
+    const signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
 
     // 3. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
