@@ -303,7 +303,7 @@ export const formatStellarError = (error) => {
     return msg;
   }
   if (msg.includes("HostError") || msg.includes("UnreachableCodeReached")) {
-    return "Soroban contract condition failed (e.g. task already completed or unauthorized).";
+    return "This escrow was not funded by your connected wallet on-chain. Create a new task with 'Lock Funds in Escrow' to test live payment release.";
   }
   if (msg.includes("insufficient_balance") || msg.includes("Insufficient balance") || msg.includes("balance")) {
     return msg.includes("Account holds") ? msg : "Insufficient Testnet XLM balance to fund this escrow.";
@@ -552,7 +552,8 @@ export const submitFundTask = async ({
  * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
  */
 export const simulateApproveTask = async ({ clientAddress, taskId }) => {
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+  const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
+  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY || isMockTask) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
       preparedTx: null,
@@ -605,7 +606,8 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
  * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
  */
 export const submitApproveTask = async ({ clientAddress, taskId }) => {
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+  const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
+  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY || isMockTask) {
     console.log(`[DEMO MODE] Simulating approve_task release for Task #${taskId}`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     const demoHash = 'demo_release_' + Date.now().toString(16);
