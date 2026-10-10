@@ -10,6 +10,7 @@ import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import { Analytics } from '@vercel/analytics/react';
 import { Navigate } from 'react-router-dom';
 import './index.css';
 
@@ -67,6 +68,7 @@ function App() {
                 />
               </Routes>
             </div>
+            <Analytics />
           </Router>
         </TaskProvider>
       </ToastProvider>
