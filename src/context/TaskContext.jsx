@@ -116,7 +116,7 @@ export const TaskProvider = ({ children }) => {
       } catch (dbErr) {
         console.warn("Supabase insert notice (using local state fallback):", dbErr);
         const newTask = {
-          id: 'task-' + Date.now(),
+          id: 'task-' + Math.floor(Date.now() / 1000),
           title: task.title,
           amount: task.amount,
           status: 'Available',
