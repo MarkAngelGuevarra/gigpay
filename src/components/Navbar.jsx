@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
 
 const Navbar = () => {
   const { user, signOut, publicKey, connectWallet } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -42,19 +44,31 @@ const Navbar = () => {
   const handleConnect = async () => {
     setError('');
     try {
-      await connectWallet();
+      const res = await connectWallet();
+      const connectedKey = typeof res === 'string' ? res : res?.publicKey;
+      const network = res?.network || '';
+
+      if (network && !network.toUpperCase().includes('TESTNET')) {
+        const msg = `Freighter is on ${network}. Please switch network to Testnet in Freighter settings!`;
+        setError(msg);
+        addToast(msg, 'warning');
+      } else {
+        addToast(`Connected to Stellar Testnet: ${formatKey(connectedKey)}`, 'success');
+      }
     } catch (err) {
       if (err.message === 'WALLET_NOT_INSTALLED') {
         setShowOnboardingModal(true);
       } else {
         setError(err.message);
+        addToast(err.message || 'Failed to connect wallet', 'error');
       }
     }
   };
 
   const formatKey = (key) => {
     if (!key) return '';
-    return `${key.slice(0, 5)}...${key.slice(-4)}`;
+    const str = typeof key === 'string' ? key : (key?.address || String(key));
+    return `${str.slice(0, 5)}...${str.slice(-4)}`;
   };
 
   return (

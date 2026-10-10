@@ -73,14 +73,23 @@ export const connectWallet = async () => {
     }
 
     const access = await withTimeout(requestAccess(), 5000);
-    if (access.error) throw new Error(access.error);
+    if (access?.error) throw new Error(access.error);
 
-    const publicKey = await withTimeout(getPublicKey(), 2000);
-    const network = await withTimeout(getNetwork(), 2000);
+    const keyResult = await withTimeout(getPublicKey(), 2000);
+    const networkResult = await withTimeout(getNetwork(), 2000);
+    
+    // Normalize string public key defensively regardless of freighter-api object return shape
+    const resolvedKey = typeof keyResult === 'string'
+      ? keyResult
+      : (keyResult?.address || access?.address || String(keyResult || ''));
+
+    const resolvedNetwork = typeof networkResult === 'string'
+      ? networkResult
+      : (networkResult?.network || networkResult?.networkPassphrase || NETWORK);
     
     return {
-      publicKey: publicKey,
-      network: network,
+      publicKey: resolvedKey,
+      network: resolvedNetwork,
     };
   } catch (error) {
     if (error.message === 'WALLET_NOT_INSTALLED') {

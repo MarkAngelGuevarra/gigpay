@@ -21,6 +21,10 @@ const ClientDashboard = () => {
   const [isEstimating, setIsEstimating] = useState(false);
 
   const initiateApproval = (id) => {
+    if (!publicKey) {
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
+    }
     setTaskToApprove(id);
     setConfirmText('');
   };
@@ -56,6 +60,10 @@ const ClientDashboard = () => {
 
   const handleApprove = async () => {
     if (confirmText !== 'CONFIRM' || !taskToApprove) return;
+    if (!publicKey) {
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
+    }
     setIsTransacting(true);
     const taskId = taskToApprove;
     setTaskToApprove(null);
@@ -75,7 +83,8 @@ const ClientDashboard = () => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskAmount) return;
 
-    if (freelancerWallet && publicKey && freelancerWallet.trim() === publicKey.trim()) {
+    const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
+    if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
       addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
       return;
     }
@@ -308,6 +317,11 @@ const ClientDashboard = () => {
               placeholder="CONFIRM"
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ff4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.5rem' }} 
             />
+            {!publicKey && (
+              <p style={{ color: '#f59e0b', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <AlertTriangle size={14} /> Wallet not connected. Please connect your Freighter wallet in the header first.
+              </p>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
               <button 
                 className="btn btn-outline" 
@@ -319,10 +333,10 @@ const ClientDashboard = () => {
               <button 
                 className="btn" 
                 onClick={handleApprove}
-                disabled={confirmText !== 'CONFIRM'}
-                style={{ padding: '0.5rem 1rem', backgroundColor: confirmText === 'CONFIRM' ? '#ff4444' : '#555', color: 'white', cursor: confirmText === 'CONFIRM' ? 'pointer' : 'not-allowed' }}
+                disabled={confirmText !== 'CONFIRM' || !publicKey || isTransacting}
+                style={{ padding: '0.5rem 1rem', backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#ff4444' : '#555', color: 'white', cursor: (confirmText === 'CONFIRM' && publicKey) ? 'pointer' : 'not-allowed' }}
               >
-                Force Release Funds
+                {isTransacting ? 'Processing...' : 'Force Release Funds'}
               </button>
             </div>
           </div>

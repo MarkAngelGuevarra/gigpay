@@ -124,8 +124,11 @@ export const AuthProvider = ({ children }) => {
   const connectWallet = async () => {
     const res = await connectFreighter();
     if (res.error) throw new Error(res.error);
-    setPublicKey(res.publicKey);
-    return res.publicKey;
+    const key = typeof res.publicKey === 'string'
+      ? res.publicKey
+      : (res.publicKey?.address || String(res.publicKey || ''));
+    setPublicKey(key);
+    return { publicKey: key, network: res.network };
   };
 
   return (

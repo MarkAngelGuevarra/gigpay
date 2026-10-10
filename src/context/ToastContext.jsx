@@ -21,7 +21,7 @@ export const ToastProvider = ({ children }) => {
       <div style={{ position: 'fixed', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 9999 }}>
         {toasts.map(toast => (
           <div key={toast.id} className="animate-fade-in" style={{
-            background: toast.type === 'error' ? 'rgba(255, 68, 68, 0.9)' : 'rgba(0, 200, 150, 0.9)',
+            background: toast.type === 'error' ? 'rgba(255, 68, 68, 0.9)' : (toast.type === 'warning' ? 'rgba(245, 158, 11, 0.95)' : 'rgba(0, 200, 150, 0.9)'),
             color: 'white',
             padding: '1rem 1.5rem',
             borderRadius: '0.5rem',
