@@ -308,6 +308,9 @@ export const formatStellarError = (error) => {
   if (msg.includes("insufficient_balance") || msg.includes("Insufficient balance") || msg.includes("balance")) {
     return msg.includes("Account holds") ? msg : "Insufficient Testnet XLM balance to fund this escrow.";
   }
+  if (msg.includes("Failed to fetch")) {
+    return "Network connection to Stellar RPC interrupted. Please check connection and retry.";
+  }
   return msg;
 };
 

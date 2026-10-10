@@ -3,7 +3,7 @@ import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, E
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature } from '../lib/stellar';
+import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
@@ -72,8 +72,9 @@ const ClientDashboard = () => {
       await updateTaskStatus(taskId, 'Completed');
       addToast("Transaction Confirmed! Funds released to freelancer.", "success");
     } catch (error) {
-      const isWarning = error.message.includes("rejected") || error.message.includes("declined");
-      addToast(error.message || "Transaction failed.", isWarning ? "warning" : "error");
+      const formatted = formatStellarError(error);
+      const isWarning = formatted.includes("rejected") || formatted.includes("declined");
+      addToast(formatted, isWarning ? "warning" : "error");
     } finally {
       setIsTransacting(false);
     }
@@ -103,8 +104,9 @@ const ClientDashboard = () => {
       setFreelancerWallet('');
       addToast("Task Escrow created and funded on Stellar Testnet!", "success");
     } catch (error) {
-      const isWarning = error.message.includes("rejected") || error.message.includes("declined") || error.message.includes("Self-dealing") || error.message.includes("Insufficient balance");
-      addToast(error.message || "Transaction failed.", isWarning ? "warning" : "error");
+      const formatted = formatStellarError(error);
+      const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
+      addToast(formatted, isWarning ? "warning" : "error");
     } finally {
       setIsTransacting(false);
     }
