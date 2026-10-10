@@ -9,6 +9,7 @@ import { TaskProvider } from './context/TaskContext';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Navigate } from 'react-router-dom';
 import './index.css';
 
@@ -30,11 +31,12 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <TaskProvider>
-          <Router>
-            <div className="container">
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <TaskProvider>
+            <Router>
+              <div className="container">
               <Navbar />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -69,7 +71,8 @@ function App() {
         </TaskProvider>
       </ToastProvider>
     </AuthProvider>
-  );
+  </ErrorBoundary>
+);
 }
 
 export default App;
