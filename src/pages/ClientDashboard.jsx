@@ -15,11 +15,16 @@ const ClientDashboard = () => {
   const [isTransacting, setIsTransacting] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskAmount, setNewTaskAmount] = useState('');
+  const [freelancerWallet, setFreelancerWallet] = useState('');
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
 
   const initiateApproval = (id) => {
+    if (!publicKey) {
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
+    }
     setTaskToApprove(id);
     setConfirmText('');
   };
@@ -55,6 +60,10 @@ const ClientDashboard = () => {
 
   const handleApprove = async () => {
     if (confirmText !== 'CONFIRM' || !taskToApprove) return;
+    if (!publicKey) {
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
+    }
     setIsTransacting(true);
     const taskId = taskToApprove;
     setTaskToApprove(null);
@@ -63,7 +72,8 @@ const ClientDashboard = () => {
       await updateTaskStatus(taskId, 'Completed');
       addToast("Transaction Confirmed! Funds released to freelancer.", "success");
     } catch (error) {
-      addToast(error.message || "Transaction failed.", "error");
+      const isWarning = error.message.includes("rejected") || error.message.includes("declined");
+      addToast(error.message || "Transaction failed.", isWarning ? "warning" : "error");
     } finally {
       setIsTransacting(false);
     }
@@ -72,19 +82,29 @@ const ClientDashboard = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskAmount) return;
+
+    const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
+    if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
+      addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
+      return;
+    }
+
     setIsTransacting(true);
     
     try {
       const newTask = {
         title: newTaskTitle,
-        amount: newTaskAmount
+        amount: newTaskAmount,
+        freelancer_wallet: freelancerWallet.trim() || undefined
       };
-      addTask(newTask);
+      await addTask(newTask);
       setNewTaskTitle('');
       setNewTaskAmount('');
-      addToast("Task Escrow created successfully!", "success");
+      setFreelancerWallet('');
+      addToast("Task Escrow created and funded on Stellar Testnet!", "success");
     } catch (error) {
-      addToast(error.message || "Transaction failed.", "error");
+      const isWarning = error.message.includes("rejected") || error.message.includes("declined") || error.message.includes("Self-dealing") || error.message.includes("Insufficient balance");
+      addToast(error.message || "Transaction failed.", isWarning ? "warning" : "error");
     } finally {
       setIsTransacting(false);
     }
@@ -212,6 +232,33 @@ const ClientDashboard = () => {
                 required
               />
             </div>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Freelancer Destination Wallet (Optional)
+              </label>
+              <input 
+                type="text" 
+                placeholder="GAAT... (Defaults to QA recipient)" 
+                value={freelancerWallet}
+                onChange={(e) => setFreelancerWallet(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  borderRadius: '0.5rem', 
+                  border: freelancerWallet && freelancerWallet.trim() === publicKey?.trim() ? '1px solid #ef4444' : '1px solid var(--border)', 
+                  background: 'rgba(0,0,0,0.2)', 
+                  color: 'white', 
+                  fontSize: '0.8rem' 
+                }} 
+              />
+              {freelancerWallet && freelancerWallet.trim() === publicKey?.trim() && (
+                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  ⚠️ Anti-Self-Dealing: Cannot send escrow to your own connected client wallet.
+                </span>
+              )}
+            </div>
+
             {!publicKey && (
               <div style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ShieldAlert size={16} /> Please connect Freighter Wallet first.
@@ -270,6 +317,11 @@ const ClientDashboard = () => {
               placeholder="CONFIRM"
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ff4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.5rem' }} 
             />
+            {!publicKey && (
+              <p style={{ color: '#f59e0b', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <AlertTriangle size={14} /> Wallet not connected. Please connect your Freighter wallet in the header first.
+              </p>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
               <button 
                 className="btn btn-outline" 
@@ -281,10 +333,10 @@ const ClientDashboard = () => {
               <button 
                 className="btn" 
                 onClick={handleApprove}
-                disabled={confirmText !== 'CONFIRM'}
-                style={{ padding: '0.5rem 1rem', backgroundColor: confirmText === 'CONFIRM' ? '#ff4444' : '#555', color: 'white', cursor: confirmText === 'CONFIRM' ? 'pointer' : 'not-allowed' }}
+                disabled={confirmText !== 'CONFIRM' || !publicKey || isTransacting}
+                style={{ padding: '0.5rem 1rem', backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#ff4444' : '#555', color: 'white', cursor: (confirmText === 'CONFIRM' && publicKey) ? 'pointer' : 'not-allowed' }}
               >
-                Force Release Funds
+                {isTransacting ? 'Processing...' : 'Force Release Funds'}
               </button>
             </div>
           </div>

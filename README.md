@@ -3,9 +3,14 @@
 ![GitHub Repo Size](https://img.shields.io/github/repo-size/MarkAngelGuevarra/gigpay)
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
+![Network](https://img.shields.io/badge/Stellar-Testnet%20Protocol%2022-teal)
+![Tests](https://img.shields.io/badge/tests-8%2F8%20passing-brightgreen)
+![SOW Deliverable 2](https://img.shields.io/badge/SOW%20Deliverable%202-Hardened-green)
 
-**Stellar Community Fund (SCF) Instaward Sprint**  
-**Track:** Protocol Infrastructure & Payment Applications
+**Stellar Philippines Instawards 2026 Sprint**  
+**Track:** Decentralized Milestone Escrow for Filipino Freelancers  
+**Live Production URL:** [https://gigpay.tech](https://gigpay.tech)
 
 ---
 
@@ -55,7 +60,37 @@ Our vision is a world where anyone, anywhere, can work freely and get paid their
 * **Contract Source:** `/contracts/gigpay_escrow/src/lib.rs`
 * **Compiled Binary:** `/contracts/gigpay_escrow/target/wasm32v1-none/release/gigpay_escrow.wasm`
 * **Frontend State Binding:** Directly integrated inside `/src/context/TaskContext.jsx` and `/src/lib/stellar.js` to bind task creation directly to our deployed Soroban escrow address.
-* **Production Roadmap:** Mainnet migration and advanced arbitration architecture scheduled for the Instawards 30-Day Sprint.
+
+---
+
+## 🛡️ Week 3 Deliverable 2: Multi-Wallet Hardening & Error Resilience
+
+GigPay has hardened its frontend and smart contract interaction layer to satisfy all **SOW Table 7 Deliverable 2** acceptance criteria:
+
+* **Multi-Wallet Execution (SOW Table 7: $\ge 2$ Wallets):** Enforces distinct client funding and freelancer payout addresses across independent Freighter wallets.
+* **Anti-Self-Dealing Assertion:** Front-end and cryptographic validation asserting that client and freelancer addresses cannot collide (`client != freelancer`), preventing wasted network gas.
+* **Exponential Backoff Polling:** Progressive RPC retry schedule (`1500ms -> 2250ms -> 3375ms -> 5000ms -> 5000ms`) preventing rate limits and recovering from transient network congestion during transaction confirmation.
+* **Graceful Error Normalization:** Intercepts Freighter signature declines and timeouts with non-crashing toast warnings.
+* **Pre-Flight Reserve Assertions:** Verifies client account holds base reserve (1.0 XLM) + fee buffer (0.5 XLM) before transaction submission.
+
+### 🧪 Automated Integration Tests (8/8 Passing)
+Run the automated test suite locally:
+```bash
+npm test
+```
+
+For complete multi-wallet manual reproduction instructions (Client Persona A vs Freelancer Persona B), refer to [TESTING.md](TESTING.md).
+
+### 📋 SOW Instawards Milestone Scorecard
+
+| Milestone | SOW Deliverable | Status | Evidence / Verification |
+| :--- | :--- | :---: | :--- |
+| **Week 1** | Deliverable 1: Testnet Escrow Contract Deployment | ✅ Complete | PR #2 merged, Contract ID: `CAUU2O5Z...` |
+| **Week 2** | Deliverable 1 & 2: Frontend Wiring & Execution | ✅ Complete | PR #3 merged, 10 on-chain tx hashes verified |
+| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4, 8/8 automated tests, `TESTING.md` runbook |
+| **Week 4** | Deliverable 3: Final Verification & Capstone Video | 🔒 Locked | Capstone dossier & 3-min walkthrough video |
+
+---
 
 ## 🚀 Running Locally
 

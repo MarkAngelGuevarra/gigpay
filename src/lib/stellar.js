@@ -73,14 +73,23 @@ export const connectWallet = async () => {
     }
 
     const access = await withTimeout(requestAccess(), 5000);
-    if (access.error) throw new Error(access.error);
+    if (access?.error) throw new Error(access.error);
 
-    const publicKey = await withTimeout(getPublicKey(), 2000);
-    const network = await withTimeout(getNetwork(), 2000);
+    const keyResult = await withTimeout(getPublicKey(), 2000);
+    const networkResult = await withTimeout(getNetwork(), 2000);
+    
+    // Normalize string public key defensively regardless of freighter-api object return shape
+    const resolvedKey = typeof keyResult === 'string'
+      ? keyResult
+      : (keyResult?.address || access?.address || String(keyResult || ''));
+
+    const resolvedNetwork = typeof networkResult === 'string'
+      ? networkResult
+      : (networkResult?.network || networkResult?.networkPassphrase || NETWORK);
     
     return {
-      publicKey: publicKey,
-      network: network,
+      publicKey: resolvedKey,
+      network: resolvedNetwork,
     };
   } catch (error) {
     if (error.message === 'WALLET_NOT_INSTALLED') {
@@ -269,13 +278,146 @@ export const formatStellarError = (error) => {
   if (msg.includes("User declined") || msg.includes("User rejected") || msg.includes("declined")) {
     return "Transaction signing was rejected in Freighter.";
   }
+  if (msg.includes("Self-dealing")) {
+    return msg;
+  }
   if (msg.includes("HostError") || msg.includes("UnreachableCodeReached")) {
     return "Soroban contract condition failed (e.g. task already completed or unauthorized).";
   }
-  if (msg.includes("insufficient_balance") || msg.includes("balance")) {
-    return "Insufficient Testnet XLM balance to fund this escrow.";
+  if (msg.includes("insufficient_balance") || msg.includes("Insufficient balance") || msg.includes("balance")) {
+    return msg.includes("Account holds") ? msg : "Insufficient Testnet XLM balance to fund this escrow.";
   }
   return msg;
+};
+
+/**
+ * Validates whether a provided string is a syntactically valid Stellar Ed25519 public address (G...).
+ * 
+ * @param {string} address - Public key to validate
+ * @returns {boolean} True if address is valid G... public key
+ */
+export const isValidStellarAddress = (address) => {
+  if (!address || typeof address !== 'string') return false;
+  if (address === DEMO_PUBLIC_KEY) return true;
+  return StellarSdk.StrKey.isValidEd25519PublicKey(address);
+};
+
+/**
+ * Validates the parties of an escrow task to enforce multi-wallet separation and prevent self-dealing.
+ * 
+ * @param {string} clientAddress - Address of the client funding escrow
+ * @param {string} freelancerAddress - Destination address of the freelancer
+ * @returns {{ valid: boolean, error?: string }} Validation result with descriptive error
+ */
+export const validateEscrowParties = (clientAddress, freelancerAddress) => {
+  if (!clientAddress) {
+    return { valid: false, error: "Client wallet address is required." };
+  }
+  if (!freelancerAddress) {
+    return { valid: false, error: "Freelancer recipient wallet address is required." };
+  }
+  if (!isValidStellarAddress(clientAddress)) {
+    return { valid: false, error: "Client address is not a valid Stellar public key." };
+  }
+  if (!isValidStellarAddress(freelancerAddress)) {
+    return { valid: false, error: "Freelancer address is not a valid Stellar public key." };
+  }
+  if (clientAddress === freelancerAddress) {
+    return { 
+      valid: false, 
+      error: "Self-dealing prevented: Client wallet and Freelancer destination wallet cannot be identical. Multi-wallet separation is required." 
+    };
+  }
+  return { valid: true };
+};
+
+/**
+ * Asserts that the client account holds sufficient balance to cover the task amount
+ * plus the required base reserve (1.0 XLM) and network transaction gas fee buffer.
+ *
+ * @param {string} clientAddress - Client public key
+ * @param {number|string} amount - Task amount in XLM
+ * @returns {Promise<{ sufficient: boolean, balance: number, required: number, error?: string }>}
+ */
+export const checkBalanceSufficiency = async (clientAddress, amount) => {
+  const taskAmount = parseFloat(amount) || 0;
+  const reserveBuffer = 1.5; // 1.0 XLM base reserve + 0.5 XLM fee buffer
+  const totalRequired = taskAmount + reserveBuffer;
+
+  const { raw: currentBalance, active, isDemo } = await getAccountBalance(clientAddress);
+
+  if (isDemo) {
+    return { sufficient: true, balance: 10000, required: totalRequired };
+  }
+
+  if (!active || currentBalance < totalRequired) {
+    return {
+      sufficient: false,
+      balance: currentBalance,
+      required: totalRequired,
+      error: `Insufficient balance: Account holds ${currentBalance.toFixed(2)} XLM, but ${totalRequired.toFixed(2)} XLM is required (including 1.5 XLM base reserve & gas buffer).`
+    };
+  }
+
+  return { sufficient: true, balance: currentBalance, required: totalRequired };
+};
+
+/**
+ * Polls the Soroban RPC for transaction finality using an exponential backoff schedule.
+ * Mitigates network latency, prevents RPC rate-limiting, and catches temporary transport errors.
+ *
+ * @param {string} txHash - Transaction hash to query
+ * @param {Object} [options]
+ * @param {number} [options.maxAttempts=8] - Maximum number of polling retries
+ * @param {number} [options.initialDelayMs=1500] - Initial delay in milliseconds
+ * @param {number} [options.backoffMultiplier=1.5] - Exponential multiplier per attempt
+ * @param {number} [options.maxDelayMs=5000] - Maximum delay ceiling
+ * @returns {Promise<{ status: string, hash: string, explorerUrl: string, attempts: number }>}
+ */
+export const pollSorobanTransactionWithBackoff = async (
+  txHash,
+  {
+    maxAttempts = 8,
+    initialDelayMs = 1500,
+    backoffMultiplier = 1.5,
+    maxDelayMs = 5000
+  } = {}
+) => {
+  let attempts = 0;
+  let currentDelay = initialDelayMs;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    await new Promise((resolve) => setTimeout(resolve, currentDelay));
+
+    try {
+      const txStatus = await sorobanServer.getTransaction(txHash);
+      if (txStatus.status === 'SUCCESS') {
+        return {
+          status: 'SUCCESS',
+          hash: txHash,
+          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+          attempts
+        };
+      } else if (txStatus.status === 'FAILED') {
+        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
+      }
+    } catch (queryErr) {
+      if (queryErr.message.includes("failed on-chain")) {
+        throw queryErr;
+      }
+      console.warn(`[Soroban RPC Poll] Attempt ${attempts}/${maxAttempts} transient notice:`, queryErr.message);
+    }
+
+    currentDelay = Math.min(Math.round(currentDelay * backoffMultiplier), maxDelayMs);
+  }
+
+  return {
+    status: 'SUBMITTED',
+    hash: txHash,
+    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+    attempts
+  };
 };
 
 /**
@@ -298,6 +440,18 @@ export const submitFundTask = async ({
   amount,
   tokenAddress = NATIVE_SAC_CONTRACT_ID
 }) => {
+  // 1. Enforce multi-wallet separation and anti-self-dealing check
+  const partyValidation = validateEscrowParties(clientAddress, freelancerAddress);
+  if (!partyValidation.valid) {
+    throw new Error(partyValidation.error);
+  }
+
+  // 2. Pre-flight base reserve and gas fee check
+  const balanceCheck = await checkBalanceSufficiency(clientAddress, amount);
+  if (!balanceCheck.sufficient) {
+    throw new Error(balanceCheck.error);
+  }
+
   // Graceful fallback for demo or offline presentation
   if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
     console.log(`[DEMO MODE] Simulating fund_task submission for ${amount} XLM`);
@@ -312,7 +466,7 @@ export const submitFundTask = async ({
   }
 
   try {
-    // 1. Prepare & simulate transaction
+    // 3. Prepare & simulate transaction
     const { preparedTx } = await simulateFundTask({
       clientAddress,
       freelancerAddress,
@@ -320,7 +474,7 @@ export const submitFundTask = async ({
       tokenAddress
     });
 
-    // 2. Request user signature via Freighter
+    // 4. Request user signature via Freighter
     const signedXdr = await withTimeout(
       signTransaction(preparedTx.toXDR(), { network: NETWORK }),
       30000
@@ -332,7 +486,7 @@ export const submitFundTask = async ({
 
     const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE);
 
-    // 3. Submit transaction to Soroban RPC
+    // 5. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
 
     if (sendResult.status === 'ERROR') {
@@ -341,32 +495,13 @@ export const submitFundTask = async ({
 
     const txHash = sendResult.hash;
 
-    // 4. Poll for final confirmation (up to 30 seconds)
-    let status = sendResult.status;
-    let attempts = 0;
-    while (status === 'PENDING' && attempts < 15) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const txStatus = await sorobanServer.getTransaction(txHash);
-      status = txStatus.status;
-      attempts++;
+    // 6. Resilient polling with exponential backoff
+    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
 
-      if (status === 'SUCCESS') {
-        return {
-          success: true,
-          hash: txHash,
-          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-          isDemo: false
-        };
-      } else if (status === 'FAILED') {
-        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
-      }
-    }
-
-    // Return submitted state even if RPC polling lagged
     return {
       success: true,
       hash: txHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      explorerUrl: pollResult.explorerUrl,
       isDemo: false
     };
   } catch (error) {
@@ -475,31 +610,13 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
 
     const txHash = sendResult.hash;
 
-    // 4. Poll for final confirmation (up to 30 seconds)
-    let status = sendResult.status;
-    let attempts = 0;
-    while (status === 'PENDING' && attempts < 15) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const txStatus = await sorobanServer.getTransaction(txHash);
-      status = txStatus.status;
-      attempts++;
-
-      if (status === 'SUCCESS') {
-        return {
-          success: true,
-          hash: txHash,
-          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-          isDemo: false
-        };
-      } else if (status === 'FAILED') {
-        throw new Error(`Soroban approve_task invocation failed on-chain: ${txHash}`);
-      }
-    }
+    // 4. Resilient polling with exponential backoff
+    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
 
     return {
       success: true,
       hash: txHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      explorerUrl: pollResult.explorerUrl,
       isDemo: false
     };
   } catch (error) {
