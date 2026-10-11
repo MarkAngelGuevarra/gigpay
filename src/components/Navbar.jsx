@@ -77,7 +77,26 @@ const Navbar = () => {
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
       </a>
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <a
+          href="https://forms.gle/oLGjJRcxg5LZ5bC96"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-outline"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            borderColor: 'rgba(0, 242, 254, 0.45)',
+            background: 'rgba(0, 242, 254, 0.08)',
+            color: '#00f2fe',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            textDecoration: 'none'
+          }}
+        >
+          🚀 Pilot Tester Form <ExternalLink size={14} />
+        </a>
         {user ? (
           <>
             {user.user_metadata?.role === 'client' && (
