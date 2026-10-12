@@ -45,17 +45,16 @@ const ClientDashboard = () => {
     }
     setIsEstimating(true);
     setTimeout(() => {
-      // Simple mock logic based on words
       const words = newTaskTitle.toLowerCase();
-      let est = 100;
-      if (words.includes('website') || words.includes('app')) est = 1000;
-      if (words.includes('logo') || words.includes('design')) est = 300;
-      if (words.includes('smart contract') || words.includes('blockchain')) est = 2500;
+      let est = 2;
+      if (words.includes('website') || words.includes('app')) est = 5;
+      if (words.includes('logo') || words.includes('design')) est = 2;
+      if (words.includes('smart contract') || words.includes('blockchain')) est = 10;
       
       setNewTaskAmount(est.toString());
       setIsEstimating(false);
-      addToast(`AI estimated a fair market rate of $${est} USDC for this task.`, "success");
-    }, 1500);
+      addToast(`AI estimated a Testnet milestone rate of ${est} XLM for this task.`, "success");
+    }, 1000);
   };
 
   const handleApprove = async () => {
@@ -117,7 +116,7 @@ const ClientDashboard = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2>Client Portal</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Manage your funded tasks and approve work.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Manage your funded Stellar Soroban escrow tasks and approve milestone releases.</p>
         </div>
       </div>
 
@@ -129,7 +128,45 @@ const ClientDashboard = () => {
               Loading tasks from blockchain...
             </div>
           ) : clientTasks.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No active tasks.</p>
+            <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(0, 242, 254, 0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  🚀 PILOT TESTER QUICK-START
+                </span>
+              </div>
+              <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>No Active Escrows Yet — Ready to Test!</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                Welcome to the GigPay Client Portal on <strong>Stellar Soroban Protocol 22</strong>. Follow these 3 quick steps to complete your pilot evaluation:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.86rem', color: 'var(--text-main)' }}>
+                <div><strong>1️⃣ Connect Wallet (Optional on Mobile):</strong> Click <em>Connect Wallet</em> in the top bar (or pre-fill a sample task below).</div>
+                <div><strong>2️⃣ Lock Testnet Escrow:</strong> Click the button below to pre-fill a <strong>2 XLM</strong> sample milestone and lock it in Soroban contract <code>CAUU2O...7RD3</code>.</div>
+                <div><strong>3️⃣ Record Your Session:</strong> Take a quick screenshot of this dashboard and submit the 60-second Pilot Tester Form!</div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setNewTaskTitle('UI/UX Prototype & Soroban Integration');
+                    setNewTaskAmount('2');
+                    addToast('Sample 2 XLM milestone loaded! Click "Lock Funds in Escrow" on the right.', 'success');
+                  }}
+                  style={{ fontSize: '0.85rem', padding: '0.55rem 1rem' }}
+                >
+                  ⚡ Fill Sample Task (2 XLM)
+                </button>
+                <a
+                  href="https://forms.gle/oLGjJRcxg5LZ5bC96"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 1rem', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', textDecoration: 'none' }}
+                >
+                  📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
+                </a>
+              </div>
+            </div>
           ) : null}
           {!isLoading && clientTasks.map(task => (
             <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
@@ -145,7 +182,7 @@ const ClientDashboard = () => {
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: task.status === 'Disputed' ? '#ef4444' : 'var(--accent)' }}>
-                    ${task.amount} USDC
+                    {task.amount} XLM
                   </div>
                   
                   {task.status === 'In Progress' && (
@@ -215,7 +252,7 @@ const ClientDashboard = () => {
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
-                <label style={{ color: 'var(--text-muted)' }}>Amount (USDC)</label>
+                <label style={{ color: 'var(--text-muted)' }}>Escrow Amount (Testnet XLM)</label>
                 <button 
                   type="button" 
                   onClick={simulateAIEstimate}
@@ -227,12 +264,35 @@ const ClientDashboard = () => {
               </div>
               <input 
                 type="number" 
-                placeholder="100" 
+                step="any"
+                min="0.1"
+                placeholder="2" 
                 value={newTaskAmount}
                 onChange={(e) => setNewTaskAmount(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} 
                 required
               />
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+                {['1', '2', '5'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setNewTaskAmount(preset)}
+                    style={{
+                      flex: 1,
+                      padding: '0.3rem 0.5rem',
+                      fontSize: '0.75rem',
+                      borderRadius: '0.35rem',
+                      border: newTaskAmount === preset ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.12)',
+                      background: newTaskAmount === preset ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0,0,0,0.25)',
+                      color: newTaskAmount === preset ? '#00f2fe' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {preset} XLM
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div style={{ marginBottom: '1.25rem' }}>

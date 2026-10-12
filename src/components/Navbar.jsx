@@ -72,12 +72,12 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar animate-fade-in" style={{ flexWrap: 'wrap' }}>
+    <nav className="navbar animate-fade-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
       <a href="/" className="logo">
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
       </a>
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <a
           href="https://forms.gle/oLGjJRcxg5LZ5bC96"
           target="_blank"
@@ -86,24 +86,26 @@ const Navbar = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem',
+            gap: '0.35rem',
+            padding: '0.42rem 0.75rem',
             borderColor: 'rgba(0, 242, 254, 0.45)',
             background: 'rgba(0, 242, 254, 0.08)',
             color: '#00f2fe',
-            fontSize: '0.85rem',
+            fontSize: '0.8rem',
             fontWeight: 600,
-            textDecoration: 'none'
+            textDecoration: 'none',
+            whiteSpace: 'nowrap'
           }}
         >
-          🚀 Pilot Tester Form <ExternalLink size={14} />
+          🚀 Pilot Tester Form <ExternalLink size={13} />
         </a>
         {user ? (
           <>
             {user.user_metadata?.role === 'client' && (
-              <Link to="/client" className="btn btn-outline">Client Portal</Link>
+              <Link to="/client" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Client Portal</Link>
             )}
             {user.user_metadata?.role === 'freelancer' && (
-              <Link to="/freelancer" className="btn btn-outline">Freelancer Portal</Link>
+              <Link to="/freelancer" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Freelancer Portal</Link>
             )}
             
             {/* Visual Role Badge for Demo Clarity */}
@@ -111,41 +113,43 @@ const Navbar = () => {
               <span style={{
                 background: user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
                 color: user.user_metadata.role === 'client' ? '#60a5fa' : '#a78bfa',
-                padding: '0.3rem 0.8rem',
+                padding: '0.28rem 0.65rem',
                 borderRadius: '999px',
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 fontWeight: 'bold',
-                letterSpacing: '1px',
+                letterSpacing: '0.8px',
                 textTransform: 'uppercase',
                 border: `1px solid ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
                 display: 'flex',
                 alignItems: 'center',
+                whiteSpace: 'nowrap',
                 boxShadow: `0 0 10px ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`
               }}>
                 {user.user_metadata.role}
               </span>
             )}
             {publicKey ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
                 {/* Live Testnet Network & Balance Pill */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: '0.35rem',
                   background: 'rgba(59, 130, 246, 0.12)',
                   border: '1px solid rgba(59, 130, 246, 0.35)',
-                  padding: '0.4rem 0.8rem',
+                  padding: '0.35rem 0.65rem',
                   borderRadius: '0.5rem',
-                  fontSize: '0.8rem',
-                  color: '#93c5fd'
+                  fontSize: '0.78rem',
+                  color: '#93c5fd',
+                  whiteSpace: 'nowrap'
                 }}>
-                  <Globe size={14} style={{ color: '#60a5fa' }} />
+                  <Globe size={13} style={{ color: '#60a5fa' }} />
                   <span style={{ fontWeight: '600' }}>Testnet</span>
                   {balance !== null && (
                     <span style={{
-                      marginLeft: '0.3rem',
+                      marginLeft: '0.25rem',
                       background: 'rgba(255, 255, 255, 0.08)',
-                      padding: '0.15rem 0.45rem',
+                      padding: '0.12rem 0.4rem',
                       borderRadius: '4px',
                       color: '#ffffff',
                       fontWeight: '700'
@@ -159,29 +163,30 @@ const Navbar = () => {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.4rem',
                   background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '0.4rem 0.8rem',
+                  padding: '0.35rem 0.65rem',
                   borderRadius: '0.5rem',
-                  border: '1px solid var(--accent)'
+                  border: '1px solid var(--accent)',
+                  whiteSpace: 'nowrap'
                 }}>
-                  <span style={{ width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
+                  <span style={{ width: '7px', height: '7px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
                 </div>
               </div>
             ) : (
-              <button className="btn btn-primary" onClick={handleConnect}>Connect Wallet</button>
+              <button className="btn btn-primary" onClick={handleConnect} style={{ padding: '0.42rem 0.85rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Connect Wallet</button>
             )}
 
-            <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: 'transparent', color: 'var(--text-main)' }}>
-              <User size={16} /> Profile
+            <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+              <User size={15} /> Profile
             </Link>
-            <button onClick={handleSignOut} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: 'transparent', color: 'var(--text-muted)' }}>
-              <LogOut size={16} /> Sign Out
+            <button onClick={handleSignOut} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              <LogOut size={15} /> Sign Out
             </button>
           </>
         ) : (
-          <Link to="/auth" className="btn btn-primary">Sign In / Sign Up</Link>
+          <Link to="/auth?mode=signup" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>Sign In / Sign Up</Link>
         )}
       </div>
       {error && (
