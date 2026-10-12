@@ -9,7 +9,10 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !(params.get('mode') === 'signup' || params.get('signup') === '1');
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,16 +36,24 @@ const AuthPage = () => {
         navigate(userRole === 'client' ? '/client' : '/freelancer');
       } else {
         const data = await signUp(email, password, { role });
-        addToast("Account created successfully! Please check your email to verify your account before logging in.", "success");
-        setIsLogin(true); // switch to login mode
-        setPassword('');
-        setConfirmPassword('');
+        if (data?.session || data?.user) {
+          addToast("Pilot account created! Redirecting to your dashboard...", "success");
+          navigate(role === 'client' ? '/client' : '/freelancer');
+        } else {
+          addToast("Account created successfully! You can now sign in.", "success");
+          setIsLogin(true);
+          setPassword('');
+          setConfirmPassword('');
+        }
       }
     } catch (error) {
       console.error("Auth error:", error);
       let errorMsg = error?.message || error?.error_description;
       if (!errorMsg || errorMsg === '{}' || (typeof errorMsg === 'object' && Object.keys(errorMsg).length === 0)) {
-        errorMsg = "Invalid email or password. If you don't have an account, click 'Sign Up' below.";
+        errorMsg = "Invalid email or password. New tester? Click '🚀 Sign Up (New Tester)' at the top first!";
+      }
+      if (typeof errorMsg === 'string' && errorMsg.includes('Invalid login credentials')) {
+        errorMsg = "Account not found yet! Click the '🚀 Sign Up (New Tester)' tab above to register your email first.";
       }
       if (typeof errorMsg === 'string' && errorMsg.includes('Email not confirmed')) {
         addToast("Please check your email and click the confirmation link before logging in.", "error");
@@ -61,8 +72,8 @@ const AuthPage = () => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '420px', padding: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
           <img 
             src="/logo.png" 
             alt="GigPay Emblem" 
@@ -75,9 +86,63 @@ const AuthPage = () => {
             }} 
           />
         </div>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          {isLogin ? 'Welcome Back' : 'Create an Account'}
+
+        {/* Prominent Top Mode Switcher Tabs for Pilot Testers */}
+        <div style={{
+          display: 'flex',
+          gap: '0.4rem',
+          background: 'rgba(0, 0, 0, 0.35)',
+          padding: '0.35rem',
+          borderRadius: '0.65rem',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '1.25rem'
+        }}>
+          <button
+            type="button"
+            onClick={() => setIsLogin(false)}
+            style={{
+              flex: 1.2,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '0.45rem',
+              border: !isLogin ? '1px solid rgba(0, 242, 254, 0.6)' : '1px solid transparent',
+              background: !isLogin ? 'rgba(0, 242, 254, 0.16)' : 'transparent',
+              color: !isLogin ? '#00f2fe' : 'var(--text-muted)',
+              fontWeight: !isLogin ? 700 : 500,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            🚀 Sign Up (New Tester)
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsLogin(true)}
+            style={{
+              flex: 0.8,
+              padding: '0.6rem 0.5rem',
+              borderRadius: '0.45rem',
+              border: isLogin ? '1px solid rgba(0, 242, 254, 0.6)' : '1px solid transparent',
+              background: isLogin ? 'rgba(0, 242, 254, 0.16)' : 'transparent',
+              color: isLogin ? '#00f2fe' : 'var(--text-muted)',
+              fontWeight: isLogin ? 700 : 500,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Sign In
+          </button>
+        </div>
+
+        <h2 style={{ textAlign: 'center', marginBottom: '0.35rem', fontSize: '1.35rem' }}>
+          {isLogin ? 'Welcome Back' : 'Create Pilot Tester Account'}
         </h2>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+          {isLogin
+            ? 'New to GigPay? Click "🚀 Sign Up (New Tester)" above to register your email.'
+            : 'Register with your email to log your verified Week 4 pilot session.'}
+        </p>
         
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
@@ -239,10 +304,13 @@ const AuthPage = () => {
           </button>
         </div>
 
-        {/* Tester & Reviewer Quick-Fill */}
+        {/* Grant Reviewer Quick-Fill */}
         <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <div style={{ fontSize: '0.75rem', color: '#00f2fe', textAlign: 'center', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-            ⚡ Tester & Reviewer Credentials
+          <div style={{ fontSize: '0.72rem', color: '#00f2fe', textAlign: 'center', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
+            🔍 Grant Reviewer Quick-Fill (Shared Demo)
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '0.75rem' }}>
+            Pilot Testers: Use <strong>🚀 Sign Up (New Tester)</strong> above with your own email!
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -272,7 +340,7 @@ const AuthPage = () => {
                 e.currentTarget.style.borderColor = 'rgba(0, 242, 254, 0.3)';
               }}
             >
-              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#00f2fe' }}>👤 Client Tester</div>
+              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#00f2fe' }}>👤 Demo Client</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>client@gigpay.tech</div>
             </button>
             <button
@@ -302,12 +370,9 @@ const AuthPage = () => {
                 e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
               }}
             >
-              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#c084fc' }}>🛠️ Freelancer Tester</div>
+              <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#c084fc' }}>🛠️ Demo Freelancer</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>freelancer@gigpay.tech</div>
             </button>
-          </div>
-          <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.6rem' }}>
-            Default Password: <code style={{ color: '#00f2fe', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>password123</code>
           </div>
         </div>
       </div>
