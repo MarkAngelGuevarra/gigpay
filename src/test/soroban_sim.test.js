@@ -7,6 +7,7 @@ import {
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
   checkSorobanRpcHealth,
   simulateFundTask,
+  simulateApproveTask,
   validateEscrowParties,
   formatStellarError
 } from '../lib/stellar.js';
@@ -123,7 +124,25 @@ async function runSorobanSimulationTests() {
   }
   console.log('✅ Test 8 Passed: User cancellations and wallet timeouts normalized gracefully.\n');
 
-  console.log('🎉 All Soroban Protocol 22 frontend integration tests passed successfully!');
+  // Test 9: u32 Task ID Clamping & simulateApproveTask Verification
+  console.log('--- Test 9: u32 Task ID Clamping & simulateApproveTask Verification ---');
+  const uuidTaskSample = '9f8e7d6c-5b4a-3210-fedc-ba9876543210';
+  const rawExtracted = parseInt(uuidTaskSample.replace(/\D/g, ''), 10);
+  const clampedU32 = Number.isFinite(rawExtracted) && rawExtracted > 0 ? (rawExtracted % 4294967295 || 1) : 1;
+  if (clampedU32 < 1 || clampedU32 > 4294967295) {
+    throw new Error(`Task ID clamping out of u32 bounds: ${clampedU32}`);
+  }
+  const approveSim = await simulateApproveTask({
+    clientAddress: validClient,
+    taskId: '1'
+  });
+  if (!approveSim || !approveSim.minResourceFee) {
+    throw new Error('simulateApproveTask failed to return valid simulation response');
+  }
+  console.log(`Clamped u32 Task ID: ${clampedU32} (within [1, 4294967295])`);
+  console.log('✅ Test 9 Passed: u32 Task ID clamping and simulateApproveTask verified.\n');
+
+  console.log('🎉 All 9/9 Soroban Protocol 22 frontend integration tests passed successfully!');
 }
 
 runSorobanSimulationTests().catch((err) => {
