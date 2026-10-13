@@ -47,3 +47,5 @@
 - **Live Production URL:** [https://gigpay.tech](https://gigpay.tech) (Mirror: [https://gigpay-gules.vercel.app](https://gigpay-gules.vercel.app))
 - **Pilot Tester Intake Form:** [https://forms.gle/oLGjJRcxg5LZ5bC96](https://forms.gle/oLGjJRcxg5LZ5bC96) (Integrated into `src/components/Navbar.jsx`)
 - **Product Analytics Telemetry:** `@vercel/analytics` active in `src/App.jsx`
+- **Security Audit Documentation:** [SECURITY_AUDIT.md](SECURITY_AUDIT.md) (Protocol 22 Soroban auth invariants, CSP hardening, zero private key custody)
+- **Automated Verification Suite:** 9/9 Passing assertions in `src/test/soroban_sim.test.js` (including Test 9: `u32` Task ID bounds clamping & `simulateApproveTask` verification)
