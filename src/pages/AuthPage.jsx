@@ -21,7 +21,20 @@ const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const processSubmit = async () => {
-    if (!isLogin && password !== confirmPassword) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '').trim();
+
+    if (!cleanEmail) {
+      addToast("Please enter a valid email address.", "error");
+      return;
+    }
+
+    if (!cleanPassword) {
+      addToast("Please enter your password.", "error");
+      return;
+    }
+
+    if (!isLogin && cleanPassword !== confirmPassword.trim()) {
       addToast("Passwords do not match.", "error");
       return;
     }
@@ -30,12 +43,12 @@ const AuthPage = () => {
     
     try {
       if (isLogin) {
-        const data = await signIn(email, password);
+        const data = await signIn(cleanEmail, cleanPassword);
         addToast("Logged in successfully!", "success");
-        const userRole = data.user.user_metadata?.role || 'client';
+        const userRole = data.user?.user_metadata?.role || 'client';
         navigate(userRole === 'client' ? '/client' : '/freelancer');
       } else {
-        const data = await signUp(email, password, { role });
+        const data = await signUp(cleanEmail, cleanPassword, { role });
         if (data?.session || data?.user) {
           addToast("Pilot account created! Redirecting to your dashboard...", "success");
           navigate(role === 'client' ? '/client' : '/freelancer');

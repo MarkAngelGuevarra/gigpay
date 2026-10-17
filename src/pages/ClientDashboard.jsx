@@ -7,7 +7,7 @@ import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
-  const { user, publicKey } = useAuth();
+  const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus } = useTasks();
   const { addToast } = useToast();
   const clientTasks = tasks.filter(t => t.client_id === user?.id);
@@ -148,6 +148,9 @@ const ClientDashboard = () => {
                   type="button"
                   className="btn btn-primary"
                   onClick={() => {
+                    if (!publicKey) {
+                      connectTesterWallet();
+                    }
                     setNewTaskTitle('UI/UX Prototype & Soroban Integration');
                     setNewTaskAmount('2');
                     addToast('Sample 2 XLM milestone loaded! Click "Lock Funds in Escrow" on the right.', 'success');
