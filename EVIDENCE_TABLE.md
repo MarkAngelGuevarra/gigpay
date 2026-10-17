@@ -49,3 +49,4 @@
 - **Product Analytics Telemetry:** `@vercel/analytics` active in `src/App.jsx`
 - **Security Audit Documentation:** [SECURITY_AUDIT.md](SECURITY_AUDIT.md) (Protocol 22 Soroban auth invariants, CSP hardening, zero private key custody)
 - **Automated Verification Suite:** 9/9 Passing assertions in `src/test/soroban_sim.test.js` (including Test 9: `u32` Task ID bounds clamping & `simulateApproveTask` verification)
+- **Live User Onboarding & Walkthrough Video:** [https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)

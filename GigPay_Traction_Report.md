@@ -38,6 +38,7 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 * **Verified Pilot Testers (Evidence Vault):**
   * **User #01:** Prince Dale Limosnero (`princedale99@gmail.com` / `@princedale99` Telegram) — Client & Web3 UX Tester
   * **User #02:** Ashley Loraine A. Mendoza (`mendozaoraine3@gmail.com` / Messenger) — Freelancer & Remote Worker Persona
+* **Live User Onboarding Recording (Loom):** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
 * **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the local vault at `Downloads/GigPay_Month2_User_Evidence_Vault/`.
 
 ---
