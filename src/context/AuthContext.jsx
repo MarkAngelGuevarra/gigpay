@@ -131,8 +131,14 @@ export const AuthProvider = ({ children }) => {
     return { publicKey: key, network: res.network };
   };
 
+  const connectTesterWallet = () => {
+    const demoKey = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+    setPublicKey(demoKey);
+    return { publicKey: demoKey, network: 'TESTNET' };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signUp, signIn, signOut, publicKey, connectWallet }}>
+    <AuthContext.Provider value={{ user, isLoading, signUp, signIn, signOut, publicKey, connectWallet, connectTesterWallet }}>
       {children}
     </AuthContext.Provider>
   );

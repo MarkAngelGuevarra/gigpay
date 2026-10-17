@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet } = useAuth();
+  const { user, signOut, publicKey, connectWallet, connectTesterWallet } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -236,22 +236,35 @@ const Navbar = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <a 
                 href="https://www.freighter.app/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="btn btn-primary"
-                style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+                style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', whiteSpace: 'nowrap' }}
               >
                 Download Freighter <ExternalLink size={16} />
               </a>
               <button 
+                type="button"
+                onClick={() => {
+                  setShowOnboardingModal(false);
+                  connectTesterWallet();
+                  addToast("Web3 Simulator Wallet activated! You can now test escrows.", "success");
+                }}
+                className="btn btn-outline"
+                style={{ flex: 1, borderColor: 'rgba(0, 242, 254, 0.5)', color: '#00f2fe', whiteSpace: 'nowrap' }}
+              >
+                ⚡ Mobile / Tester Mode
+              </button>
+              <button 
+                type="button"
                 onClick={() => setShowOnboardingModal(false)}
                 className="btn btn-outline"
-                style={{ flex: 1, borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
               >
-                I'll do it later
+                Close
               </button>
             </div>
           </div>
