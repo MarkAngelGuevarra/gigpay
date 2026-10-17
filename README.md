@@ -5,8 +5,8 @@
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Network](https://img.shields.io/badge/Stellar-Testnet%20Protocol%2022-teal)
-![Tests](https://img.shields.io/badge/tests-8%2F8%20passing-brightgreen)
-![SOW Deliverable 2](https://img.shields.io/badge/SOW%20Deliverable%202-Hardened-green)
+![Tests](https://img.shields.io/badge/tests-9%2F9%20passing-brightgreen)
+![SOW Deliverable 3](https://img.shields.io/badge/SOW%20Deliverable%203-Verified-green)
 
 **Stellar Philippines Instawards 2026 Sprint**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
@@ -84,11 +84,11 @@ For complete multi-wallet manual reproduction instructions (Client Persona A vs 
 ### 📋 SOW Instawards Milestone Scorecard
 
 | Milestone | SOW Deliverable | Status | Evidence / Verification |
-| :--- | :--- | :---: | :--- |
+| :--- | :--- | :--- | :--- |
 | **Week 1** | Deliverable 1: Testnet Escrow Contract Deployment | ✅ Complete | PR #2 merged, Contract ID: `CAUU2O5Z...` |
 | **Week 2** | Deliverable 1 & 2: Frontend Wiring & Execution | ✅ Complete | PR #3 merged, 10 on-chain tx hashes verified |
-| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4, 8/8 automated tests, `TESTING.md` runbook |
-| **Week 4** | Deliverable 3: Final Verification & Capstone Video | 🔒 Locked | Capstone dossier & 3-min walkthrough video |
+| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4 merged, 8/8 automated tests, `TESTING.md` runbook |
+| **Week 4** | Deliverable 3: Final Verification & Capstone Video | ✅ Complete | PR #5, 9/9 automated tests, `SECURITY_AUDIT.md`, Traction Report |
 
 ---
 
