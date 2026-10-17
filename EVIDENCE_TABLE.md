@@ -32,3 +32,21 @@
   - `src/context/TaskContext.jsx`: Wired contract funding and approval triggers to live Freighter signatures and RPC polling
   - `src/pages/ClientDashboard.jsx`: Dynamic on-chain transaction badges linking directly to Stellar Expert explorer
 
+## 🛡️ Week 3 Deliverable Verification: Multi-Wallet Hardening & Error Resilience
+- **Branch / PR:** `week-3-freighter-execution` (Pull Request #4 — Merged)
+- **SOW Milestone:** Deliverable 2 — Multi-Wallet Escrow Execution & Error Resilience ($2,000 USD Allocation)
+- **Automated Verification Suite:** 8/8 Passing assertions in `src/test/soroban_sim.test.js` and [TESTING.md](TESTING.md) runbook
+- **Hardened Capabilities:**
+  - `validateEscrowParties`: Enforces distinct Client (`GBUGB...`) and Freelancer (`GAATY...`) Ed25519 keys and blocks self-dealing
+  - `formatStellarError`: Normalizes user signature rejections, RPC timeouts, and insufficient XLM reserve errors
+  - Exponential backoff Soroban RPC polling (`1500ms -> 2250ms -> 3375ms -> 5000ms` ceiling)
+
+## 📋 Week 4 Deliverable 3 Verification Matrix & Pilot Onboarding Telemetry (In Progress)
+- **Branch / PR:** `week-4-verification-package` (Pull Request #5)
+- **SOW Milestone:** Deliverable 3 — Verification Package, Security Audit & Capstone Walkthrough ($500 USD Allocation)
+- **Live Production URL:** [https://gigpay.tech](https://gigpay.tech) (Mirror: [https://gigpay-gules.vercel.app](https://gigpay-gules.vercel.app))
+- **Pilot Tester Intake Form:** [https://forms.gle/oLGjJRcxg5LZ5bC96](https://forms.gle/oLGjJRcxg5LZ5bC96) (Integrated into `src/components/Navbar.jsx`)
+- **Product Analytics Telemetry:** `@vercel/analytics` active in `src/App.jsx`
+- **Security Audit Documentation:** [SECURITY_AUDIT.md](SECURITY_AUDIT.md) (Protocol 22 Soroban auth invariants, CSP hardening, zero private key custody)
+- **Automated Verification Suite:** 9/9 Passing assertions in `src/test/soroban_sim.test.js` (including Test 9: `u32` Task ID bounds clamping & `simulateApproveTask` verification)
+- **Live User Onboarding & Walkthrough Video:** [https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
