@@ -38,7 +38,9 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 * **Verified Pilot Testers (Evidence Vault):**
   * **User #01:** Prince Dale Limosnero (`princedale99@gmail.com` / `@princedale99` Telegram) — Client & Web3 UX Tester
   * **User #02:** Ashley Loraine A. Mendoza (`mendozaoraine3@gmail.com` / Messenger) — Freelancer & Remote Worker Persona
-* **Live User Onboarding Recording (Loom):** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
+* **Live User Onboarding Recordings (Loom):**
+  * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 6 community members on camera (Clarence Ingal, Christian Daniel Gerlan, Ashley Loraine Mendoza, Ella Deladia, Prince Dale Limosnero, and Mark Angel Guevarra) demonstrating milestone creation, escrow lock, and mobile tester mode.
+  * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
 * **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the local vault at `Downloads/GigPay_Month2_User_Evidence_Vault/`.
 
 ---
