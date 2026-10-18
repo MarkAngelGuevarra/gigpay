@@ -43,6 +43,13 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
 * **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the public Google Drive evidence vault at [GigPay Month 2 User Evidence Vault](https://drive.google.com/drive/folders/1ePGnn2aVU8KE2qq0h-zjB3pwHAqXBH-M?usp=sharing).
 
+### 3.2 Public X (Twitter) Weekly Ship Posts
+Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X tagging `@StellarOrg`, `@PHI_stellar`, and `@riseinweb3`:
+* **Week 1 Ship Post (Sep 22, 2026):** [`https://x.com/GigPayPH/status/2102193930150502781`](https://x.com/GigPayPH/status/2102193930150502781) — Soroban escrow deployment, 4/4 Rust unit tests & contract ID.
+* **Week 2 Ship Post (Oct 1, 2026):** [`https://x.com/GigPayPH/status/2105480741761282160`](https://x.com/GigPayPH/status/2105480741761282160) — Frontend UI wiring, live Freighter balance, Soroban simulation & escrow funding/release.
+* **Week 3 Ship Post (Oct 10, 2026):** [`https://x.com/GigPayPH/status/2108793569138110574`](https://x.com/GigPayPH/status/2108793569138110574) — Multi-wallet escrow execution, anti-self-dealing assertion & exponential backoff RPC resilience.
+* **Week 4 Ship Post (Oct 17, 2026):** [`https://x.com/GigPayPH/status/2111271953164300425`](https://x.com/GigPayPH/status/2111271953164300425) — Final verification package, security audit, 9/9 passing tests & 14+ verified pilot testers.
+
 ---
 
 ## 4. Production Web Analytics Telemetry (`@vercel/analytics`)

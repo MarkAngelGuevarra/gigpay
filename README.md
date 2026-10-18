@@ -85,10 +85,10 @@ For complete multi-wallet manual reproduction instructions (Client Persona A vs 
 
 | Milestone | SOW Deliverable | Status | Evidence / Verification |
 | :--- | :--- | :--- | :--- |
-| **Week 1** | Deliverable 1: Testnet Escrow Contract Deployment | ✅ Complete | PR #2 merged, Contract ID: `CAUU2O5Z...` |
-| **Week 2** | Deliverable 1 & 2: Frontend Wiring & Execution | ✅ Complete | PR #3 merged, 10 on-chain tx hashes verified |
-| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4 merged, 8/8 automated tests, `TESTING.md` runbook |
-| **Week 4** | Deliverable 3: Final Verification & Capstone Video | ✅ Complete | [Live Group Onboarding Call](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) & [Capstone Walkthrough](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6), PR #5 merged, 9/9 tests, `SECURITY_AUDIT.md` |
+| **Week 1** | Deliverable 1: Testnet Escrow Contract Deployment | ✅ Complete | PR #2 merged, Contract ID: `CAUU2O5Z...`, [Week 1 X Ship Post](https://x.com/GigPayPH/status/2102193930150502781) |
+| **Week 2** | Deliverable 1 & 2: Frontend Wiring & Execution | ✅ Complete | PR #3 merged, 10 on-chain tx hashes, [Week 2 X Ship Post](https://x.com/GigPayPH/status/2105480741761282160) |
+| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4 merged, 9/9 automated tests, `TESTING.md`, [Week 3 X Ship Post](https://x.com/GigPayPH/status/2108793569138110574) |
+| **Week 4** | Deliverable 3: Final Verification & Capstone Video | ✅ Complete | [Live Group Onboarding Call](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0), [Capstone Walkthrough](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6), PR #5 merged, `SECURITY_AUDIT.md`, [Week 4 X Ship Post](https://x.com/GigPayPH/status/2111271953164300425) |
 
 ---
 
