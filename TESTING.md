@@ -18,7 +18,7 @@ The test suite validates RPC health, contract schema, transaction footprint simu
 npm test
 ```
 
-### Verified Assertions (8/8 Passing):
+### Verified Assertions (9/9 Passing):
 1. **RPC Endpoint Health:** Queries `https://soroban-testnet.stellar.org` and asserts endpoint responsiveness.
 2. **Contract & SAC Formatting:** Asserts StrKey C-address format for both Escrow Contract and Native SAC.
 3. **`fund_task` Transaction Simulation:** Generates simulated auth entries and validates calculated resource fee footprint.
@@ -27,6 +27,7 @@ npm test
 6. **Exponential Backoff Schedule:** Validates progressive delay math (`1500ms -> 2250ms -> 3375ms -> 5000ms -> 5000ms`) with hard upper ceiling.
 7. **`validateEscrowParties` Unit Logic:** Validates rejection of empty keys, malformed addresses, and identical self-dealing wallets.
 8. **`formatStellarError` Normalization:** Validates graceful message formatting for Freighter user rejections, signature cancellations, and network timeouts.
+9. **`u32` Task ID Clamping & `simulateApproveTask`:** Validates numeric clamping within `[1, 4294967295]` and simulated approval state release.
 
 ---
 

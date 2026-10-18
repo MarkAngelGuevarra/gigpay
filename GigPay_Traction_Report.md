@@ -5,7 +5,7 @@
 **Live Production URL:** [`https://gigpay.tech`](https://gigpay.tech) (Mirror: [`https://gigpay-gules.vercel.app`](https://gigpay-gules.vercel.app))  
 **Active Testnet Contract ID:** [`CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)  
 **Soroban Protocol Version:** Protocol 22  
-**Reporting Date:** Thursday, October 15, 2026  
+**Reporting Date:** Sunday, October 18, 2026  
 
 ---
 
@@ -41,7 +41,7 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 * **Live User Onboarding Recordings (Loom):**
   * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 6 community members on camera (Clarence Ingal, Christian Daniel Gerlan, Ashley Loraine Mendoza, Ella Deladia, Prince Dale Limosnero, and Mark Angel Guevarra) demonstrating milestone creation, escrow lock, and mobile tester mode.
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
-* **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the local vault at `Downloads/GigPay_Month2_User_Evidence_Vault/`.
+* **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the public Google Drive evidence vault at [GigPay Month 2 User Evidence Vault](https://drive.google.com/drive/folders/1ePGnn2aVU8KE2qq0h-zjB3pwHAqXBH-M?usp=sharing).
 
 ---
 
@@ -51,13 +51,13 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 
 | Metric | Value | Strategic Significance |
 | :--- | :--- | :--- |
-| **Unique Visitors** | **44+ Unique Visitors** | Authentic organic reach |
-| **Total Page Views** | **64+ Page Views** | Multi-page exploration |
-| **Top Page: Landing (/)** | **31 Visitors / 37 Views** | High initial discovery |
-| **Top Page: Auth (/auth)** | **15 Visitors / 25 Views** | **32% Sign-Up Intent Rate** |
-| **Mobile Share** | **25% Mobile (Android 18%, iOS 7%)** | Validates simulator need |
-| **Top Referrer (Social)** | **46% Facebook / Messenger** | Personal DM conversion |
-| **Core Geographic Market** | **30% Philippines (13 users)** | **2.3 pages/visit density** |
+| **Unique Visitors** | **104 Unique Visitors** | Authentic organic reach (up from 44+) |
+| **Total Page Views** | **266 Total Page Views** | Deep multi-page exploration (up from 64+) |
+| **Top Page: Landing (/)** | **68 Visitors / 111 Views** | High initial discovery |
+| **Top Page: Auth (/auth)** | **50 Visitors / 88 Views** | **48% Sign-Up Intent Rate** |
+| **Active Onboarded Users** | **22 Authenticated Users** | Real Supabase Auth accounts with unique UUIDs |
+| **Mobile & OS Share** | **47% Windows, 35% Android, 9% iOS, 9% Linux** | Strong mobile penetration validating simulator need |
+| **Core Geographic Market** | **53% Philippines (55 visitors / 183 page views)** | Primary domestic target audience engagement |
 
 ---
 
@@ -77,7 +77,7 @@ Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Delivera
 | **Week 1** | **Deliverable 1:** Core Soroban Escrow Contract (`lib.rs`), Unit Tests, Testnet Deployment (`CAUU2O...7RD3`) | $1,500 USD | ✅ **COMPLETED (PR #2)** |
 | **Week 2** | **Deliverable 2 (Part 1):** Frontend UI Integration, Freighter Connection, Task State Synchronization | $1,000 USD | ✅ **COMPLETED (PR #3)** |
 | **Week 3** | **Deliverable 2 (Part 2):** Multi-Wallet Hardening, Anti-Self-Dealing Assertion, RPC Backoff Resilience | $1,000 USD | ✅ **COMPLETED (PR #4)** |
-| **Week 4** | **Deliverable 3:** Verification Package, Security Audit, Traction Telemetry, Capstone Loom Walkthrough | $500 USD | 🟢 **IN PROGRESS (PR #5)** |
+| **Week 4** | **Deliverable 3:** Verification Package, Security Audit, Traction Telemetry, Capstone Loom Walkthrough | $500 USD | ✅ **COMPLETED (PR #5 Merged)** |
 | **TOTAL** | **Full Month 1 Instawards Scope** | **$5,000 USD** | **100% On Track** |
 
 ---
