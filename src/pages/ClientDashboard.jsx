@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink } from 'lucide-react';
+import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, Zap } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +10,7 @@ const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus } = useTasks();
   const { addToast } = useToast();
-  const clientTasks = tasks.filter(t => t.client_id === user?.id);
+  const clientTasks = tasks.filter(t => t.client_id === user?.id || (user?.id === 'demo-client-uuid-001' && (!t.client_id || t.client_id === 'demo-client-uuid-001')));
   
   const [isTransacting, setIsTransacting] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -19,11 +19,12 @@ const ClientDashboard = () => {
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
+  const [justCreatedTask, setJustCreatedTask] = useState(null);
 
   const initiateApproval = (id) => {
     if (!publicKey) {
-      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
-      return;
+      connectTesterWallet();
+      addToast("Connected Testnet Simulator Wallet for milestone release.", "info");
     }
     setTaskToApprove(id);
     setConfirmText('');
@@ -60,8 +61,7 @@ const ClientDashboard = () => {
   const handleApprove = async () => {
     if (confirmText !== 'CONFIRM' || !taskToApprove) return;
     if (!publicKey) {
-      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
-      return;
+      connectTesterWallet();
     }
     setIsTransacting(true);
     const taskId = taskToApprove;
@@ -83,6 +83,11 @@ const ClientDashboard = () => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskAmount) return;
 
+    if (!publicKey) {
+      connectTesterWallet();
+      addToast("Connected Testnet Simulator Wallet with 10,000 XLM for escrow funding.", "info");
+    }
+
     const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
     if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
       addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
@@ -93,15 +98,16 @@ const ClientDashboard = () => {
     
     try {
       const newTask = {
-        title: newTaskTitle,
-        amount: newTaskAmount,
+        title: newTaskTitle.trim(),
+        amount: newTaskAmount.trim(),
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
-      await addTask(newTask);
+      const created = await addTask(newTask);
+      setJustCreatedTask(created || { id: 'temp-' + Date.now(), title: newTask.title, amount: newTask.amount });
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
-      addToast("Task Escrow created and funded on Stellar Testnet!", "success");
+      addToast(`Task "${newTask.title}" created and locked in Soroban Escrow!`, "success");
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
@@ -123,6 +129,39 @@ const ClientDashboard = () => {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
         {/* Task List */}
         <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {justCreatedTask && (
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              borderRadius: '0.75rem',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              animation: 'fadeIn 0.3s ease-in-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <CheckCircle size={22} style={{ color: '#4ade80', flexShrink: 0 }} />
+                <div>
+                  <div style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem' }}>
+                    Milestone Escrow Successfully Created & Funded!
+                  </div>
+                  <div style={{ color: '#86efac', fontSize: '0.85rem' }}>
+                    "{justCreatedTask.title}" ({justCreatedTask.amount} XLM) is now available for freelancers to accept.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setJustCreatedTask(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' }}
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {isLoading ? (
             <div className="glass-panel" style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--accent)' }}>
               Loading tasks from blockchain...
@@ -175,7 +214,14 @@ const ClientDashboard = () => {
             <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <h3 style={{ marginBottom: '0.25rem', color: task.status === 'Disputed' ? '#ef4444' : 'white' }}>{task.title}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, color: task.status === 'Disputed' ? '#ef4444' : 'white' }}>{task.title}</h3>
+                    {task.id === justCreatedTask?.id && (
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 'bold' }}>
+                        ✨ Just Created
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <Clock size={14} /> {task.status}
@@ -324,17 +370,50 @@ const ClientDashboard = () => {
               )}
             </div>
 
-            {!publicKey && (
-              <div style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ShieldAlert size={16} /> Please connect Freighter Wallet first.
+            {!publicKey ? (
+              <div style={{ 
+                padding: '0.85rem', 
+                background: 'rgba(0, 242, 254, 0.08)', 
+                border: '1px solid rgba(0, 242, 254, 0.3)', 
+                borderRadius: '0.5rem',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem'
+              }}>
+                <div style={{ color: '#00f2fe', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                  <Zap size={15} /> Student / Mobile Tester Mode
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: 0, lineHeight: 1.4 }}>
+                  No Freighter wallet extension? Connect a pre-funded Testnet Simulator Wallet with 1 click to test escrows without setup.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    connectTesterWallet();
+                    addToast("Simulator Testnet Wallet (10,000 XLM) connected!", "success");
+                  }}
+                  className="btn btn-outline"
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem',
+                    fontSize: '0.8rem',
+                    borderColor: '#00f2fe',
+                    color: '#00f2fe',
+                    background: 'rgba(0, 242, 254, 0.12)',
+                    fontWeight: 600
+                  }}
+                >
+                  ⚡ Connect Testnet Simulator Wallet
+                </button>
               </div>
-            )}
+            ) : null}
             <button 
               className="btn btn-primary" 
-              style={{ marginTop: '0.5rem', opacity: isTransacting || !publicKey ? 0.5 : 1 }}
-              disabled={isTransacting || !publicKey}
+              style={{ marginTop: '0.5rem', opacity: isTransacting ? 0.6 : 1 }}
+              disabled={isTransacting}
             >
-              <PlusCircle size={18}/> {isTransacting ? 'Locking...' : 'Lock Funds in Escrow'}
+              <PlusCircle size={18}/> {isTransacting ? 'Signing & Locking Escrow on Testnet...' : 'Lock Funds in Escrow'}
             </button>
           </form>
 
@@ -383,9 +462,22 @@ const ClientDashboard = () => {
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ff4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.5rem' }} 
             />
             {!publicKey && (
-              <p style={{ color: '#f59e0b', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <AlertTriangle size={14} /> Wallet not connected. Please connect your Freighter wallet in the header first.
-              </p>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <p style={{ color: '#f59e0b', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <AlertTriangle size={14} /> Wallet not connected.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    connectTesterWallet();
+                    addToast("Simulator Testnet Wallet connected!", "success");
+                  }}
+                  className="btn btn-outline"
+                  style={{ width: '100%', fontSize: '0.8rem', padding: '0.45rem', borderColor: '#00f2fe', color: '#00f2fe', background: 'rgba(0, 242, 254, 0.08)' }}
+                >
+                  ⚡ Connect Simulator Wallet to Release Funds
+                </button>
+              </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
               <button 
@@ -398,8 +490,8 @@ const ClientDashboard = () => {
               <button 
                 className="btn" 
                 onClick={handleApprove}
-                disabled={confirmText !== 'CONFIRM' || !publicKey || isTransacting}
-                style={{ padding: '0.5rem 1rem', backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#ff4444' : '#555', color: 'white', cursor: (confirmText === 'CONFIRM' && publicKey) ? 'pointer' : 'not-allowed' }}
+                disabled={confirmText !== 'CONFIRM' || isTransacting}
+                style={{ padding: '0.5rem 1rem', backgroundColor: confirmText === 'CONFIRM' ? '#ff4444' : '#555', color: 'white', cursor: confirmText === 'CONFIRM' ? 'pointer' : 'not-allowed' }}
               >
                 {isTransacting ? 'Processing...' : 'Force Release Funds'}
               </button>

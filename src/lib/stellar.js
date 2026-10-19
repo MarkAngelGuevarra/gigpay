@@ -44,7 +44,7 @@ export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
  */
 export const checkSorobanRpcHealth = async () => {
   try {
-    const health = await withTimeout(sorobanServer.getHealth(), 5000);
+    const health = await withTimeout(sorobanServer.getHealth(), 10000);
     return { status: health.status || 'HEALTHY', rpcUrl: SOROBAN_RPC_URL };
   } catch (err) {
     console.warn("[Soroban RPC Health] Warning or timeout:", err.message);

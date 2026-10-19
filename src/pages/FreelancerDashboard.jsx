@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,17 +7,17 @@ import { requestWalletSignature } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const FreelancerDashboard = () => {
-  const { user, publicKey } = useAuth();
+  const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const { addToast } = useToast();
   const availableTasks = tasks.filter(t => t.status === 'Available');
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && t.freelancer_id === user?.id);
-  const completedTasks = tasks.filter(t => t.status === 'Completed' && t.freelancer_id === user?.id);
+  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
+  const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
   
   const totalEarned = completedTasks.reduce((sum, task) => sum + Number(task.amount), 0);
 
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [isAccepting, setIsAccepting] = useState(false);
+  const [acceptingTaskId, setAcceptingTaskId] = useState(null);
   const [showKycModal, setShowKycModal] = useState(false);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -35,21 +35,31 @@ const FreelancerDashboard = () => {
   ];
 
   const handleAcceptWork = async (id, amount) => {
-    setIsAccepting(true);
+    let activeKey = publicKey;
+    if (!activeKey) {
+      const conn = connectTesterWallet();
+      activeKey = conn?.publicKey || 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+      addToast("Simulator Testnet Wallet connected to sign task acceptance.", "info");
+    }
+    setAcceptingTaskId(id);
     try {
-      await requestWalletSignature(publicKey, `Accept Escrow Contract for $${amount} USDC`);
-      updateTaskStatus(id, 'In Progress', true);
-      addToast("Work accepted! Good luck on the task.", "success");
+      await requestWalletSignature(activeKey, `Accept Escrow Contract for ${amount} XLM`);
+      await updateTaskStatus(id, 'In Progress', true);
+      addToast("Work accepted! Task escrow moved to In Progress.", "success");
     } catch (error) {
       addToast(error.message || "Failed to sign acceptance.", "error");
     } finally {
-      setIsAccepting(false);
+      setAcceptingTaskId(null);
     }
   };
 
   const handleWithdraw = async () => {
+    if (!publicKey) {
+      connectTesterWallet();
+      addToast("Simulator Testnet Wallet connected for bank off-ramp testing.", "info");
+    }
     if (totalEarned === 0) {
-      addToast("No funds available to withdraw.", "error");
+      addToast("No completed funds available to withdraw yet. Complete a task milestone first!", "warning");
       return;
     }
     
@@ -68,9 +78,15 @@ const FreelancerDashboard = () => {
       return;
     }
 
+    let activeKey = publicKey;
+    if (!activeKey) {
+      const conn = connectTesterWallet();
+      activeKey = conn?.publicKey || 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+    }
+
     setIsWithdrawing(true);
     try {
-      await requestWalletSignature(publicKey, `Withdraw $${totalEarned} USDC from Escrow to ${selectedBank}`);
+      await requestWalletSignature(activeKey, `Withdraw $${totalEarned} USDC from Escrow to ${selectedBank}`);
       const bankName = banks.find(b => b.id === selectedBank)?.name || selectedBank;
       const last4 = accountNumber.slice(-4) || '1234';
       addToast(`Successfully converted & transferred $${totalEarned} USDC to ${bankName} account ending in ****${last4}.`, "success");
@@ -96,6 +112,44 @@ const FreelancerDashboard = () => {
 
   return (
     <div className="animate-fade-in">
+      {!publicKey && (
+        <div className="glass-panel" style={{ 
+          padding: '1rem 1.25rem', 
+          marginBottom: '2rem', 
+          border: '1px solid rgba(0, 242, 254, 0.4)',
+          background: 'rgba(0, 242, 254, 0.06)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Zap size={24} style={{ color: '#00f2fe', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, color: 'white', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ background: 'rgba(0, 242, 254, 0.2)', color: '#00f2fe', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem' }}>PILOT TESTER</span>
+                Testing Freelancer Mode without Freighter Wallet?
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                One-click activate a pre-funded Testnet Simulator Wallet to accept tasks and test instant bank off-ramps with zero setup.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              connectTesterWallet();
+              addToast("Simulator Testnet Wallet (10,000 XLM) connected!", "success");
+            }}
+            style={{ fontSize: '0.82rem', padding: '0.45rem 1rem', whiteSpace: 'nowrap' }}
+          >
+            ⚡ Connect Simulator Wallet
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '3rem' }}>
         <div className="glass-panel" style={{ flex: '1 1 250px', borderLeft: '4px solid var(--accent)' }}>
           <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total Earned</h4>
@@ -106,16 +160,24 @@ const FreelancerDashboard = () => {
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{acceptedTasks.length}</div>
         </div>
         <div className="glass-panel" style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {!publicKey && (
-            <div style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-              <ShieldAlert size={16} /> Wallet Required
-            </div>
-          )}
+          {!publicKey ? (
+            <button 
+              type="button"
+              className="btn btn-outline" 
+              style={{ width: '100%', marginBottom: '0.5rem', borderColor: '#00f2fe', color: '#00f2fe', background: 'rgba(0, 242, 254, 0.08)', fontSize: '0.82rem' }}
+              onClick={() => {
+                connectTesterWallet();
+                addToast("Simulator Testnet Wallet connected!", "success");
+              }}
+            >
+              ⚡ Connect Simulator Wallet
+            </button>
+          ) : null}
           <button 
             className="btn btn-primary" 
-            style={{ width: '100%', marginBottom: '0.5rem', opacity: isWithdrawing || !publicKey ? 0.5 : 1 }}
+            style={{ width: '100%', marginBottom: '0.5rem', opacity: isWithdrawing ? 0.6 : 1 }}
             onClick={handleWithdraw}
-            disabled={isWithdrawing || !publicKey}
+            disabled={isWithdrawing}
           >
             <Wallet size={18} /> {isWithdrawing ? 'Processing...' : 'Withdraw to Bank'}
           </button>
@@ -129,7 +191,11 @@ const FreelancerDashboard = () => {
             Syncing with Supabase Realtime...
           </div>
         ) : availableTasks.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No tasks available right now.</p>
+          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', border: '1px dashed rgba(255, 255, 255, 0.15)' }}>
+            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.95rem' }}>
+              No funded tasks available right now. Open the Client Portal or log in as a Client to fund a new Soroban escrow task!
+            </p>
+          </div>
         ) : null}
         {!isLoading && availableTasks.map(task => (
           <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -142,12 +208,11 @@ const FreelancerDashboard = () => {
                 <div style={{ fontWeight: 'bold', color: 'var(--accent)' }}>${task.amount} USDC Locked</div>
                   <button 
                     className="btn btn-outline" 
-                    style={{ padding: '0.5rem 1rem', opacity: !publicKey || isAccepting ? 0.5 : 1 }} 
+                    style={{ padding: '0.5rem 1rem', opacity: acceptingTaskId === task.id ? 0.6 : 1, borderColor: '#00f2fe', color: '#00f2fe' }} 
                     onClick={() => handleAcceptWork(task.id, task.amount)}
-                    disabled={!publicKey || isAccepting}
-                    title={!publicKey ? "Connect wallet to accept work" : ""}
+                    disabled={acceptingTaskId === task.id}
                   >
-                    {isAccepting ? 'Signing...' : <>Accept Work <ArrowUpRight size={16} /></>}
+                    {acceptingTaskId === task.id ? 'Signing Acceptance...' : <>Accept Work <ArrowUpRight size={16} /></>}
                   </button>
               </div>
             </div>

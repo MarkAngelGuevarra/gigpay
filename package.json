@@ -9,7 +9,7 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "server": "json-server --watch db.json --port 3001",
-    "test": "node src/test/soroban_sim.test.js"
+    "test": "node src/test/soroban_sim.test.js && node src/test/task_lifecycle.test.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",

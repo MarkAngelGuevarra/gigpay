@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 // Smart routing: Bypass Windows Antivirus on localhost via Proxy, use direct URL on Vercel
 const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const supabaseUrl = isLocalhost ? 'http://localhost:5173/api/supabase' : 'https://gulshfticoirrpuohdxk.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_uimxpjAcUVlf4mqite3pZg_zhrrzy3Y';
 
 // Custom fetcher with auto-fallback to proxy to prevent "Failed to fetch" when Windows Antivirus blocks .supabase.co on Vercel
 const customFetch = async (url, options) => {
