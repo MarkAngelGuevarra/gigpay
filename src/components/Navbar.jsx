@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet } from 'lucide-react';
+import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, ShieldCheck } from 'lucide-react';
+import PublicLedgerModal from './PublicLedgerModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
@@ -11,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [balance, setBalance] = useState(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
@@ -78,6 +80,27 @@ const Navbar = () => {
         <span className="logo-text">GigPay</span>
       </a>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => setShowLedgerModal(true)}
+          className="btn btn-outline"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.42rem 0.75rem',
+            borderColor: 'rgba(16, 185, 129, 0.45)',
+            background: 'rgba(16, 185, 129, 0.08)',
+            color: '#6ee7b7',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer'
+          }}
+          title="View public immutable verification ledger (75 users)"
+        >
+          <ShieldCheck size={13} /> Public Ledger
+        </button>
         <a
           href="https://forms.gle/oLGjJRcxg5LZ5bC96"
           target="_blank"
@@ -270,6 +293,10 @@ const Navbar = () => {
           </div>
         </div>
       )}
+      <PublicLedgerModal
+        isOpen={showLedgerModal}
+        onClose={() => setShowLedgerModal(false)}
+      />
     </nav>
   );
 };

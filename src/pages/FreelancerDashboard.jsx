@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap, Download } from 'lucide-react';
 import EscrowSuccessModal from '../components/EscrowSuccessModal';
+import PublicLedgerModal from '../components/PublicLedgerModal';
 import { exportTelemetryToCSV } from '../lib/telemetry';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
@@ -21,6 +22,7 @@ const FreelancerDashboard = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
   const [successModalData, setSuccessModalData] = useState(null);
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -121,6 +123,32 @@ const FreelancerDashboard = () => {
 
   return (
     <div className="animate-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2>Freelancer Portal</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Browse funded Stellar escrow contracts, accept jobs, and cash out instantly.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setIsLedgerOpen(true)}
+            className="btn btn-outline"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#6ee7b7' }}
+            title="View public immutable verification ledger"
+          >
+            <ShieldCheck size={16} /> View Public Ledger
+          </button>
+          <button
+            type="button"
+            onClick={exportTelemetryToCSV}
+            className="btn btn-outline"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', borderColor: 'rgba(0, 242, 254, 0.4)', color: '#00f2fe' }}
+            title="Download the full verified onboarding ledger spreadsheet (.csv) for Instawards"
+          >
+            <Download size={16} /> Export Traction Ledger (.csv)
+          </button>
+        </div>
+      </div>
       {!publicKey && (
         <div className="glass-panel" style={{ 
           padding: '1rem 1.25rem', 
@@ -369,6 +397,11 @@ const FreelancerDashboard = () => {
         user={user}
         publicKey={publicKey}
         onToast={addToast}
+      />
+
+      <PublicLedgerModal
+        isOpen={isLedgerOpen}
+        onClose={() => setIsLedgerOpen(false)}
       />
     </div>
   );
