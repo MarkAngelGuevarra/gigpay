@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, Zap } from 'lucide-react';
+import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, Zap, Download } from 'lucide-react';
+import EscrowSuccessModal from '../components/EscrowSuccessModal';
+import { exportTelemetryToCSV } from '../lib/telemetry';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +22,7 @@ const ClientDashboard = () => {
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
   const [justCreatedTask, setJustCreatedTask] = useState(null);
+  const [successModalData, setSuccessModalData] = useState(null);
 
   const initiateApproval = (id) => {
     if (!publicKey) {
@@ -67,9 +70,15 @@ const ClientDashboard = () => {
     const taskId = taskToApprove;
     setTaskToApprove(null);
     
+    const approvedTaskObj = tasks.find(t => t.id === taskId);
     try {
       await updateTaskStatus(taskId, 'Completed');
       addToast("Transaction Confirmed! Funds released to freelancer.", "success");
+      setSuccessModalData({
+        task: approvedTaskObj || { id: taskId, title: 'Milestone Escrow', amount: '50' },
+        role: 'client',
+        actionType: 'approved'
+      });
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined");
@@ -103,7 +112,13 @@ const ClientDashboard = () => {
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
       const created = await addTask(newTask);
-      setJustCreatedTask(created || { id: 'temp-' + Date.now(), title: newTask.title, amount: newTask.amount });
+      const createdTaskData = created || { id: 'temp-' + Date.now(), title: newTask.title, amount: newTask.amount };
+      setJustCreatedTask(createdTaskData);
+      setSuccessModalData({
+        task: createdTaskData,
+        role: 'client',
+        actionType: 'created'
+      });
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
@@ -124,6 +139,15 @@ const ClientDashboard = () => {
           <h2>Client Portal</h2>
           <p style={{ color: 'var(--text-muted)' }}>Manage your funded Stellar Soroban escrow tasks and approve milestone releases.</p>
         </div>
+        <button
+          type="button"
+          onClick={exportTelemetryToCSV}
+          className="btn btn-outline"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', borderColor: 'rgba(0, 242, 254, 0.4)', color: '#00f2fe' }}
+          title="Download the full verified onboarding ledger spreadsheet (.csv) for Instawards"
+        >
+          <Download size={16} /> Export Traction Ledger (.csv)
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
@@ -499,6 +523,17 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
+
+      <EscrowSuccessModal
+        isOpen={Boolean(successModalData)}
+        onClose={() => setSuccessModalData(null)}
+        task={successModalData?.task}
+        role={successModalData?.role || 'client'}
+        actionType={successModalData?.actionType || 'created'}
+        user={user}
+        publicKey={publicKey}
+        onToast={addToast}
+      />
     </div>
   );
 };

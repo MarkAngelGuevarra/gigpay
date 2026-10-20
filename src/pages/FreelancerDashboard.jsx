@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap, Download } from 'lucide-react';
+import EscrowSuccessModal from '../components/EscrowSuccessModal';
+import { exportTelemetryToCSV } from '../lib/telemetry';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +20,7 @@ const FreelancerDashboard = () => {
 
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
+  const [successModalData, setSuccessModalData] = useState(null);
   const [showKycModal, setShowKycModal] = useState(false);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -45,6 +48,12 @@ const FreelancerDashboard = () => {
     try {
       await requestWalletSignature(activeKey, `Accept Escrow Contract for ${amount} XLM`);
       await updateTaskStatus(id, 'In Progress', true);
+      const targetTask = tasks.find(t => t.id === id);
+      setSuccessModalData({
+        task: targetTask || { id, title: 'Accepted Milestone', amount },
+        role: 'freelancer',
+        actionType: 'accepted'
+      });
       addToast("Work accepted! Task escrow moved to In Progress.", "success");
     } catch (error) {
       addToast(error.message || "Failed to sign acceptance.", "error");
@@ -350,6 +359,17 @@ const FreelancerDashboard = () => {
           </div>
         </div>
       )}
+
+      <EscrowSuccessModal
+        isOpen={Boolean(successModalData)}
+        onClose={() => setSuccessModalData(null)}
+        task={successModalData?.task}
+        role={successModalData?.role || 'freelancer'}
+        actionType={successModalData?.actionType || 'accepted'}
+        user={user}
+        publicKey={publicKey}
+        onToast={addToast}
+      />
     </div>
   );
 };
