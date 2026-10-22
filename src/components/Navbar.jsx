@@ -97,7 +97,7 @@ const Navbar = () => {
             whiteSpace: 'nowrap',
             cursor: 'pointer'
           }}
-          title="View public immutable verification ledger (75 users)"
+          title="View public immutable verification ledger"
         >
           <ShieldCheck size={13} /> Public Ledger
         </button>
