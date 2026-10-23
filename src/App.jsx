@@ -23,7 +23,8 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/auth" />;
   }
 
-  if (requiredRole && user.user_metadata?.role !== requiredRole) {
+  const isSimulation = user.is_simulation_mode || user.user_metadata?.is_simulation_mode;
+  if (!isSimulation && requiredRole && user.user_metadata?.role !== requiredRole) {
     return <Navigate to="/" />;
   }
 

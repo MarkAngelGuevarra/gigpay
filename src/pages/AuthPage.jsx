@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = () => {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, loginSimulationMode } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
   
@@ -387,6 +387,35 @@ const AuthPage = () => {
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>freelancer@gigpay.tech</div>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              loginSimulationMode('client');
+              addToast("⚡ Dual-Role Simulation Sandbox Activated! Test the full escrow lifecycle.", "success");
+              navigate('/client');
+            }}
+            style={{
+              width: '100%',
+              marginTop: '0.75rem',
+              padding: '0.65rem 0.5rem',
+              borderRadius: '0.5rem',
+              border: '1px solid rgba(0, 242, 254, 0.6)',
+              background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(139, 92, 246, 0.15))',
+              cursor: 'pointer',
+              textAlign: 'center',
+              color: '#00f2fe',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              boxShadow: '0 0 12px rgba(0, 242, 254, 0.2)'
+            }}
+          >
+            ⚡ 1-Click Dual-Role Sandbox (Simulate Client & Freelancer)
+          </button>
         </div>
       </div>
     </div>

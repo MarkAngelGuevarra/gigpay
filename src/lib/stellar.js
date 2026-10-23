@@ -21,7 +21,14 @@ const withTimeout = (promise, ms) => {
 };
 
 // A simulated public key used exclusively if the real wallet fails to load
-const DEMO_PUBLIC_KEY = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+export const DEMO_PUBLIC_KEY = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+export const DEMO_FREELANCER_KEY = 'GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3';
+
+export const isDemoWallet = (key) => {
+  if (!key) return true;
+  const str = typeof key === 'string' ? key.trim() : (key?.address?.trim() || String(key).trim());
+  return str === DEMO_PUBLIC_KEY || str === DEMO_FREELANCER_KEY || str.startsWith('GBDEMO_');
+};
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 const NETWORK = env.VITE_STELLAR_NETWORK || 'TESTNET';
@@ -109,8 +116,11 @@ export const connectWallet = async () => {
  * @returns {Promise<{ balance: string, raw: number, active: boolean, isDemo: boolean }>}
  */
 export const getAccountBalance = async (publicKey) => {
-  if (!publicKey || publicKey === DEMO_PUBLIC_KEY) {
-    return { balance: "10,000.00", raw: 10000, active: true, isDemo: true };
+  if (!publicKey || isDemoWallet(publicKey)) {
+    const isFreelancer = (typeof publicKey === 'string' ? publicKey.trim() : '') === DEMO_FREELANCER_KEY;
+    const amount = isFreelancer ? "500.00" : "10,000.00";
+    const rawVal = isFreelancer ? 500 : 10000;
+    return { balance: amount, raw: rawVal, active: true, isDemo: true };
   }
 
   try {
@@ -142,7 +152,7 @@ export const getAccountBalance = async (publicKey) => {
 export const requestWalletSignature = async (publicKey, description) => {
   try {
     // If we are using the fallback demo wallet, simulate a successful transaction instantly
-    if (publicKey === DEMO_PUBLIC_KEY) {
+    if (isDemoWallet(publicKey)) {
       console.log(`[DEMO MODE] Simulating signature for: ${description}`);
       await new Promise(resolve => setTimeout(resolve, 1500)); // Fake loading delay
       return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
@@ -221,7 +231,7 @@ export const simulateFundTask = async ({
   amount,
   tokenAddress = NATIVE_SAC_CONTRACT_ID
 }) => {
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+  if (!clientAddress || isDemoWallet(clientAddress)) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
       preparedTx: null,
@@ -477,7 +487,7 @@ export const submitFundTask = async ({
   }
 
   // Graceful fallback for demo or offline presentation
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY) {
+  if (!clientAddress || isDemoWallet(clientAddress)) {
     console.log(`[DEMO MODE] Simulating fund_task submission for ${amount} XLM`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     const demoHash = 'demo_fund_' + Date.now().toString(16);
@@ -553,7 +563,7 @@ export const submitFundTask = async ({
  */
 export const simulateApproveTask = async ({ clientAddress, taskId }) => {
   const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY || isMockTask) {
+  if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
       preparedTx: null,
@@ -614,7 +624,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
  */
 export const submitApproveTask = async ({ clientAddress, taskId }) => {
   const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
-  if (!clientAddress || clientAddress === DEMO_PUBLIC_KEY || isMockTask) {
+  if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
     console.log(`[DEMO MODE] Simulating approve_task release for Task #${taskId}`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     const demoHash = 'demo_release_' + Date.now().toString(16);

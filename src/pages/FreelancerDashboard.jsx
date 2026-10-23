@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap, Download } from 'lucide-react';
 import EscrowSuccessModal from '../components/EscrowSuccessModal';
 import PublicLedgerModal from '../components/PublicLedgerModal';
@@ -10,9 +11,10 @@ import { requestWalletSignature } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const FreelancerDashboard = () => {
-  const { user, publicKey, connectTesterWallet } = useAuth();
+  const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const availableTasks = tasks.filter(t => t.status === 'Available');
   const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
   const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
@@ -149,6 +151,50 @@ const FreelancerDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Dual-Role Simulation Banner */}
+      {(isSimulationMode || user?.is_simulation_mode || user?.id === 'demo-freelancer-uuid-002') && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(0, 242, 254, 0.12))',
+          border: '1px solid rgba(139, 92, 246, 0.35)',
+          borderRadius: '0.75rem',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Zap size={18} style={{ color: '#a78bfa', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.88rem', color: '#e2e8f0' }}>
+              <strong>Dual-Role Simulation Active:</strong> Currently viewing as <strong>Freelancer (Alex Rivera)</strong>. Accept work below, then switch to Client to approve and release escrow payout!
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              switchRole('client');
+              navigate('/client');
+              addToast("Switched to Client Portal! Review deliverable and release escrow.", "info");
+            }}
+            className="btn btn-outline"
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8rem',
+              borderColor: 'rgba(96, 165, 250, 0.6)',
+              color: '#93c5fd',
+              background: 'rgba(59, 130, 246, 0.15)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            ⇄ Switch to Client View
+          </button>
+        </div>
+      )}
+
       {!publicKey && (
         <div className="glass-panel" style={{ 
           padding: '1rem 1.25rem', 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY } from '../lib/stellar';
 
 const AuthContext = createContext();
 
@@ -131,14 +131,71 @@ export const AuthProvider = ({ children }) => {
     return { publicKey: key, network: res.network };
   };
 
-  const connectTesterWallet = () => {
-    const demoKey = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
+  const connectTesterWallet = (roleOverride) => {
+    const effectiveRole = roleOverride || user?.user_metadata?.role || 'client';
+    const demoKey = effectiveRole === 'freelancer' ? DEMO_FREELANCER_KEY : DEMO_PUBLIC_KEY;
     setPublicKey(demoKey);
     return { publicKey: demoKey, network: 'TESTNET' };
   };
 
+  const switchRole = (roleOverride) => {
+    const currentRole = user?.user_metadata?.role || 'client';
+    const targetRole = roleOverride || (currentRole === 'client' ? 'freelancer' : 'client');
+    const isClient = targetRole === 'client';
+    const updatedUser = {
+      id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
+      email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
+      is_simulation_mode: true,
+      user_metadata: {
+        role: targetRole,
+        display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
+        is_simulation_mode: true
+      }
+    };
+    setUser(updatedUser);
+    localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
+    
+    // Automatically sync paired simulator wallet so anti-self-dealing assertion always passes
+    if (!publicKey || publicKey === DEMO_PUBLIC_KEY || publicKey === DEMO_FREELANCER_KEY) {
+      setPublicKey(isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY);
+    }
+    return targetRole;
+  };
+
+  const loginSimulationMode = (initialRole = 'client') => {
+    const isClient = initialRole === 'client';
+    const simUser = {
+      id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
+      email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
+      is_simulation_mode: true,
+      user_metadata: {
+        role: initialRole,
+        display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
+        is_simulation_mode: true
+      }
+    };
+    setUser(simUser);
+    localStorage.setItem('gigpay_demo_user', JSON.stringify(simUser));
+    setPublicKey(isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY);
+    return simUser;
+  };
+
+  const isSimulationMode = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signUp, signIn, signOut, publicKey, connectWallet, connectTesterWallet }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      signUp, 
+      signIn, 
+      signOut, 
+      publicKey, 
+      connectWallet, 
+      connectTesterWallet,
+      switchRole,
+      loginSimulationMode,
+      isSimulationMode
+    }}>
       {children}
     </AuthContext.Provider>
   );

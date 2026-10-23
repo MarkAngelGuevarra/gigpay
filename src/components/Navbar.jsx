@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet, connectTesterWallet } = useAuth();
+  const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -124,12 +124,64 @@ const Navbar = () => {
         </a>
         {user ? (
           <>
-            {user.user_metadata?.role === 'client' && (
-              <Link to="/client" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Client Portal</Link>
+            {(user.user_metadata?.role === 'client' || isSimulationMode) && (
+              <Link 
+                to="/client" 
+                className="btn btn-outline" 
+                style={{ 
+                  padding: '0.42rem 0.75rem', 
+                  fontSize: '0.8rem', 
+                  whiteSpace: 'nowrap',
+                  borderColor: user.user_metadata?.role === 'client' ? 'rgba(59, 130, 246, 0.6)' : undefined,
+                  background: user.user_metadata?.role === 'client' ? 'rgba(59, 130, 246, 0.15)' : undefined
+                }}
+              >
+                Client Portal
+              </Link>
             )}
-            {user.user_metadata?.role === 'freelancer' && (
-              <Link to="/freelancer" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Freelancer Portal</Link>
+            {(user.user_metadata?.role === 'freelancer' || isSimulationMode) && (
+              <Link 
+                to="/freelancer" 
+                className="btn btn-outline" 
+                style={{ 
+                  padding: '0.42rem 0.75rem', 
+                  fontSize: '0.8rem', 
+                  whiteSpace: 'nowrap',
+                  borderColor: user.user_metadata?.role === 'freelancer' ? 'rgba(139, 92, 246, 0.6)' : undefined,
+                  background: user.user_metadata?.role === 'freelancer' ? 'rgba(139, 92, 246, 0.15)' : undefined
+                }}
+              >
+                Freelancer Portal
+              </Link>
             )}
+
+            {/* Interactive 1-Click Dual-Role Simulation Switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                const newRole = switchRole();
+                addToast(`Switched to ${newRole === 'client' ? 'Client (Hiring)' : 'Freelancer (Working)'} View!`, 'info');
+                navigate(newRole === 'client' ? '/client' : '/freelancer');
+              }}
+              className="btn btn-outline"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.42rem 0.75rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(139, 92, 246, 0.12))',
+                borderColor: 'rgba(0, 242, 254, 0.5)',
+                color: '#00f2fe',
+                cursor: 'pointer',
+                borderRadius: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+              title="Toggle between Client and Freelancer personas to simulate the entire escrow lifecycle"
+            >
+              ⇄ Switch to {user.user_metadata?.role === 'client' ? 'Freelancer' : 'Client'} View
+            </button>
             
             {/* Visual Role Badge for Demo Clarity */}
             {user.user_metadata?.role && (
@@ -148,7 +200,7 @@ const Navbar = () => {
                 whiteSpace: 'nowrap',
                 boxShadow: `0 0 10px ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`
               }}>
-                {user.user_metadata.role}
+                {user.user_metadata.role} {isSimulationMode && '• SIM'}
               </span>
             )}
             {publicKey ? (

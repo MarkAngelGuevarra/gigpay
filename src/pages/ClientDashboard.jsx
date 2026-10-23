@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, Zap, Download, ShieldCheck } from 'lucide-react';
 import EscrowSuccessModal from '../components/EscrowSuccessModal';
 import PublicLedgerModal from '../components/PublicLedgerModal';
@@ -10,9 +11,10 @@ import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
-  const { user, publicKey, connectTesterWallet } = useAuth();
+  const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus } = useTasks();
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const clientTasks = tasks.filter(t => t.client_id === user?.id || (user?.id === 'demo-client-uuid-001' && (!t.client_id || t.client_id === 'demo-client-uuid-001')));
   
   const [isTransacting, setIsTransacting] = useState(false);
@@ -162,6 +164,49 @@ const ClientDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Dual-Role Simulation Banner */}
+      {(isSimulationMode || user?.is_simulation_mode || user?.id === 'demo-client-uuid-001') && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12))',
+          border: '1px solid rgba(59, 130, 246, 0.35)',
+          borderRadius: '0.75rem',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Zap size={18} style={{ color: '#00f2fe', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.88rem', color: '#e2e8f0' }}>
+              <strong>Dual-Role Simulation Active:</strong> Currently viewing as <strong>Client (Acme Corp)</strong>. Fund your escrow task, then switch to Freelancer to accept it!
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              switchRole('freelancer');
+              navigate('/freelancer');
+              addToast("Switched to Freelancer Portal! Accept your funded task.", "info");
+            }}
+            className="btn btn-outline"
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8rem',
+              borderColor: 'rgba(167, 139, 250, 0.6)',
+              color: '#c4b5fd',
+              background: 'rgba(139, 92, 246, 0.15)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            ⇄ Switch to Freelancer View
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
         {/* Task List */}
