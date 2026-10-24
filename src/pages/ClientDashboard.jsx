@@ -185,26 +185,44 @@ const ClientDashboard = () => {
               <strong>Dual-Role Simulation Active:</strong> Currently viewing as <strong>Client (Acme Corp)</strong>. Fund your escrow task, then switch to Freelancer to accept it!
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              switchRole('freelancer');
-              navigate('/freelancer');
-              addToast("Switched to Freelancer Portal! Accept your funded task.", "info");
-            }}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.8rem',
-              borderColor: 'rgba(167, 139, 250, 0.6)',
-              color: '#c4b5fd',
-              background: 'rgba(139, 92, 246, 0.15)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            ⇄ Switch to Freelancer View
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                switchRole('freelancer');
+                navigate('/freelancer');
+                addToast("Switched to Freelancer Portal! Accept your funded task.", "info");
+              }}
+              className="btn btn-outline"
+              style={{
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                borderColor: 'rgba(167, 139, 250, 0.6)',
+                color: '#c4b5fd',
+                background: 'rgba(139, 92, 246, 0.15)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⇄ Switch to Freelancer View
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/auth?mode=signup')}
+              className="btn btn-outline"
+              style={{
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                borderColor: 'rgba(0, 242, 254, 0.6)',
+                color: '#00f2fe',
+                background: 'rgba(0, 242, 254, 0.12)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🚀 Create Real Pilot Account
+            </button>
+          </div>
         </div>
       )}
 
@@ -305,19 +323,45 @@ const ClientDashboard = () => {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: task.status === 'Under Review' ? '#38bdf8' : undefined, fontWeight: task.status === 'Under Review' ? 600 : undefined }}>
                       <Clock size={14} /> {task.status}
                     </span>
                     <span>Freelancer: {task.freelancer_id ? task.freelancer_id.slice(0, 8) + '...' : 'Unassigned'}</span>
                   </div>
+                  {task.deliverable_url && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{ fontSize: '0.82rem', color: '#bae6fd' }}>
+                        <strong>📤 Work Proof:</strong> {task.deliverable_notes || 'Deliverable ready for client verification'}
+                      </span>
+                      <a
+                        href={task.deliverable_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#38bdf8', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}
+                      >
+                        Inspect Link <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: task.status === 'Disputed' ? '#ef4444' : 'var(--accent)' }}>
                     {task.amount} XLM
                   </div>
                   
-                  {task.status === 'In Progress' && (
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {(task.status === 'In Progress' || task.status === 'Under Review') && (
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <button 
                         className="btn btn-outline" 
                         onClick={() => handleDispute(task.id)}
@@ -331,9 +375,16 @@ const ClientDashboard = () => {
                         className="btn btn-outline" 
                         onClick={() => initiateApproval(task.id)}
                         disabled={isTransacting}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: 'var(--accent)', color: 'var(--accent)', opacity: isTransacting ? 0.5 : 1 }}
+                        style={{ 
+                          padding: '0.5rem 1rem', 
+                          fontSize: '0.85rem', 
+                          borderColor: task.status === 'Under Review' ? '#38bdf8' : 'var(--accent)', 
+                          color: task.status === 'Under Review' ? '#38bdf8' : 'var(--accent)', 
+                          background: task.status === 'Under Review' ? 'rgba(56, 189, 248, 0.12)' : undefined,
+                          opacity: isTransacting ? 0.5 : 1 
+                        }}
                       >
-                        <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Pay'}
+                        <CheckCircle size={14} /> {isTransacting ? 'Processing...' : (task.status === 'Under Review' ? 'Verify & Release' : 'Approve & Pay')}
                       </button>
                     </div>
                   )}

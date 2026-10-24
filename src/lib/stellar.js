@@ -30,6 +30,42 @@ export const isDemoWallet = (key) => {
   return str === DEMO_PUBLIC_KEY || str === DEMO_FREELANCER_KEY || str.startsWith('GBDEMO_');
 };
 
+/**
+ * Generates an authentic ephemeral Stellar Ed25519 keypair and requests Friendbot testnet funding.
+ * Enables extensionless university students to generate real on-chain transaction hashes on Stellar Expert.
+ */
+export const createEphemeralTestnetWallet = async () => {
+  const keypair = StellarSdk.Keypair.random();
+  const publicKey = keypair.publicKey();
+  const secretKey = keypair.secret();
+
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
+      sessionStorage.setItem('gigpay_ephemeral_seckey', secretKey);
+    }
+  } catch (e) {
+    console.warn("Session storage notice:", e);
+  }
+
+  // Request Friendbot testnet funding (10,000 test XLM)
+  try {
+    await withTimeout(
+      fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`),
+      8000
+    );
+  } catch (err) {
+    console.warn("[Friendbot] Ephemeral funding notice:", err.message);
+  }
+
+  return {
+    publicKey,
+    secretKey,
+    network: 'TESTNET',
+    isEphemeral: true
+  };
+};
+
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 const NETWORK = env.VITE_STELLAR_NETWORK || 'TESTNET';
 const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
@@ -185,6 +221,19 @@ export const requestWalletSignature = async (publicKey, description) => {
       }))
       .setTimeout(30)
       .build();
+
+    // If using an ephemeral student testnet wallet, sign directly with the stored keypair
+    const storedSecKey = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gigpay_ephemeral_seckey') : null;
+    const storedPubKey = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gigpay_ephemeral_pubkey') : null;
+    if (storedSecKey && storedPubKey && publicKey === storedPubKey) {
+      try {
+        const kp = StellarSdk.Keypair.fromSecret(storedSecKey);
+        transaction.sign(kp);
+        return { success: true, signedXdr: transaction.toXDR() };
+      } catch (signErr) {
+        console.warn("Ephemeral signature notice:", signErr);
+      }
+    }
 
     const xdr = transaction.toXDR();
     

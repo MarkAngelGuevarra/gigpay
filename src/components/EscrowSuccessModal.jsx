@@ -223,6 +223,39 @@ const EscrowSuccessModal = ({
             </div>
           </form>
         )}
+
+        {/* Test Drive to Real Account Conversion Prompt */}
+        {(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || user?.id === 'demo-client-uuid-001' || user?.id === 'demo-freelancer-uuid-002') && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(139, 92, 246, 0.1))',
+            border: '1px solid rgba(0, 242, 254, 0.4)',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            marginTop: '1.25rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ color: '#00f2fe', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+              🎯 Completed Your Simulation Test Drive!
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0 0 0.75rem 0', lineHeight: 1.5 }}>
+              Ready to record official proof of traction for the student cohort? Create your authenticated student account now.
+            </p>
+            <a
+              href="/auth?mode=signup"
+              className="btn btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 1rem',
+                fontSize: '0.82rem',
+                textDecoration: 'none'
+              }}
+            >
+              🚀 Create Real Pilot Account (Official Cohort)
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

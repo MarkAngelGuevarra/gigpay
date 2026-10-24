@@ -4,8 +4,8 @@ const TaskProgress = ({ status }) => {
   const steps = ['Available', 'In Progress', 'Completed'];
   let currentStep = steps.indexOf(status);
   
-  if (status === 'Disputed') {
-    currentStep = 1; // It's stalled at In Progress
+  if (status === 'Disputed' || status === 'Under Review') {
+    currentStep = 1; // It's at In Progress / Review stage
   }
 
   return (

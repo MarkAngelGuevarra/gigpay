@@ -250,7 +250,7 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
-  const updateTaskStatus = async (id, newStatus, assignFreelancer = false) => {
+  const updateTaskStatus = async (id, newStatus, assignFreelancer = false, extraData = {}) => {
     const effectivePublicKey = publicKey || DEMO_FALLBACK_KEY;
     const effectiveUserId = user?.id || (assignFreelancer ? 'demo-freelancer-uuid-002' : 'demo-client-uuid-001');
 
@@ -264,13 +264,17 @@ export const TaskProvider = ({ children }) => {
           clientAddress: effectivePublicKey,
           taskId: id
         });
+      } else if (newStatus === 'Under Review') {
+        const actionDesc = 'Submit Work Proof';
+        await requestWalletSignature(effectivePublicKey, `${actionDesc}: Task ${String(id).slice(0, 8)}`);
       } else {
         const actionDesc = 'Accept Escrow Work';
         await requestWalletSignature(effectivePublicKey, `${actionDesc}: Task ${String(id).slice(0, 8)}`);
       }
 
       const updatedFields = { 
-        status: newStatus 
+        status: newStatus,
+        ...extraData
       };
 
       if (assignFreelancer) {

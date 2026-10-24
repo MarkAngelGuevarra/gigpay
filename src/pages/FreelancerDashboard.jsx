@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap, Download } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, Zap, Download, ExternalLink } from 'lucide-react';
 import EscrowSuccessModal from '../components/EscrowSuccessModal';
 import PublicLedgerModal from '../components/PublicLedgerModal';
 import { exportTelemetryToCSV } from '../lib/telemetry';
@@ -16,7 +16,7 @@ const FreelancerDashboard = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const availableTasks = tasks.filter(t => t.status === 'Available');
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
+  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
   const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (!t.freelancer_id && user?.id === 'demo-freelancer-uuid-002')));
   
   const totalEarned = completedTasks.reduce((sum, task) => sum + Number(task.amount), 0);
@@ -29,6 +29,12 @@ const FreelancerDashboard = () => {
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   
+  // Work Proof Submission State (Deliverable 3 Compliance)
+  const [taskToSubmitProof, setTaskToSubmitProof] = useState(null);
+  const [deliverableUrl, setDeliverableUrl] = useState('');
+  const [deliverableNotes, setDeliverableNotes] = useState('');
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false);
+
   // New Bank Off-ramp State
   const [showBankModal, setShowBankModal] = useState(false);
   const [selectedBank, setSelectedBank] = useState('');
@@ -113,6 +119,29 @@ const FreelancerDashboard = () => {
     }
   };
 
+  const handleSubmitProof = async (e) => {
+    e.preventDefault();
+    if (!deliverableUrl || !taskToSubmitProof) {
+      addToast("Please provide a valid deliverable URL (e.g. GitHub PR, Loom, Google Drive).", "error");
+      return;
+    }
+    setIsSubmittingProof(true);
+    try {
+      await updateTaskStatus(taskToSubmitProof.id, 'Under Review', false, {
+        deliverable_url: deliverableUrl.trim(),
+        deliverable_notes: deliverableNotes.trim() || 'Work deliverable submitted for milestone escrow verification.'
+      });
+      addToast("Work proof submitted! Client notified to review and release escrow.", "success");
+      setTaskToSubmitProof(null);
+      setDeliverableUrl('');
+      setDeliverableNotes('');
+    } catch (err) {
+      addToast(err.message || "Failed to submit work proof.", "error");
+    } finally {
+      setIsSubmittingProof(false);
+    }
+  };
+
   const handleSimulateKyc = () => {
     setIsVerifying(true);
     setTimeout(() => {
@@ -172,26 +201,44 @@ const FreelancerDashboard = () => {
               <strong>Dual-Role Simulation Active:</strong> Currently viewing as <strong>Freelancer (Alex Rivera)</strong>. Accept work below, then switch to Client to approve and release escrow payout!
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              switchRole('client');
-              navigate('/client');
-              addToast("Switched to Client Portal! Review deliverable and release escrow.", "info");
-            }}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.8rem',
-              borderColor: 'rgba(96, 165, 250, 0.6)',
-              color: '#93c5fd',
-              background: 'rgba(59, 130, 246, 0.15)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            ⇄ Switch to Client View
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                switchRole('client');
+                navigate('/client');
+                addToast("Switched to Client Portal! Review deliverable and release escrow.", "info");
+              }}
+              className="btn btn-outline"
+              style={{
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                borderColor: 'rgba(96, 165, 250, 0.6)',
+                color: '#93c5fd',
+                background: 'rgba(59, 130, 246, 0.15)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⇄ Switch to Client View
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/auth?mode=signup')}
+              className="btn btn-outline"
+              style={{
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                borderColor: 'rgba(0, 242, 254, 0.6)',
+                color: '#00f2fe',
+                background: 'rgba(0, 242, 254, 0.12)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🚀 Create Real Pilot Account
+            </button>
+          </div>
         </div>
       )}
 
@@ -315,12 +362,36 @@ const FreelancerDashboard = () => {
                     <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{task.title}</h4>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Client: {task.client_id ? task.client_id.slice(0, 8) + '...' : 'Unknown'}</p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     <div style={{ fontWeight: 'bold', color: task.status === 'Disputed' ? '#ef4444' : 'var(--accent)' }}>${task.amount} USDC Locked</div>
-                    <span style={{ color: task.status === 'Disputed' ? '#ef4444' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-                      {task.status === 'Disputed' ? <ShieldAlert size={18} /> : <CheckCircle size={18} />} 
-                      {task.status === 'Disputed' ? 'Disputed' : 'In Progress'}
+                    <span style={{ color: task.status === 'Disputed' ? '#ef4444' : task.status === 'Under Review' ? '#38bdf8' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 'bold', fontSize: '0.88rem' }}>
+                      {task.status === 'Disputed' ? <ShieldAlert size={16} /> : <CheckCircle size={16} />} 
+                      {task.status === 'Disputed' ? 'Disputed' : task.status === 'Under Review' ? 'Under Review' : 'In Progress'}
                     </span>
+                    {task.status === 'In Progress' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTaskToSubmitProof(task);
+                          setDeliverableUrl(task.deliverable_url || '');
+                          setDeliverableNotes(task.deliverable_notes || '');
+                        }}
+                        className="btn btn-outline"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'rgba(0, 242, 254, 0.6)', color: '#00f2fe' }}
+                      >
+                        📤 Submit Work Proof
+                      </button>
+                    )}
+                    {task.status === 'Under Review' && task.deliverable_url && (
+                      <a
+                        href={task.deliverable_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#38bdf8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                      >
+                        View Proof <ExternalLink size={12} />
+                      </a>
+                    )}
                   </div>
                 </div>
                 <TaskProgress status={task.status} />
@@ -359,6 +430,62 @@ const FreelancerDashboard = () => {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Submit Work Proof Modal (Deliverable 3 SOW Compliance) */}
+      {taskToSubmitProof && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
+          <div className="glass-panel" style={{ width: '90%', maxWidth: '480px', padding: '2rem' }}>
+            <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>Submit Work Deliverable</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+              Provide verifiable proof-of-work for "{taskToSubmitProof.title}" (${taskToSubmitProof.amount} USDC). The client will review this deliverable before releasing escrow.
+            </p>
+            <form onSubmit={handleSubmitProof}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                  Deliverable URL (GitHub PR, Loom Video, Google Drive, Figma) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://github.com/.../pull/1 or https://loom.com/share/..."
+                  value={deliverableUrl}
+                  onChange={(e) => setDeliverableUrl(e.target.value)}
+                  style={{ width: '100%', padding: '0.7rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem' }}
+                />
+              </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                  Verification Summary / Notes (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Completed milestone deliverables and verified on Stellar Testnet."
+                  value={deliverableNotes}
+                  onChange={(e) => setDeliverableNotes(e.target.value)}
+                  style={{ width: '100%', padding: '0.7rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem', resize: 'none' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setTaskToSubmitProof(null)}
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmittingProof}
+                >
+                  {isSubmittingProof ? 'Submitting Proof...' : 'Submit for Client Review'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

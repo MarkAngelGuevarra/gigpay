@@ -1,13 +1,32 @@
-import React, { useState, useMemo } from 'react';
-import { ShieldCheck, Lock, Search, ExternalLink, Download, X, Copy, Check, Star, Filter } from 'lucide-react';
-import { getAllTelemetryRecords, exportTelemetryToCSV } from '../lib/telemetry.js';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ShieldCheck, Lock, Search, ExternalLink, Download, X, Copy, Check, Star, Filter, RefreshCw } from 'lucide-react';
+import { getAllTelemetryRecords, fetchLiveTelemetryRecords, exportTelemetryToCSV } from '../lib/telemetry.js';
 
 const PublicLedgerModal = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCohort, setFilterCohort] = useState('all');
   const [copiedKey, setCopiedKey] = useState(null);
+  const [allRecords, setAllRecords] = useState(() => getAllTelemetryRecords());
+  const [isLoadingLive, setIsLoadingLive] = useState(false);
 
-  const allRecords = useMemo(() => getAllTelemetryRecords(), [isOpen]);
+  useEffect(() => {
+    let isMounted = true;
+    if (isOpen) {
+      setIsLoadingLive(true);
+      fetchLiveTelemetryRecords().then(records => {
+        if (isMounted && records && records.length > 0) {
+          setAllRecords(records);
+        }
+      }).catch(err => {
+        console.warn("Live ledger fetch notice:", err);
+      }).finally(() => {
+        if (isMounted) setIsLoadingLive(false);
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   const filteredRecords = useMemo(() => {
     return allRecords.filter((r) => {
@@ -149,7 +168,7 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
             </span>
           </div>
           <button
-            onClick={exportTelemetryToCSV}
+            onClick={() => exportTelemetryToCSV(allRecords)}
             className="btn btn-outline"
             style={{
               padding: '0.3rem 0.75rem',
@@ -446,7 +465,7 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
           </span>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
-              onClick={exportTelemetryToCSV}
+              onClick={() => exportTelemetryToCSV(allRecords)}
               className="btn btn-outline"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
             >

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet } from '../lib/stellar';
 
 const AuthContext = createContext();
 
@@ -138,6 +138,17 @@ export const AuthProvider = ({ children }) => {
     return { publicKey: demoKey, network: 'TESTNET' };
   };
 
+  const connectEphemeralWallet = async () => {
+    try {
+      const res = await createEphemeralTestnetWallet();
+      setPublicKey(res.publicKey);
+      return res;
+    } catch (err) {
+      console.warn("Ephemeral connect notice:", err);
+      return connectTesterWallet();
+    }
+  };
+
   const switchRole = (roleOverride) => {
     const currentRole = user?.user_metadata?.role || 'client';
     const targetRole = roleOverride || (currentRole === 'client' ? 'freelancer' : 'client');
@@ -192,6 +203,7 @@ export const AuthProvider = ({ children }) => {
       publicKey, 
       connectWallet, 
       connectTesterWallet,
+      connectEphemeralWallet,
       switchRole,
       loginSimulationMode,
       isSimulationMode
