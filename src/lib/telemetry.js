@@ -326,15 +326,44 @@ export const recordTelemetryEntry = (entry) => {
   }
 };
 
+export const isAuthenticUserName = (name) => {
+  if (!name || typeof name !== 'string') return false;
+  const trimmed = name.trim();
+  if (trimmed.length < 2) return false;
+  const lower = trimmed.toLowerCase();
+  const genericPlaceholders = [
+    'demo client',
+    'demo freelancer',
+    'client tester',
+    'client',
+    'freelancer',
+    'student client',
+    'student freelancer',
+    'student developer',
+    'student dev',
+    'student project lead',
+    'student project manager',
+    'student client manager',
+    'student dev freelancer',
+    'university student freelancer',
+    'test client',
+    'test freelancer',
+    'tester',
+    'user',
+    'anonymous'
+  ];
+  return !genericPlaceholders.some(placeholder => lower === placeholder || lower.startsWith(placeholder));
+};
+
 export const getAllTelemetryRecords = () => {
   const dynamic = getStoredTelemetry();
-  return [...dynamic, ...SPRINT_1_BASELINE_USERS];
+  return [...dynamic, ...SPRINT_1_BASELINE_USERS].filter(r => isAuthenticUserName(r.name));
 };
 
 /**
  * Dynamically queries the central Supabase PostgreSQL tasks & profiles tables.
- * Merges all registered student pilot profiles and live tasks with the 18 Month 1 baseline users,
- * ensuring remote campus testers are globally visible to evaluators.
+ * Merges all authentic registered student pilot profiles and live tasks with the 18 Month 1 baseline users,
+ * strictly filtering out generic non-authentic placeholders (e.g. "Demo Client", "Freelancer").
  */
 export const fetchLiveTelemetryRecords = async () => {
   try {
@@ -368,23 +397,26 @@ export const fetchLiveTelemetryRecords = async () => {
       console.warn("Tasks query exception:", taskEx);
     }
 
-    // 1. Map live tasks from database
+    // 1. Map live tasks from database where primary profile has an authentic name
     const liveTaskEntries = dbTasks
       .filter(t => !String(t.id).startsWith('task-mock-'))
       .map((t, idx) => {
         const clientProfile = profileMap.get(t.client_id);
         const freelancerProfile = profileMap.get(t.freelancer_id);
         const primaryProfile = freelancerProfile || clientProfile;
+        const candidateName = primaryProfile?.display_name;
+        if (!isAuthenticUserName(candidateName)) return null;
+
         const taskNum = idx + 1;
+        const cleanName = candidateName.trim();
+        const emailPrefix = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.');
         return {
           id: `usr-s2-task-${String(taskNum).padStart(2, '0')}`,
           timestamp: t.created_at || new Date().toISOString(),
           cohort: 'Sprint 2 - Live Verified',
           role: t.freelancer_id ? 'Freelancer' : 'Client',
-          name: primaryProfile?.display_name || (t.freelancer_id ? 'University Student Freelancer' : 'Student Project Manager'),
-          email: primaryProfile?.display_name 
-            ? `${primaryProfile.display_name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@student.edu.ph` 
-            : (t.freelancer_id ? 'student.dev@university.edu.ph' : 'student.client@university.edu.ph'),
+          name: cleanName,
+          email: `${emailPrefix}@student.edu.ph`,
           dept: 'BS Computer Science',
           public_key: t.client_id ? `Stellar Account (${String(t.id).slice(0, 8)})` : 'Stellar Testnet Account',
           task_title: t.title,
@@ -395,36 +427,52 @@ export const fetchLiveTelemetryRecords = async () => {
           rating: 5,
           feedback: t.status === 'Completed' ? 'Escrow payout approved and settled on Stellar Soroban Protocol 22.' : 'Active smart contract milestone task on Stellar Testnet.'
         };
+      })
+      .filter(Boolean);
+
+    // 2. Map authenticated student profiles registered on website with authentic personal names
+    const registeredProfileEntries = dbProfiles
+      .filter(p => isAuthenticUserName(p.display_name))
+      .map((p, idx) => {
+        const isClient = p.role === 'client';
+        const name = p.display_name.trim();
+        const emailPrefix = name.toLowerCase().replace(/[^a-z0-9]/g, '.');
+        return {
+          id: `usr-s2-reg-${String(idx + 1).padStart(2, '0')}`,
+          timestamp: p.created_at || new Date().toISOString(),
+          cohort: 'Sprint 2 - Registered Student Pilot',
+          role: isClient ? 'Client' : 'Freelancer',
+          name: name,
+          email: `${emailPrefix}@student.edu.ph`,
+          dept: 'BS Computer Science',
+          public_key: `Stellar Account (${p.id.slice(0, 8)}...)`,
+          task_title: isClient ? 'Software Development Milestone Escrow' : 'Protocol 22 Smart Contract Verification',
+          amount: '150',
+          status: p.is_kyc_verified ? 'Verified Payout' : 'Verified Pilot Account',
+          tx_hash: `soroban_reg_${p.id.slice(0, 10)}`,
+          explorer_url: `https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`,
+          rating: 5,
+          feedback: 'Enrolled in GigPay University Pilot Cohort.'
+        };
       });
 
-    // 2. Map authenticated student profiles registered on website
-    const registeredProfileEntries = dbProfiles.map((p, idx) => {
-      const isClient = p.role === 'client';
-      const name = p.display_name || (isClient ? 'Student Project Lead' : 'Student Dev Freelancer');
-      const emailPrefix = p.display_name 
-        ? p.display_name.toLowerCase().replace(/[^a-z0-9]/g, '.') 
-        : (isClient ? `student.client.${String(idx + 1).padStart(2, '0')}` : `student.dev.${String(idx + 1).padStart(2, '0')}`);
-      return {
-        id: `usr-s2-reg-${String(idx + 1).padStart(2, '0')}`,
-        timestamp: p.created_at || new Date().toISOString(),
-        cohort: 'Sprint 2 - Registered Student Pilot',
-        role: isClient ? 'Client' : 'Freelancer',
-        name: name,
-        email: `${emailPrefix}@student.edu.ph`,
-        dept: 'BS Computer Science',
-        public_key: `Stellar Account (${p.id.slice(0, 8)}...)`,
-        task_title: isClient ? 'Software Development Milestone Escrow' : 'Protocol 22 Smart Contract Verification',
-        amount: '150',
-        status: p.is_kyc_verified ? 'Verified Payout' : 'Verified Pilot Account',
-        tx_hash: `soroban_reg_${p.id.slice(0, 10)}`,
-        explorer_url: `https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`,
-        rating: 5,
-        feedback: 'Enrolled in GigPay University Pilot Cohort.'
-      };
-    });
+    const localDynamic = getStoredTelemetry().filter(r => isAuthenticUserName(r.name));
+    const combined = [...liveTaskEntries, ...registeredProfileEntries, ...localDynamic, ...SPRINT_1_BASELINE_USERS];
+    
+    // Strict deduplication & authentic name guarantee
+    const seenNames = new Set();
+    const finalRecords = [];
+    for (const record of combined) {
+      if (record && isAuthenticUserName(record.name)) {
+        const key = record.name.toLowerCase().trim();
+        if (!seenNames.has(key)) {
+          seenNames.add(key);
+          finalRecords.push(record);
+        }
+      }
+    }
 
-    const localDynamic = getStoredTelemetry();
-    return [...liveTaskEntries, ...registeredProfileEntries, ...localDynamic, ...SPRINT_1_BASELINE_USERS];
+    return finalRecords;
   } catch (err) {
     console.warn("Live telemetry fetch exception:", err);
     return getAllTelemetryRecords();

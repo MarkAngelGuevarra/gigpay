@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShieldCheck, Lock, Search, ExternalLink, Download, X, Copy, Check, Star, Filter, RefreshCw } from 'lucide-react';
-import { getAllTelemetryRecords, fetchLiveTelemetryRecords, exportTelemetryToCSV } from '../lib/telemetry.js';
+import { getAllTelemetryRecords, fetchLiveTelemetryRecords, exportTelemetryToCSV, isAuthenticUserName } from '../lib/telemetry.js';
 
 const PublicLedgerModal = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCohort, setFilterCohort] = useState('all');
   const [copiedKey, setCopiedKey] = useState(null);
-  const [allRecords, setAllRecords] = useState(() => getAllTelemetryRecords());
+  const [allRecords, setAllRecords] = useState(() => getAllTelemetryRecords().filter(r => isAuthenticUserName(r.name)));
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
       setIsLoadingLive(true);
       fetchLiveTelemetryRecords().then(records => {
         if (isMounted && records && records.length > 0) {
-          setAllRecords(records);
+          setAllRecords(records.filter(r => isAuthenticUserName(r.name)));
         }
       }).catch(err => {
         console.warn("Live ledger fetch notice:", err);
@@ -28,8 +28,12 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
+  const authenticRecords = useMemo(() => {
+    return allRecords.filter(r => isAuthenticUserName(r.name));
+  }, [allRecords]);
+
   const filteredRecords = useMemo(() => {
-    return allRecords.filter((r) => {
+    return authenticRecords.filter((r) => {
       // Filter by Cohort
       if (filterCohort === 'sprint2' && !r.cohort?.toLowerCase().includes('sprint 2')) return false;
       if (filterCohort === 'sprint1' && !r.cohort?.toLowerCase().includes('sprint 1')) return false;
@@ -48,7 +52,7 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
         r.feedback?.toLowerCase().includes(term)
       );
     });
-  }, [allRecords, searchTerm, filterCohort]);
+  }, [authenticRecords, searchTerm, filterCohort]);
 
   if (!isOpen) return null;
 
@@ -58,8 +62,8 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const sprint1Count = allRecords.filter(r => r.cohort?.toLowerCase().includes('sprint 1')).length;
-  const sprint2Count = allRecords.filter(r => r.cohort?.toLowerCase().includes('sprint 2')).length;
+  const sprint1Count = authenticRecords.filter(r => r.cohort?.toLowerCase().includes('sprint 1')).length;
+  const sprint2Count = authenticRecords.filter(r => r.cohort?.toLowerCase().includes('sprint 2')).length;
 
   return (
     <div style={{
@@ -168,7 +172,7 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
             </span>
           </div>
           <button
-            onClick={() => exportTelemetryToCSV(allRecords)}
+            onClick={() => exportTelemetryToCSV(authenticRecords)}
             className="btn btn-outline"
             style={{
               padding: '0.3rem 0.75rem',
@@ -461,11 +465,11 @@ const PublicLedgerModal = ({ isOpen, onClose }) => {
           gap: '1rem'
         }}>
           <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Showing <strong>{filteredRecords.length}</strong> of <strong>{allRecords.length}</strong> verified entries.
+            Showing <strong>{filteredRecords.length}</strong> of <strong>{authenticRecords.length}</strong> verified entries.
           </span>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
-              onClick={() => exportTelemetryToCSV(allRecords)}
+              onClick={() => exportTelemetryToCSV(authenticRecords)}
               className="btn btn-outline"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
             >
