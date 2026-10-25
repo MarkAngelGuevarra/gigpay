@@ -27,6 +27,9 @@ const ClientDashboard = () => {
   const [justCreatedTask, setJustCreatedTask] = useState(null);
   const [successModalData, setSuccessModalData] = useState(null);
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [taskToDispute, setTaskToDispute] = useState(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [isDisputing, setIsDisputing] = useState(false);
 
   const initiateApproval = (id) => {
     if (!publicKey) {
@@ -37,12 +40,27 @@ const ClientDashboard = () => {
     setConfirmText('');
   };
 
-  const handleDispute = async (id) => {
+  const initiateDispute = (taskId) => {
+    setTaskToDispute(taskId);
+    setDisputeReason('');
+  };
+
+  const handleConfirmDispute = async (e) => {
+    if (e) e.preventDefault();
+    if (!taskToDispute) return;
+    setIsDisputing(true);
     try {
-      await updateTaskStatus(id, 'Disputed');
-      addToast("Task has been disputed. Funds are frozen until arbitration resolves.", "success");
+      await updateTaskStatus(taskToDispute, 'Disputed', false, {
+        dispute_reason: disputeReason.trim() || 'Client requested mediation due to deliverable discrepancies.',
+        disputed_at: new Date().toISOString()
+      });
+      addToast("Milestone funds frozen. Dispute metadata logged for arbitration.", "warning");
+      setTaskToDispute(null);
+      setDisputeReason('');
     } catch (error) {
-      addToast("Failed to raise dispute.", "error");
+      addToast("Failed to freeze escrow funds.", "error");
+    } finally {
+      setIsDisputing(false);
     }
   };
 
@@ -364,7 +382,7 @@ const ClientDashboard = () => {
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <button 
                         className="btn btn-outline" 
-                        onClick={() => handleDispute(task.id)}
+                        onClick={() => initiateDispute(task.id)}
                         disabled={isTransacting}
                         style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: '#ef4444', color: '#ef4444' }}
                         title="Freeze funds and request arbitration"
@@ -408,7 +426,14 @@ const ClientDashboard = () => {
                     </a>
                   )}
                   {task.status === 'Disputed' && (
-                    <span style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Awaiting Arbitration</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Awaiting Arbitration</span>
+                      {task.dispute_reason && (
+                        <div style={{ fontSize: '0.75rem', color: '#f87171', maxWidth: '240px', marginTop: '0.2rem' }}>
+                          <strong>Reason:</strong> {task.dispute_reason}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -629,6 +654,53 @@ const ClientDashboard = () => {
                 {isTransacting ? 'Processing...' : 'Force Release Funds'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+            {/* Dispute Modal with Structured Metadata */}
+      {taskToDispute && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
+          <div className="glass-panel" style={{ width: '90%', maxWidth: '440px', padding: '2rem', border: '1px solid #ef4444' }}>
+            <h3 style={{ color: '#ef4444', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertTriangle size={20} /> Freeze Escrow & Log Dispute
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Freezing this escrow immediately halts all fund releases. Please record the dispute reason for the arbitration log.
+            </p>
+            <form onSubmit={handleConfirmDispute}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                  Dispute Reason *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  placeholder="e.g. Deliverable incomplete, work does not meet specification requirements."
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem', resize: 'none' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setTaskToDispute(null)}
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  disabled={isDisputing}
+                  style={{ backgroundColor: '#ef4444', color: 'white', fontWeight: 600 }}
+                >
+                  {isDisputing ? 'Freezing Funds...' : 'Freeze Escrow Funds'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -5,12 +5,13 @@
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Network](https://img.shields.io/badge/Stellar-Testnet%20Protocol%2022-teal)
-![Tests](https://img.shields.io/badge/tests-9%2F9%20passing-brightgreen)
-![SOW Deliverable 3](https://img.shields.io/badge/SOW%20Deliverable%203-Verified-green)
+![Tests](https://img.shields.io/badge/tests-76%2F76%20passing-brightgreen)
+![SOW Deliverables](https://img.shields.io/badge/Sprint%202%20SOW-Verified-green)
 
-**Stellar Philippines Instawards 2026 Sprint**  
+**Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
-**Live Production URL:** [https://gigpay.tech](https://gigpay.tech)
+**Live Production URL:** [https://gigpay.tech](https://gigpay.tech)  
+**Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
 
 ---
 
@@ -25,109 +26,91 @@ The global freelance economy is booming, but the financial infrastructure suppor
 
 **GigPay** is a decentralized, Web3-native escrow platform designed to eliminate middlemen and empower the gig economy. 
 
-Our vision is a world where anyone, anywhere, can work freely and get paid their full value instantly. By leveraging the Stellar network and Soroban Smart Contracts, we provide:
+By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 - **Instant Finality:** Payments settle in under 5 seconds cross-border.
 - **Zero Middleman Fees:** By operating as a decentralized protocol, we eliminate the 20% platform tax. Freelancers keep exactly what they earn.
 - **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. Freelancers work knowing the funds are cryptographically guaranteed. Once work is approved, funds are released instantly.
 
-## ✨ Premium Features
-
-1. **Authentic Web3 Signatures:** Deep integration with `@stellar/freighter-api`. Both Clients and Freelancers must sign secure transactions to lock funds, accept work, and withdraw USDC from escrow.
-2. **The GigPay Advantage Widget:** An interactive fee calculator that dynamically proves how much money users save compared to Upwork (e.g., $100 fee vs $0.0001 Stellar fee).
-3. **Slide to Verify Captcha:** A custom, Web3-native human verification puzzle built with Framer Motion to protect the application from bots while maintaining a futuristic aesthetic.
-4. **Magical Auto-Login:** A premium debounce feature that seamlessly logs users in the moment they finish typing their password.
-5. **Real-Time Sync:** Powered by Supabase, the dual-sided marketplace (Client and Freelancer dashboards) updates instantly across all users.
-
-## 🛠 Tech Stack
-
-- **Frontend:** React, Vite, Tailwind CSS (via custom styling), Framer Motion, Lucide React
-- **Backend / Database:** Supabase (PostgreSQL, Auth, Realtime Subscriptions)
-- **Blockchain / Web3:** Stellar Network (Testnet), Soroban Smart Contracts, `@stellar/freighter-api`
-
-## 🔗 Deployed Smart Contract & Architecture
-
-**GigPay's Soroban smart contract is officially deployed and active on the Stellar Testnet.**
-
-### 📍 On-Chain Deployment Details (Stellar Testnet)
-* **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
-* **Network:** Stellar Testnet (Protocol 22)
-* **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
-* **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
-* **Deployment Transaction:** [`d90e6e47...`](https://stellar.expert/explorer/testnet/tx/d90e6e47231356cc87c03c3207d166345b0b86705afbd8682be365e7a179cc39)
-* **Stellar-Expert Explorer Link:** [Verify on Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
-
-### 📂 Source Code & Frontend Integration
-* **Contract Source:** `/contracts/gigpay_escrow/src/lib.rs`
-* **Compiled Binary:** `/contracts/gigpay_escrow/target/wasm32v1-none/release/gigpay_escrow.wasm`
-* **Frontend State Binding:** Directly integrated inside `/src/context/TaskContext.jsx` and `/src/lib/stellar.js` to bind task creation directly to our deployed Soroban escrow address.
+> **Note on Simulated Features:** All bank off-ramps and fiat withdrawals in the demo dashboard are simulated test features for UI demonstration purposes. Real settlement operates strictly on Stellar Testnet (Protocol 22).
 
 ---
 
-## 🛡️ Week 3 Deliverable 2: Multi-Wallet Hardening & Error Resilience
+## 🚀 Sprint 2 (Month 2 SOW) Deliverables Architecture
 
-GigPay has hardened its frontend and smart contract interaction layer to satisfy all **SOW Table 7 Deliverable 2** acceptance criteria:
+GigPay's Month 2 engagement fulfills all 4 deliverables specified in our approved Statement of Work:
 
-* **Multi-Wallet Execution (SOW Table 7: $\ge 2$ Wallets):** Enforces distinct client funding and freelancer payout addresses across independent Freighter wallets.
-* **Anti-Self-Dealing Assertion:** Front-end and cryptographic validation asserting that client and freelancer addresses cannot collide (`client != freelancer`), preventing wasted network gas.
-* **Exponential Backoff Polling:** Progressive RPC retry schedule (`1500ms -> 2250ms -> 3375ms -> 5000ms -> 5000ms`) preventing rate limits and recovering from transient network congestion during transaction confirmation.
-* **Graceful Error Normalization:** Intercepts Freighter signature declines and timeouts with non-crashing toast warnings.
-* **Pre-Flight Reserve Assertions:** Verifies client account holds base reserve (1.0 XLM) + fee buffer (0.5 XLM) before transaction submission.
+### 1. Real-Time Multi-User Task Lifecycle & Escrow State Sync (Deliverable 1 — $1,500)
+* **Sub-500ms State Reflection:** Tasks funded by clients render immediately on freelancers' screens without manual page reloads or database polling.
+* **Resilient Shared Cache:** Implements optimistic in-memory dispatch combined with `gigpay_shared_tasks` localStorage caching and cross-window storage event listeners.
+* **RLS Fallback Bridge:** Seamlessly tolerates network partitions or Supabase RLS error 42501 with 100% data integrity.
 
-### 🧪 Automated Integration Tests (8/8 Passing)
-Run the automated test suite locally:
+### 2. Zero-Barrier Onboarding & Public Verification Ledger (Deliverable 2 — $1,250)
+* **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate authentic ephemeral Ed25519 keypairs pre-funded with 10,000 XLM via Friendbot.
+* **Immutable Public Ledger Modal:** Real-time query of Supabase tasks and authentic student profiles with one-click Master CSV export for grant auditors.
+* **Anti-Bot Filtering:** Strictly purges generic placeholders (`Demo Client`, `Freelancer`) to present verifiable student developer identities.
+
+### 3. Dispute Mitigation Freeze & Proof-of-Work Verification (Deliverable 3 — $1,250)
+* **Proof-of-Work Deliverable Submission:** Freelancers attach GitHub PR, Loom, or Google Drive links along with verification notes, moving tasks to `Under Review`.
+* **Client Deliverable Review:** Clients inspect deliverables directly from the dashboard before releasing funds.
+* **Structured Dispute Freeze:** Clients can halt releases and log structured dispute metadata (`dispute_reason`, `disputed_at`).
+* **Accidental Release Guard:** AWS-style confirmation modal requiring users to type `"CONFIRM"` before escrow funds can be unlocked.
+
+### 4. Comprehensive Testing Suite & Clean-Install Logs (Deliverable 4 — $1,000)
+* **Automated Tests:** 6 test suites with **76 total passing assertions** (`npm test`), plus 4/4 native Rust contract tests (`cargo test`).
+* **Multi-OS Validation:** Full clean-install logs verified across Windows 11, macOS Apple Silicon, and Ubuntu Linux. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+
+---
+
+## 🧪 Running Automated Tests
+
+Run the full automated test suite locally:
 ```bash
 npm test
 ```
 
-For complete multi-wallet manual reproduction instructions (Client Persona A vs Freelancer Persona B), refer to [TESTING.md](TESTING.md).
+### Test Suite Coverage Matrix (76 Assertions — 100% Green)
+* `soroban_sim.test.js`: Soroban Protocol 22 RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
+* `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
+* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
+* `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15/15).
+* `freelancer_portal_qa.test.js`: Real-time cross-tab sync, double-click protection, work proof submission (12/12).
+* `dual_role_simulation.test.js`: Dynamic role switcher, paired simulator keypairs, anti-self-dealing verification (17/17).
 
-### 📋 SOW Instawards Milestone Scorecard
+---
 
-| Milestone | SOW Deliverable | Status | Evidence / Verification |
-| :--- | :--- | :--- | :--- |
-| **Week 1** | Deliverable 1: Testnet Escrow Contract Deployment | ✅ Complete | PR #2 merged, Contract ID: `CAUU2O5Z...`, [Week 1 X Ship Post](https://x.com/GigPayPH/status/2102193930150502781) |
-| **Week 2** | Deliverable 1 & 2: Frontend Wiring & Execution | ✅ Complete | PR #3 merged, 10 on-chain tx hashes, [Week 2 X Ship Post](https://x.com/GigPayPH/status/2105480741761282160) |
-| **Week 3** | Deliverable 2: Multi-Wallet Hardening & Error Resilience | ✅ Complete | PR #4 merged, 9/9 automated tests, `TESTING.md`, [Week 3 X Ship Post](https://x.com/GigPayPH/status/2108793569138110574) |
-| **Week 4** | Deliverable 3: Final Verification & Capstone Video | ✅ Complete | [Live Group Onboarding Call](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0), [Capstone Walkthrough](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6), PR #5 merged, `SECURITY_AUDIT.md`, [Week 4 X Ship Post](https://x.com/GigPayPH/status/2111271953164300425) |
+## 🔗 Deployed Smart Contract (Stellar Testnet)
+
+* **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
+* **Network:** Stellar Testnet (Protocol 22)
+* **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
+* **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
+* **Stellar-Expert Explorer Link:** [Verify on Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
 
 ---
 
 ## 🚀 Running Locally
 
-Want to try GigPay yourself? Follow these steps:
+```bash
+# 1. Clone repository
+git clone https://github.com/MarkAngelGuevarra/gigpay.git
+cd gigpay
 
-### Prerequisites
-- Node.js (v18+)
-- A Supabase account and project
-- [Freighter Wallet](https://www.freighter.app/) browser extension installed and set to Stellar Testnet.
+# 2. Install dependencies
+npm install
 
-### Installation
+# 3. Run automated test suite
+npm test
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/MarkAngelGuevarra/gigpay.git
-   cd gigpay
-   ```
+# 4. Start local development server
+npm run dev
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+For clean installation logs on other operating systems, inspect [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 
-3. **Set up Environment Variables:**
-   Create a `.env` file in the root directory and add your Supabase credentials.
+---
 
-4. **Initialize Database:**
-   Run the `supabase_schema.sql` script in your Supabase SQL Editor.
-
-5. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-6. **Interact:**
-   Open `http://localhost:5173` in your browser. Create an account, connect your Freighter wallet, and try posting or accepting a task!
-
-## 📬 Let's Connect
-*   **Email:** [marcangelguevarra@gmail.com](mailto:marcangelguevarra@gmail.com)
-*   **GitHub:** [MarkAngelGuevarra](https://github.com/MarkAngelGuevarra)
+## 📬 Builder Contact
+* **Primary Contact:** Mark Angel Guevarra ([marcangelguevarra@gmail.com](mailto:marcangelguevarra@gmail.com))
+* **Stellar Ambassador Chapter:** Stellar Philippines (Leads: Nelson Lumbres & Armielyn Obinguar)
+* **Live App:** [https://gigpay.tech](https://gigpay.tech)
+* **Twitter / X:** [@GigPayPH](https://x.com/GigPayPH)
