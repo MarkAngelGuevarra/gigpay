@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, Zap, Download, ShieldCheck } from 'lucide-react';
-import EscrowSuccessModal from '../components/EscrowSuccessModal';
-import PublicLedgerModal from '../components/PublicLedgerModal';
-import { exportTelemetryToCSV } from '../lib/telemetry';
+import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -11,11 +7,10 @@ import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
-  const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
-  const { tasks, isLoading, addTask, updateTaskStatus } = useTasks();
+  const { user, publicKey } = useAuth();
+  const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
-  const navigate = useNavigate();
-  const clientTasks = tasks.filter(t => t.client_id === user?.id || (user?.id === 'demo-client-uuid-001' && (!t.client_id || t.client_id === 'demo-client-uuid-001')));
+  const clientTasks = tasks.filter(t => t.client_id === user?.id);
   
   const [isTransacting, setIsTransacting] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -24,43 +19,36 @@ const ClientDashboard = () => {
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
-  const [justCreatedTask, setJustCreatedTask] = useState(null);
-  const [successModalData, setSuccessModalData] = useState(null);
-  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+
+  // Dispute Modal State (Deliverable 3 - Armielyn Requirement)
   const [taskToDispute, setTaskToDispute] = useState(null);
-  const [disputeReason, setDisputeReason] = useState('');
-  const [isDisputing, setIsDisputing] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
 
   const initiateApproval = (id) => {
     if (!publicKey) {
-      connectTesterWallet();
-      addToast("Connected Testnet Simulator Wallet for milestone release.", "info");
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
     }
     setTaskToApprove(id);
     setConfirmText('');
   };
 
-  const initiateDispute = (taskId) => {
-    setTaskToDispute(taskId);
-    setDisputeReason('');
+  const handleDisputeSubmit = async () => {
+    if (!taskToDispute) return;
+    try {
+      await raiseDispute(taskToDispute, disputeReason);
+      setTaskToDispute(null);
+      setDisputeReason('Deliverables require revision or do not match agreed specification.');
+    } catch (error) {
+      addToast("Failed to raise dispute: " + error.message, "error");
+    }
   };
 
-  const handleConfirmDispute = async (e) => {
-    if (e) e.preventDefault();
-    if (!taskToDispute) return;
-    setIsDisputing(true);
+  const handleResolve = async (id) => {
     try {
-      await updateTaskStatus(taskToDispute, 'Disputed', false, {
-        dispute_reason: disputeReason.trim() || 'Client requested mediation due to deliverable discrepancies.',
-        disputed_at: new Date().toISOString()
-      });
-      addToast("Milestone funds frozen. Dispute metadata logged for arbitration.", "warning");
-      setTaskToDispute(null);
-      setDisputeReason('');
+      await resolveDispute(id);
     } catch (error) {
-      addToast("Failed to freeze escrow funds.", "error");
-    } finally {
-      setIsDisputing(false);
+      addToast("Failed to resolve dispute.", "error");
     }
   };
 
@@ -86,21 +74,16 @@ const ClientDashboard = () => {
   const handleApprove = async () => {
     if (confirmText !== 'CONFIRM' || !taskToApprove) return;
     if (!publicKey) {
-      connectTesterWallet();
+      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
+      return;
     }
     setIsTransacting(true);
     const taskId = taskToApprove;
     setTaskToApprove(null);
     
-    const approvedTaskObj = tasks.find(t => t.id === taskId);
     try {
       await updateTaskStatus(taskId, 'Completed');
-      addToast("Transaction Confirmed! Funds released to freelancer.", "success");
-      setSuccessModalData({
-        task: approvedTaskObj || { id: taskId, title: 'Milestone Escrow', amount: '50' },
-        role: 'client',
-        actionType: 'approved'
-      });
+      addToast("Transaction Confirmed! Escrow released to freelancer on Testnet.", "success");
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined");
@@ -114,11 +97,6 @@ const ClientDashboard = () => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskAmount) return;
 
-    if (!publicKey) {
-      connectTesterWallet();
-      addToast("Connected Testnet Simulator Wallet with 10,000 XLM for escrow funding.", "info");
-    }
-
     const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
     if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
       addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
@@ -129,22 +107,15 @@ const ClientDashboard = () => {
     
     try {
       const newTask = {
-        title: newTaskTitle.trim(),
-        amount: newTaskAmount.trim(),
+        title: newTaskTitle,
+        amount: newTaskAmount,
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
-      const created = await addTask(newTask);
-      const createdTaskData = created || { id: 'temp-' + Date.now(), title: newTask.title, amount: newTask.amount };
-      setJustCreatedTask(createdTaskData);
-      setSuccessModalData({
-        task: createdTaskData,
-        role: 'client',
-        actionType: 'created'
-      });
+      await addTask(newTask);
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
-      addToast(`Task "${newTask.title}" created and locked in Soroban Escrow!`, "success");
+      addToast("Task Escrow created and funded on Stellar Testnet!", "success");
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
@@ -159,127 +130,15 @@ const ClientDashboard = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2>Client Portal</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Manage your funded Stellar Soroban escrow tasks and approve milestone releases.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setIsLedgerOpen(true)}
-            className="btn btn-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#6ee7b7' }}
-            title="View public immutable verification ledger"
-          >
-            <ShieldCheck size={16} /> View Public Ledger
-          </button>
-          <button
-            type="button"
-            onClick={exportTelemetryToCSV}
-            className="btn btn-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', borderColor: 'rgba(0, 242, 254, 0.4)', color: '#00f2fe' }}
-            title="Download the full verified onboarding ledger spreadsheet (.csv) for Instawards"
-          >
-            <Download size={16} /> Export Traction Ledger (.csv)
-          </button>
+          <p style={{ color: 'var(--text-muted)' }}>
+            Manage your funded Stellar Soroban escrow tasks, inspect freelancer proof-of-work, and approve milestone payouts.
+          </p>
         </div>
       </div>
-
-      {/* Dual-Role Simulation Banner */}
-      {(isSimulationMode || user?.is_simulation_mode || user?.id === 'demo-client-uuid-001') && (
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12))',
-          border: '1px solid rgba(59, 130, 246, 0.35)',
-          borderRadius: '0.75rem',
-          padding: '0.85rem 1.25rem',
-          marginBottom: '1.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <Zap size={18} style={{ color: '#00f2fe', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.88rem', color: '#e2e8f0' }}>
-              <strong>Dual-Role Simulation Active:</strong> Currently viewing as <strong>Client (Acme Corp)</strong>. Fund your escrow task, then switch to Freelancer to accept it!
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => {
-                switchRole('freelancer');
-                navigate('/freelancer');
-                addToast("Switched to Freelancer Portal! Accept your funded task.", "info");
-              }}
-              className="btn btn-outline"
-              style={{
-                padding: '0.35rem 0.75rem',
-                fontSize: '0.8rem',
-                borderColor: 'rgba(167, 139, 250, 0.6)',
-                color: '#c4b5fd',
-                background: 'rgba(139, 92, 246, 0.15)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              ⇄ Switch to Freelancer View
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/auth?mode=signup')}
-              className="btn btn-outline"
-              style={{
-                padding: '0.35rem 0.75rem',
-                fontSize: '0.8rem',
-                borderColor: 'rgba(0, 242, 254, 0.6)',
-                color: '#00f2fe',
-                background: 'rgba(0, 242, 254, 0.12)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              🚀 Create Real Pilot Account
-            </button>
-          </div>
-        </div>
-      )}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
         {/* Task List */}
         <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {justCreatedTask && (
-            <div style={{
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '0.75rem',
-              padding: '1rem 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              animation: 'fadeIn 0.3s ease-in-out'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <CheckCircle size={22} style={{ color: '#4ade80', flexShrink: 0 }} />
-                <div>
-                  <div style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem' }}>
-                    Milestone Escrow Successfully Created & Funded!
-                  </div>
-                  <div style={{ color: '#86efac', fontSize: '0.85rem' }}>
-                    "{justCreatedTask.title}" ({justCreatedTask.amount} XLM) is now available for freelancers to accept.
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setJustCreatedTask(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' }}
-                title="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          )}
           {isLoading ? (
             <div className="glass-panel" style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--accent)' }}>
               Loading tasks from blockchain...
@@ -305,9 +164,6 @@ const ClientDashboard = () => {
                   type="button"
                   className="btn btn-primary"
                   onClick={() => {
-                    if (!publicKey) {
-                      connectTesterWallet();
-                    }
                     setNewTaskTitle('UI/UX Prototype & Soroban Integration');
                     setNewTaskAmount('2');
                     addToast('Sample 2 XLM milestone loaded! Click "Lock Funds in Escrow" on the right.', 'success');
@@ -328,118 +184,129 @@ const ClientDashboard = () => {
               </div>
             </div>
           ) : null}
-          {!isLoading && clientTasks.map(task => (
-            <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, color: task.status === 'Disputed' ? '#ef4444' : 'white' }}>{task.title}</h3>
-                    {task.id === justCreatedTask?.id && (
-                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 'bold' }}>
-                        ✨ Just Created
+
+          {!isLoading && clientTasks.map(task => {
+            const isDisputed = task.status === 'Disputed';
+            const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
+
+            return (
+              <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderLeft: isDisputed ? '4px solid #ef4444' : '4px solid var(--accent)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 style={{ marginBottom: '0.25rem', color: isDisputed ? '#ef4444' : 'white' }}>{task.title}</h3>
+                    <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={14} /> {task.status}
                       </span>
+                      <span>Freelancer: {task.freelancer_id ? task.freelancer_id.slice(0, 8) + '...' : 'Unassigned'}</span>
+                      <span>Contract: <code>CAUU2O...7RD3</code></span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: isDisputed ? '#ef4444' : 'var(--accent)' }}>
+                      {task.amount} XLM
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    {task.status === 'In Progress' && (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="btn btn-outline" 
+                          onClick={() => setTaskToDispute(task.id)}
+                          disabled={isTransacting}
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#ef4444', color: '#ef4444' }}
+                          title="Freeze escrow funds and log dispute"
+                        >
+                          <AlertTriangle size={13} /> Freeze & Dispute
+                        </button>
+                        <button 
+                          className="btn btn-primary" 
+                          onClick={() => initiateApproval(task.id)}
+                          disabled={isTransacting}
+                          style={{ padding: '0.45rem 0.95rem', fontSize: '0.8rem', opacity: isTransacting ? 0.5 : 1 }}
+                        >
+                          <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Disputed State Freeze Notice & Resolution Button */}
+                    {isDisputed && (
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => handleResolve(task.id)}
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', borderColor: '#10b981', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <RotateCcw size={12} /> Resolve Dispute
+                        </button>
+                      </div>
+                    )}
+
+                    {task.tx_hash && (
+                      <a 
+                        href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
+                      >
+                        On-Chain Tx: {task.tx_hash.slice(0, 6)}...{task.tx_hash.slice(-4)} <ExternalLink size={11} />
+                      </a>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: task.status === 'Under Review' ? '#38bdf8' : undefined, fontWeight: task.status === 'Under Review' ? 600 : undefined }}>
-                      <Clock size={14} /> {task.status}
-                    </span>
-                    <span>Freelancer: {task.freelancer_id ? task.freelancer_id.slice(0, 8) + '...' : 'Unassigned'}</span>
-                  </div>
-                  {task.deliverable_url && (
-                    <div style={{
-                      marginTop: '0.5rem',
-                      padding: '0.45rem 0.75rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(56, 189, 248, 0.08)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                      flexWrap: 'wrap'
-                    }}>
-                      <span style={{ fontSize: '0.82rem', color: '#bae6fd' }}>
-                        <strong>📤 Work Proof:</strong> {task.deliverable_notes || 'Deliverable ready for client verification'}
-                      </span>
-                      <a
-                        href={task.deliverable_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#38bdf8', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}
-                      >
-                        Inspect Link <ExternalLink size={12} />
-                      </a>
-                    </div>
-                  )}
                 </div>
-                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: task.status === 'Disputed' ? '#ef4444' : 'var(--accent)' }}>
-                    {task.amount} XLM
-                  </div>
-                  
-                  {(task.status === 'In Progress' || task.status === 'Under Review') && (
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button 
-                        className="btn btn-outline" 
-                        onClick={() => initiateDispute(task.id)}
-                        disabled={isTransacting}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderColor: '#ef4444', color: '#ef4444' }}
-                        title="Freeze funds and request arbitration"
-                      >
-                        <AlertTriangle size={14} /> Dispute
-                      </button>
-                      <button 
-                        className="btn btn-outline" 
-                        onClick={() => initiateApproval(task.id)}
-                        disabled={isTransacting}
-                        style={{ 
-                          padding: '0.5rem 1rem', 
-                          fontSize: '0.85rem', 
-                          borderColor: task.status === 'Under Review' ? '#38bdf8' : 'var(--accent)', 
-                          color: task.status === 'Under Review' ? '#38bdf8' : 'var(--accent)', 
-                          background: task.status === 'Under Review' ? 'rgba(56, 189, 248, 0.12)' : undefined,
-                          opacity: isTransacting ? 0.5 : 1 
-                        }}
-                      >
-                        <CheckCircle size={14} /> {isTransacting ? 'Processing...' : (task.status === 'Under Review' ? 'Verify & Release' : 'Approve & Pay')}
-                      </button>
+
+                {/* Dispute Metadata Freeze Alert (Armielyn Acceptance Criteria b & c) */}
+                {isDisputed && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.85rem', fontSize: '0.85rem', color: '#fca5a5' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>
+                      <AlertTriangle size={15} color="#ef4444" /> ⛔ Release Action Frozen (Disputed State)
                     </div>
-                  )}
-                  {task.tx_hash ? (
-                    <a 
-                      href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.8rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
-                    >
-                      On-Chain Tx: {task.tx_hash.slice(0, 6)}...{task.tx_hash.slice(-4)} <ExternalLink size={11} />
-                    </a>
-                  ) : (
-                    <a 
-                      href={`https://stellar.expert/explorer/testnet/contract/${task.contract_id || 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3'}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}
-                    >
-                      Contract: CAUU2O...7RD3 <ExternalLink size={11} />
-                    </a>
-                  )}
-                  {task.status === 'Disputed' && (
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Awaiting Arbitration</span>
-                      {task.dispute_reason && (
-                        <div style={{ fontSize: '0.75rem', color: '#f87171', maxWidth: '240px', marginTop: '0.2rem' }}>
-                          <strong>Reason:</strong> {task.dispute_reason}
-                        </div>
+                    <div style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>
+                      <strong>Dispute Metadata:</strong> {task.dispute_reason || 'Client logged revision request.'}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      Escrow settlement is paused per SOW Deliverable 3 until mutually resolved or updated by the freelancer.
+                    </div>
+                  </div>
+                )}
+
+                {/* Attached Freelancer Proof of Work (Armielyn Deliverable 3 Verification) */}
+                {hasProof && (
+                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#00f2fe', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+                      <CheckCircle2 size={14} /> Freelancer Proof of Work Attached:
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: task.submission_notes ? '0.5rem' : 0 }}>
+                      {task.github_pr_url && (
+                        <a href={task.github_pr_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
+                          <FileCode size={13} /> Inspect GitHub PR <ExternalLink size={11} />
+                        </a>
+                      )}
+                      {task.doc_url && (
+                        <a href={task.doc_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
+                          <FileText size={13} /> Inspect Document <ExternalLink size={11} />
+                        </a>
+                      )}
+                      {task.loom_url && (
+                        <a href={task.loom_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
+                          <Video size={13} /> Watch Loom Demo <ExternalLink size={11} />
+                        </a>
                       )}
                     </div>
-                  )}
-                </div>
+                    {task.submission_notes && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.4rem' }}>
+                        <strong>Freelancer Note:</strong> {task.submission_notes}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <TaskProgress status={task.status} />
               </div>
-              <TaskProgress status={task.status} />
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Create Task Form */}
@@ -457,136 +324,79 @@ const ClientDashboard = () => {
                 required
               />
             </div>
+
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
-                <label style={{ color: 'var(--text-muted)' }}>Escrow Amount (Testnet XLM)</label>
-                <button 
-                  type="button" 
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ color: 'var(--text-muted)', margin: 0 }}>Milestone Amount (XLM)</label>
+                <button
+                  type="button"
                   onClick={simulateAIEstimate}
                   disabled={isEstimating}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--accent)',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: 0
+                  }}
                 >
-                  <Sparkles size={12} /> {isEstimating ? 'Estimating...' : 'AI Estimate'}
+                  <Sparkles size={14} /> {isEstimating ? 'Estimating...' : 'AI Fee Estimate'}
                 </button>
               </div>
               <input 
                 type="number" 
-                step="any"
+                placeholder="e.g. 5" 
                 min="0.1"
-                placeholder="2" 
+                step="any"
                 value={newTaskAmount}
                 onChange={(e) => setNewTaskAmount(e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} 
                 required
               />
-              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
-                {['1', '2', '5'].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setNewTaskAmount(preset)}
-                    style={{
-                      flex: 1,
-                      padding: '0.3rem 0.5rem',
-                      fontSize: '0.75rem',
-                      borderRadius: '0.35rem',
-                      border: newTaskAmount === preset ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.12)',
-                      background: newTaskAmount === preset ? 'rgba(0, 242, 254, 0.14)' : 'rgba(0,0,0,0.25)',
-                      color: newTaskAmount === preset ? '#00f2fe' : 'var(--text-muted)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {preset} XLM
-                  </button>
-                ))}
-              </div>
             </div>
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Freelancer Destination Wallet (Optional)
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
+                Target Freelancer Wallet (Optional)
               </label>
               <input 
                 type="text" 
-                placeholder="GAAT... (Defaults to QA recipient)" 
+                placeholder="G... (Leave blank for public marketplace)" 
                 value={freelancerWallet}
                 onChange={(e) => setFreelancerWallet(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '0.5rem', 
-                  border: freelancerWallet && freelancerWallet.trim() === publicKey?.trim() ? '1px solid #ef4444' : '1px solid var(--border)', 
-                  background: 'rgba(0,0,0,0.2)', 
-                  color: 'white', 
-                  fontSize: '0.8rem' 
-                }} 
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white', fontSize: '0.85rem' }} 
               />
-              {freelancerWallet && freelancerWallet.trim() === publicKey?.trim() && (
-                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  ⚠️ Anti-Self-Dealing: Cannot send escrow to your own connected client wallet.
-                </span>
-              )}
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Self-dealing protection active: Cannot assign to your own wallet.
+              </span>
             </div>
 
-            {!publicKey ? (
-              <div style={{ 
-                padding: '0.85rem', 
-                background: 'rgba(0, 242, 254, 0.08)', 
-                border: '1px solid rgba(0, 242, 254, 0.3)', 
-                borderRadius: '0.5rem',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.45rem'
-              }}>
-                <div style={{ color: '#00f2fe', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                  <Zap size={15} /> Student / Mobile Tester Mode
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: 0, lineHeight: 1.4 }}>
-                  No Freighter wallet extension? Connect a pre-funded Testnet Simulator Wallet with 1 click to test escrows without setup.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    connectTesterWallet();
-                    addToast("Simulator Testnet Wallet (10,000 XLM) connected!", "success");
-                  }}
-                  className="btn btn-outline"
-                  style={{
-                    width: '100%',
-                    padding: '0.45rem',
-                    fontSize: '0.8rem',
-                    borderColor: '#00f2fe',
-                    color: '#00f2fe',
-                    background: 'rgba(0, 242, 254, 0.12)',
-                    fontWeight: 600
-                  }}
-                >
-                  ⚡ Connect Testnet Simulator Wallet
-                </button>
-              </div>
-            ) : null}
             <button 
+              type="submit" 
               className="btn btn-primary" 
-              style={{ marginTop: '0.5rem', opacity: isTransacting ? 0.6 : 1 }}
               disabled={isTransacting}
+              style={{ marginTop: '0.5rem', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
             >
-              <PlusCircle size={18}/> {isTransacting ? 'Signing & Locking Escrow on Testnet...' : 'Lock Funds in Escrow'}
+              <PlusCircle size={18} /> {isTransacting ? 'Invoking Soroban RPC...' : 'Lock Funds in Escrow'}
             </button>
           </form>
 
-          {/* The GigPay Advantage Widget */}
-          {newTaskAmount && !isNaN(newTaskAmount) && Number(newTaskAmount) > 0 && (
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '0.5rem' }}>
-              <h4 style={{ color: '#4ade80', marginBottom: '0.5rem', fontSize: '0.9rem' }}>✨ The GigPay Advantage</h4>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {/* Fee Comparison Widget */}
+          {newTaskAmount && Number(newTaskAmount) > 0 && (
+            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>💡 0% Escrow Advantage</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Upwork Fee (20%):</span>
-                  <span style={{ color: '#ef4444', textDecoration: 'line-through' }}>${(Number(newTaskAmount) * 0.2).toFixed(2)}</span>
+                  <span>Traditional Fee (20%):</span>
+                  <span style={{ color: '#ff4444' }}>${(Number(newTaskAmount) * 0.2).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Stellar Network Fee:</span>
-                  <span style={{ color: '#4ade80' }}>$0.0001</span>
+                  <span>Stellar Gas Fee:</span>
+                  <span style={{ color: '#4ade80' }}>&lt; $0.0001</span>
                 </div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontWeight: 'bold' }}>
@@ -599,127 +409,94 @@ const ClientDashboard = () => {
         </div>
       </div>
 
-      {/* AWS-style Confirmation Modal */}
-      {taskToApprove && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
-          <div className="glass-panel" style={{ width: '400px', padding: '2rem', border: '1px solid #ff4444' }}>
-            <h3 style={{ color: '#ff4444', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              ⚠️ Danger Zone
+      {/* Dispute Reason Modal (Deliverable 3 - Armielyn Requirement) */}
+      {taskToDispute && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
+          <div className="glass-panel" style={{ width: '450px', padding: '2rem', border: '1px solid #ef4444' }}>
+            <h3 style={{ color: '#ef4444', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertTriangle size={20} /> Raise Escrow Dispute
             </h3>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
-              You are about to release funds from escrow. This action is irreversible on the blockchain.
+            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Freezes the escrow milestone and blocks standard fund release. Dispute metadata will be logged to the task record.
             </p>
-            <p style={{ marginBottom: '0.5rem' }}>
-              To proceed, please type <strong>CONFIRM</strong> below:
-            </p>
-            <input 
-              type="text" 
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="CONFIRM"
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ff4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.5rem' }} 
+            <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
+              Dispute Reason / Required Revisions:
+            </label>
+            <textarea
+              rows={3}
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ef4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', fontSize: '0.85rem' }}
             />
-            {!publicKey && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <p style={{ color: '#f59e0b', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <AlertTriangle size={14} /> Wallet not connected.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    connectTesterWallet();
-                    addToast("Simulator Testnet Wallet connected!", "success");
-                  }}
-                  className="btn btn-outline"
-                  style={{ width: '100%', fontSize: '0.8rem', padding: '0.45rem', borderColor: '#00f2fe', color: '#00f2fe', background: 'rgba(0, 242, 254, 0.08)' }}
-                >
-                  ⚡ Connect Simulator Wallet to Release Funds
-                </button>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
                 className="btn btn-outline" 
-                onClick={() => setTaskToApprove(null)}
-                style={{ padding: '0.5rem 1rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}
+                onClick={() => setTaskToDispute(null)}
+                style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)', padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
               >
                 Cancel
               </button>
               <button 
                 className="btn" 
-                onClick={handleApprove}
-                disabled={confirmText !== 'CONFIRM' || isTransacting}
-                style={{ padding: '0.5rem 1rem', backgroundColor: confirmText === 'CONFIRM' ? '#ff4444' : '#555', color: 'white', cursor: confirmText === 'CONFIRM' ? 'pointer' : 'not-allowed' }}
+                onClick={handleDisputeSubmit}
+                style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px' }}
               >
-                {isTransacting ? 'Processing...' : 'Force Release Funds'}
+                Confirm Dispute Freeze
               </button>
             </div>
           </div>
         </div>
       )}
 
-            {/* Dispute Modal with Structured Metadata */}
-      {taskToDispute && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
-          <div className="glass-panel" style={{ width: '90%', maxWidth: '440px', padding: '2rem', border: '1px solid #ef4444' }}>
-            <h3 style={{ color: '#ef4444', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertTriangle size={20} /> Freeze Escrow & Log Dispute
+      {/* Release Confirmation Modal: Strict CONFIRM Requirement (Armielyn Acceptance Criteria d) */}
+      {taskToApprove && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
+          <div className="glass-panel" style={{ width: '440px', padding: '2rem', border: '1px solid #10b981' }}>
+            <h3 style={{ color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CheckCircle size={22} /> Milestone Release Confirmation
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-              Freezing this escrow immediately halts all fund releases. Please record the dispute reason for the arbitration log.
+            <p style={{ marginBottom: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+              You are about to release funds from the Soroban escrow contract (<code>CAUU2O...7RD3</code>) to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
             </p>
-            <form onSubmit={handleConfirmDispute}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                  Dispute Reason *
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  placeholder="e.g. Deliverable incomplete, work does not meet specification requirements."
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(0,0,0,0.3)', color: 'white', fontSize: '0.85rem', resize: 'none' }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setTaskToDispute(null)}
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn"
-                  disabled={isDisputing}
-                  style={{ backgroundColor: '#ef4444', color: 'white', fontWeight: 600 }}
-                >
-                  {isDisputing ? 'Freezing Funds...' : 'Freeze Escrow Funds'}
-                </button>
-              </div>
-            </form>
+            <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+              <strong>⚠️ Armielyn Reviewer Requirement:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
+            </div>
+            <input 
+              type="text" 
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRM"
+              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: confirmText === 'CONFIRM' ? '1px solid #10b981' : '1px solid var(--border)', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', letterSpacing: '1px', fontWeight: 'bold' }} 
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setTaskToApprove(null)}
+                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn" 
+                onClick={handleApprove}
+                disabled={confirmText !== 'CONFIRM' || !publicKey || isTransacting}
+                style={{ 
+                  padding: '0.45rem 1.1rem', 
+                  fontSize: '0.8rem',
+                  backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#10b981' : '#475569', 
+                  color: 'white', 
+                  cursor: (confirmText === 'CONFIRM' && publicKey) ? 'pointer' : 'not-allowed',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 600
+                }}
+              >
+                {isTransacting ? 'Invoking Soroban RPC...' : 'Release Escrow Payout'}
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      <EscrowSuccessModal
-        isOpen={Boolean(successModalData)}
-        onClose={() => setSuccessModalData(null)}
-        task={successModalData?.task}
-        role={successModalData?.role || 'client'}
-        actionType={successModalData?.actionType || 'created'}
-        user={user}
-        publicKey={publicKey}
-        onToast={addToast}
-      />
-
-      <PublicLedgerModal
-        isOpen={isLedgerOpen}
-        onClose={() => setIsLedgerOpen(false)}
-      />
     </div>
   );
 };
