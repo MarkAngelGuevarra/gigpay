@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, ShieldCheck } from 'lucide-react';
-import PublicLedgerModal from './PublicLedgerModal';
+import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
+import VerificationLedgerModal from './VerificationLedgerModal';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
+  const { user, signOut, publicKey, connectWallet } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -80,27 +80,6 @@ const Navbar = () => {
         <span className="logo-text">GigPay</span>
       </a>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          onClick={() => setShowLedgerModal(true)}
-          className="btn btn-outline"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.42rem 0.75rem',
-            borderColor: 'rgba(16, 185, 129, 0.45)',
-            background: 'rgba(16, 185, 129, 0.08)',
-            color: '#6ee7b7',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            cursor: 'pointer'
-          }}
-          title="View public immutable verification ledger"
-        >
-          <ShieldCheck size={13} /> Public Ledger
-        </button>
         <a
           href="https://forms.gle/oLGjJRcxg5LZ5bC96"
           target="_blank"
@@ -122,66 +101,33 @@ const Navbar = () => {
         >
           🚀 Pilot Tester Form <ExternalLink size={13} />
         </a>
+        <button
+          type="button"
+          onClick={() => setShowLedgerModal(true)}
+          className="btn btn-outline"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.42rem 0.75rem',
+            borderColor: 'rgba(99, 102, 241, 0.45)',
+            background: 'rgba(99, 102, 241, 0.08)',
+            color: '#818cf8',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <FileSpreadsheet size={13} /> 📜 Public Ledger
+        </button>
         {user ? (
           <>
-            {(user.user_metadata?.role === 'client' || isSimulationMode) && (
-              <Link 
-                to="/client" 
-                className="btn btn-outline" 
-                style={{ 
-                  padding: '0.42rem 0.75rem', 
-                  fontSize: '0.8rem', 
-                  whiteSpace: 'nowrap',
-                  borderColor: user.user_metadata?.role === 'client' ? 'rgba(59, 130, 246, 0.6)' : undefined,
-                  background: user.user_metadata?.role === 'client' ? 'rgba(59, 130, 246, 0.15)' : undefined
-                }}
-              >
-                Client Portal
-              </Link>
+            {user.user_metadata?.role === 'client' && (
+              <Link to="/client" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Client Portal</Link>
             )}
-            {(user.user_metadata?.role === 'freelancer' || isSimulationMode) && (
-              <Link 
-                to="/freelancer" 
-                className="btn btn-outline" 
-                style={{ 
-                  padding: '0.42rem 0.75rem', 
-                  fontSize: '0.8rem', 
-                  whiteSpace: 'nowrap',
-                  borderColor: user.user_metadata?.role === 'freelancer' ? 'rgba(139, 92, 246, 0.6)' : undefined,
-                  background: user.user_metadata?.role === 'freelancer' ? 'rgba(139, 92, 246, 0.15)' : undefined
-                }}
-              >
-                Freelancer Portal
-              </Link>
+            {user.user_metadata?.role === 'freelancer' && (
+              <Link to="/freelancer" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Freelancer Portal</Link>
             )}
-
-            {/* Interactive 1-Click Dual-Role Simulation Switcher */}
-            <button
-              type="button"
-              onClick={() => {
-                const newRole = switchRole();
-                addToast(`Switched to ${newRole === 'client' ? 'Client (Hiring)' : 'Freelancer (Working)'} View!`, 'info');
-                navigate(newRole === 'client' ? '/client' : '/freelancer');
-              }}
-              className="btn btn-outline"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.42rem 0.75rem',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(139, 92, 246, 0.12))',
-                borderColor: 'rgba(0, 242, 254, 0.5)',
-                color: '#00f2fe',
-                cursor: 'pointer',
-                borderRadius: '0.5rem',
-                whiteSpace: 'nowrap'
-              }}
-              title="Toggle between Client and Freelancer personas to simulate the entire escrow lifecycle"
-            >
-              ⇄ Switch to {user.user_metadata?.role === 'client' ? 'Freelancer' : 'Client'} View
-            </button>
             
             {/* Visual Role Badge for Demo Clarity */}
             {user.user_metadata?.role && (
@@ -200,7 +146,7 @@ const Navbar = () => {
                 whiteSpace: 'nowrap',
                 boxShadow: `0 0 10px ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`
               }}>
-                {user.user_metadata.role} {isSimulationMode && '• SIM'}
+                {user.user_metadata.role}
               </span>
             )}
             {publicKey ? (
@@ -311,43 +257,32 @@ const Navbar = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <a 
                 href="https://www.freighter.app/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="btn btn-primary"
-                style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
               >
                 Download Freighter <ExternalLink size={16} />
               </a>
               <button 
-                type="button"
-                onClick={() => {
-                  setShowOnboardingModal(false);
-                  connectTesterWallet();
-                  addToast("Web3 Simulator Wallet activated! You can now test escrows.", "success");
-                }}
-                className="btn btn-outline"
-                style={{ flex: 1, borderColor: 'rgba(0, 242, 254, 0.5)', color: '#00f2fe', whiteSpace: 'nowrap' }}
-              >
-                ⚡ Mobile / Tester Mode
-              </button>
-              <button 
-                type="button"
                 onClick={() => setShowOnboardingModal(false)}
                 className="btn btn-outline"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                style={{ flex: 1, borderColor: 'var(--border)', color: 'var(--text-muted)' }}
               >
-                Close
+                I'll do it later
               </button>
             </div>
           </div>
         </div>
       )}
-      <PublicLedgerModal
-        isOpen={showLedgerModal}
-        onClose={() => setShowLedgerModal(false)}
+
+      {/* Public Verification Ledger Modal (Deliverable 2) */}
+      <VerificationLedgerModal 
+        isOpen={showLedgerModal} 
+        onClose={() => setShowLedgerModal(false)} 
       />
     </nav>
   );
