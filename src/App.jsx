@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import ClientDashboard from './pages/ClientDashboard';
@@ -10,8 +10,6 @@ import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import { Analytics } from '@vercel/analytics/react';
-import { Navigate } from 'react-router-dom';
 import './index.css';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -39,43 +37,42 @@ function App() {
           <TaskProvider>
             <Router>
               <div className="container">
-              <Navbar />
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/client" 
-                  element={
-                    <ProtectedRoute requiredRole="client">
-                      <ClientDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/freelancer" 
-                  element={
-                    <ProtectedRoute requiredRole="freelancer">
-                      <FreelancerDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-              </Routes>
-            </div>
-            <Analytics />
-          </Router>
-        </TaskProvider>
-      </ToastProvider>
-    </AuthProvider>
-  </ErrorBoundary>
-);
+                <Navbar />
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/client" 
+                    element={
+                      <ProtectedRoute requiredRole="client">
+                        <ClientDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/freelancer" 
+                    element={
+                      <ProtectedRoute requiredRole="freelancer">
+                        <FreelancerDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                </Routes>
+              </div>
+            </Router>
+          </TaskProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App;

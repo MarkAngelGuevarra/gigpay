@@ -8,7 +8,7 @@ import { getAccountBalance } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet } = useAuth();
+  const { user, signOut, publicKey, connectWallet, connectTesterWallet } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -279,6 +279,18 @@ const Navbar = () => {
                 style={{ flex: 1, borderColor: 'var(--border)', color: 'var(--text-muted)' }}
               >
                 I'll do it later
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  connectTesterWallet();
+                  setShowOnboardingModal(false);
+                  addToast("Connected in Mobile / Simulator Testnet Mode!", "success");
+                }}
+                className="btn btn-outline"
+                style={{ flex: '1 1 100%', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', marginTop: '0.5rem', fontSize: '0.85rem' }}
+              >
+                ⚡ Continue in Mobile / Simulator Testnet Mode
               </button>
             </div>
           </div>

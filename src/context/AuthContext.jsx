@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection } from '../lib/stellar';
 
 const AuthContext = createContext();
 
@@ -9,7 +9,19 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [publicKey, setPublicKey] = useState(null);
+  const [publicKey, setPublicKey] = useState(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const savedKey = localStorage.getItem('gigpay_wallet_public_key');
+        if (savedKey && (savedKey.startsWith('G') || savedKey.startsWith('GBDEMO_'))) {
+          return savedKey;
+        }
+      }
+    } catch (e) {
+      console.warn("[AuthContext] Local storage wallet read warning:", e);
+    }
+    return null;
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +39,22 @@ export const AuthProvider = ({ children }) => {
       } catch (e) {
         localStorage.removeItem('gigpay_demo_user');
       }
+    }
+
+    // Rehydrate and verify Freighter wallet connection resilience
+    try {
+      const cachedKey = localStorage.getItem('gigpay_wallet_public_key');
+      if (cachedKey) {
+        setPublicKey(cachedKey);
+        // Optionally verify with isConnected()
+        checkFreighterConnection().then(connected => {
+          if (!connected && !cachedKey.startsWith('GBDEMO_') && cachedKey !== DEMO_FREELANCER_KEY && cachedKey !== DEMO_PUBLIC_KEY) {
+            console.info("[AuthContext] Cached wallet session loaded; Freighter active check:", connected);
+          }
+        }).catch(() => {});
+      }
+    } catch (storageErr) {
+      console.warn("[AuthContext] Wallet persistence check notice:", storageErr);
     }
 
     // Check active sessions and sets the user
@@ -111,7 +139,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('gigpay_demo_user');
+    try {
+      localStorage.removeItem('gigpay_demo_user');
+      localStorage.removeItem('gigpay_wallet_public_key');
+    } catch (e) {
+      console.warn("Storage cleanup notice:", e);
+    }
     try {
       await supabase.auth.signOut();
     } catch (e) {
@@ -121,20 +154,46 @@ export const AuthProvider = ({ children }) => {
     setPublicKey(null);
   };
 
+  const disconnectWallet = () => {
+    try {
+      localStorage.removeItem('gigpay_wallet_public_key');
+    } catch (e) {
+      console.warn("[AuthContext] Storage cleanup notice:", e);
+    }
+    setPublicKey(null);
+  };
+
   const connectWallet = async () => {
-    const res = await connectFreighter();
-    if (res.error) throw new Error(res.error);
-    const key = typeof res.publicKey === 'string'
-      ? res.publicKey
-      : (res.publicKey?.address || String(res.publicKey || ''));
-    setPublicKey(key);
-    return { publicKey: key, network: res.network };
+    try {
+      const res = await connectFreighter();
+      if (res?.error) throw new Error(res.error);
+      const key = typeof res.publicKey === 'string'
+        ? res.publicKey
+        : (res.publicKey?.address || String(res.publicKey || ''));
+      setPublicKey(key);
+      try {
+        if (key) {
+          localStorage.setItem('gigpay_wallet_public_key', key);
+        }
+      } catch (err) {
+        console.warn("[AuthContext] Could not cache wallet public key:", err);
+      }
+      return { publicKey: key, network: res.network };
+    } catch (error) {
+      console.error("[AuthContext] Wallet connection error:", error);
+      throw error;
+    }
   };
 
   const connectTesterWallet = (roleOverride) => {
     const effectiveRole = roleOverride || user?.user_metadata?.role || 'client';
     const demoKey = effectiveRole === 'freelancer' ? DEMO_FREELANCER_KEY : DEMO_PUBLIC_KEY;
     setPublicKey(demoKey);
+    try {
+      localStorage.setItem('gigpay_wallet_public_key', demoKey);
+    } catch (err) {
+      console.warn("[AuthContext] Could not cache demo wallet key:", err);
+    }
     return { publicKey: demoKey, network: 'TESTNET' };
   };
 
@@ -142,6 +201,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await createEphemeralTestnetWallet();
       setPublicKey(res.publicKey);
+      try {
+        localStorage.setItem('gigpay_wallet_public_key', res.publicKey);
+      } catch (err) {
+        console.warn("[AuthContext] Could not cache ephemeral wallet key:", err);
+      }
       return res;
     } catch (err) {
       console.warn("Ephemeral connect notice:", err);
@@ -164,17 +228,28 @@ export const AuthProvider = ({ children }) => {
       }
     };
     setUser(updatedUser);
-    localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
+    try {
+      localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.warn("Could not cache switched user:", e);
+    }
     
     // Automatically sync paired simulator wallet so anti-self-dealing assertion always passes
     if (!publicKey || publicKey === DEMO_PUBLIC_KEY || publicKey === DEMO_FREELANCER_KEY) {
-      setPublicKey(isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY);
+      const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
+      setPublicKey(nextKey);
+      try {
+        localStorage.setItem('gigpay_wallet_public_key', nextKey);
+      } catch (err) {
+        console.warn("Could not cache switched demo key:", err);
+      }
     }
     return targetRole;
   };
 
   const loginSimulationMode = (initialRole = 'client') => {
     const isClient = initialRole === 'client';
+    const simKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
     const simUser = {
       id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
       email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
@@ -186,8 +261,13 @@ export const AuthProvider = ({ children }) => {
       }
     };
     setUser(simUser);
-    localStorage.setItem('gigpay_demo_user', JSON.stringify(simUser));
-    setPublicKey(isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY);
+    try {
+      localStorage.setItem('gigpay_demo_user', JSON.stringify(simUser));
+      localStorage.setItem('gigpay_wallet_public_key', simKey);
+    } catch (e) {
+      console.warn("Could not cache simulation user/key:", e);
+    }
+    setPublicKey(simKey);
     return simUser;
   };
 
@@ -202,6 +282,7 @@ export const AuthProvider = ({ children }) => {
       signOut, 
       publicKey, 
       connectWallet, 
+      disconnectWallet,
       connectTesterWallet,
       connectEphemeralWallet,
       switchRole,

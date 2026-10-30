@@ -11,6 +11,16 @@ const ClientDashboard = () => {
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
   const clientTasks = tasks.filter(t => t.client_id === user?.id);
+
+  // Aggregate Metrics Calculations (R2 & R3 Requirement with safe zero-division guards)
+  const totalEscrowed = clientTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const activeEscrows = clientTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length;
+  const totalReleased = clientTasks.filter(t => t.status === 'Completed').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const completedTasks = clientTasks.filter(t => t.status === 'Completed');
+  const totalTasksCount = clientTasks.length;
+  const completionPercentage = totalTasksCount > 0 
+    ? Math.round((completedTasks.length / totalTasksCount) * 100) 
+    : 0;
   
   const [isTransacting, setIsTransacting] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -24,12 +34,19 @@ const ClientDashboard = () => {
   const [taskToDispute, setTaskToDispute] = useState(null);
   const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
 
-  const initiateApproval = (id) => {
+  const initiateApproval = (taskOrId) => {
     if (!publicKey) {
       addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
       return;
     }
-    setTaskToApprove(id);
+    const taskObj = (taskOrId && typeof taskOrId === 'object') 
+      ? taskOrId 
+      : (clientTasks.find(t => t.id === taskOrId) || { id: taskOrId });
+    if (taskObj.status === 'Available') {
+      addToast("Cannot release escrow before task is accepted and work is in progress.", "warning");
+      return;
+    }
+    setTaskToApprove(taskObj);
     setConfirmText('');
   };
 
@@ -77,13 +94,20 @@ const ClientDashboard = () => {
       addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
       return;
     }
+
+    const targetTaskId = typeof taskToApprove === 'object' ? taskToApprove.id : taskToApprove;
+    if (!targetTaskId) {
+      addToast("Error: Missing task identifier for milestone release.", "error");
+      return;
+    }
+
     setIsTransacting(true);
-    const taskId = taskToApprove;
-    setTaskToApprove(null);
-    
     try {
-      await updateTaskStatus(taskId, 'Completed');
-      addToast("Transaction Confirmed! Escrow released to freelancer on Testnet.", "success");
+      const result = await updateTaskStatus(targetTaskId, 'Completed');
+      setTaskToApprove(null);
+      setConfirmText('');
+      const txSnippet = result?.hash ? ` (Tx: ${result.hash.slice(0, 8)}...)` : '';
+      addToast(`Transaction Confirmed! Escrow released to freelancer on Testnet${txSnippet}.`, "success");
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined");
@@ -133,6 +157,34 @@ const ClientDashboard = () => {
           <p style={{ color: 'var(--text-muted)' }}>
             Manage your funded Stellar Soroban escrow tasks, inspect freelancer proof-of-work, and approve milestone payouts.
           </p>
+        </div>
+      </div>
+
+      {/* Aggregate Balance & Escrow Metrics Cards (R2 & R3 Pilot Requirement) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
+        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid var(--accent)' }}>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Escrowed</h4>
+          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+            {totalEscrowed.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
+          </div>
+        </div>
+        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #38bdf8' }}>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Active Escrows</h4>
+          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+            {activeEscrows}
+          </div>
+        </div>
+        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #10b981' }}>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Released</h4>
+          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+            {totalReleased.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
+          </div>
+        </div>
+        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #f59e0b' }}>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Completion Rate</h4>
+          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+            {completionPercentage}%
+          </div>
         </div>
       </div>
 
@@ -223,9 +275,15 @@ const ClientDashboard = () => {
                         )}
                         <button 
                           className="btn btn-primary" 
-                          onClick={() => initiateApproval(task.id)}
-                          disabled={isTransacting}
-                          style={{ padding: '0.45rem 0.95rem', fontSize: '0.8rem', opacity: isTransacting ? 0.5 : 1 }}
+                          onClick={() => initiateApproval(task)}
+                          disabled={isTransacting || task.status === 'Available'}
+                          title={task.status === 'Available' ? "Cannot release escrow before task is accepted by a freelancer" : undefined}
+                          style={{ 
+                            padding: '0.45rem 0.95rem', 
+                            fontSize: '0.8rem', 
+                            opacity: (isTransacting || task.status === 'Available') ? 0.45 : 1,
+                            cursor: (isTransacting || task.status === 'Available') ? 'not-allowed' : 'pointer'
+                          }}
                         >
                           <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}
                         </button>
@@ -457,9 +515,17 @@ const ClientDashboard = () => {
             <h3 style={{ color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <CheckCircle size={22} /> Milestone Release Confirmation
             </h3>
-            <p style={{ marginBottom: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
               You are about to release funds from the Soroban escrow contract (<code>CAUU2O...7RD3</code>) to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
             </p>
+            {taskToApprove?.title && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ color: 'white', fontWeight: 600 }}>{taskToApprove.title}</div>
+                <div style={{ marginTop: '0.25rem', color: '#10b981', fontWeight: 'bold' }}>
+                  Release Amount: {taskToApprove.amount} XLM
+                </div>
+              </div>
+            )}
             <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
               <strong>⚠️ Armielyn Reviewer Requirement:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
             </div>
@@ -468,13 +534,15 @@ const ClientDashboard = () => {
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="CONFIRM"
+              disabled={isTransacting}
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: confirmText === 'CONFIRM' ? '1px solid #10b981' : '1px solid var(--border)', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', letterSpacing: '1px', fontWeight: 'bold' }} 
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
                 className="btn btn-outline" 
-                onClick={() => setTaskToApprove(null)}
-                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}
+                onClick={() => { if (!isTransacting) setTaskToApprove(null); }}
+                disabled={isTransacting}
+                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)', opacity: isTransacting ? 0.5 : 1 }}
               >
                 Cancel
               </button>
@@ -487,7 +555,7 @@ const ClientDashboard = () => {
                   fontSize: '0.8rem',
                   backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#10b981' : '#475569', 
                   color: 'white', 
-                  cursor: (confirmText === 'CONFIRM' && publicKey) ? 'pointer' : 'not-allowed',
+                  cursor: (confirmText === 'CONFIRM' && publicKey && !isTransacting) ? 'pointer' : 'not-allowed',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: 600

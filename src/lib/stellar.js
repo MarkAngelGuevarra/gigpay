@@ -96,6 +96,19 @@ export const checkSorobanRpcHealth = async () => {
 };
 
 /**
+ * Checks if Freighter extension is installed and responds to ping.
+ * @returns {Promise<boolean>}
+ */
+export const checkFreighterConnection = async () => {
+  try {
+    if (!isConnected) return false;
+    return await withTimeout(isConnected(), 2000);
+  } catch (err) {
+    return false;
+  }
+};
+
+/**
  * Checks if the user has Freighter installed and connected.
  * If Freighter is broken or blocked, it instantly falls back to a Demo Mode.
  */
@@ -611,7 +624,8 @@ export const submitFundTask = async ({
  * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
  */
 export const simulateApproveTask = async ({ clientAddress, taskId }) => {
-  const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
+  const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId || 1) : taskId;
+  const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
   if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
@@ -621,7 +635,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
     };
   }
 
-  const rawNum = typeof taskId === 'string' ? parseInt(taskId.replace(/\D/g, ''), 10) : Number(taskId);
+  const rawNum = typeof resolvedTaskId === 'string' ? parseInt(String(resolvedTaskId).replace(/\D/g, ''), 10) : Number(resolvedTaskId);
   const numericTaskId = Number.isFinite(rawNum) && rawNum > 0 ? (rawNum % 4294967295 || 1) : 1;
   const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
   const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
@@ -668,13 +682,14 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
  *
  * @param {Object} params
  * @param {string} params.clientAddress - Public key of client
- * @param {number|string} params.taskId - On-chain task ID
+ * @param {number|string|Object} params.taskId - On-chain task ID
  * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
  */
 export const submitApproveTask = async ({ clientAddress, taskId }) => {
-  const isMockTask = typeof taskId === 'string' && taskId.startsWith('task-mock');
+  const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId || 1) : taskId;
+  const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
   if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
-    console.log(`[DEMO MODE] Simulating approve_task release for Task #${taskId}`);
+    console.log(`[DEMO MODE] Simulating approve_task release for Task #${resolvedTaskId}`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     const demoHash = 'demo_release_' + Date.now().toString(16);
     return {
@@ -745,5 +760,5 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
   }
 };
 
-
-
+export const approveMilestone = submitApproveTask;
+export const releaseMilestone = submitApproveTask;

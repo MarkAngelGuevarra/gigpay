@@ -14,10 +14,11 @@ const FreelancerDashboard = () => {
   const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && t.freelancer_id === user?.id);
   const completedTasks = tasks.filter(t => t.status === 'Completed' && t.freelancer_id === user?.id);
   
-  const totalEarned = completedTasks.reduce((sum, task) => sum + Number(task.amount), 0);
+  const totalEarned = completedTasks.reduce((sum, task) => sum + (Number(task.amount) || 0), 0);
 
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [acceptingTaskId, setAcceptingTaskId] = useState(null);
   const [showKycModal, setShowKycModal] = useState(false);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -44,16 +45,22 @@ const FreelancerDashboard = () => {
 
   const handleAcceptWork = async (id, amount) => {
     setIsAccepting(true);
+    setAcceptingTaskId(id);
     try {
-      await requestWalletSignature(publicKey, `Accept Escrow Contract for ${amount} XLM`);
-      updateTaskStatus(id, 'In Progress', true);
-      addToast("Work accepted! Escrow milestone is now active.", "success");
-    } catch (error) {
-      addToast(error.message || "Failed to sign acceptance.", "error");
+      if (publicKey) {
+        await requestWalletSignature(publicKey, `Accept Escrow Contract for ${amount || ''} XLM`);
+      }
+      await updateTaskStatus(id, 'In Progress', true);
+      addToast("Task accepted! Funds remain locked in Soroban escrow until completion.", "success");
+    } catch (err) {
+      addToast("Failed to accept task: " + (err?.message || err), "error");
     } finally {
       setIsAccepting(false);
+      setAcceptingTaskId(null);
     }
   };
+
+  const handleAcceptTask = handleAcceptWork;
 
   const handleSubmitProof = async (taskId) => {
     if (!githubPrUrl && !docUrl && !loomUrl) {
@@ -182,7 +189,7 @@ const FreelancerDashboard = () => {
                   disabled={!publicKey || isAccepting}
                   title={!publicKey ? "Connect wallet to accept work" : ""}
                 >
-                  {isAccepting ? 'Signing...' : <>Accept Work <ArrowUpRight size={16} /></>}
+                  {acceptingTaskId === task.id ? 'Signing...' : <>Accept Work <ArrowUpRight size={16} /></>}
                 </button>
               </div>
             </div>
@@ -385,8 +392,8 @@ const FreelancerDashboard = () => {
 
       {/* KYC Verification Modal */}
       {showKycModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
-          <div className="glass-panel" style={{ width: '400px', padding: '2rem', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(400px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', color: '#ffb84d' }}>
               <ShieldAlert size={48} />
             </div>
@@ -418,8 +425,8 @@ const FreelancerDashboard = () => {
 
       {/* Bank Selection Off-Ramp Modal */}
       {showBankModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
-          <div className="glass-panel" style={{ width: '450px', padding: '2rem' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--accent)' }}>
               <Landmark size={28} />
               <h3 style={{ margin: 0, color: 'white' }}>Select Off-Ramp Destination</h3>

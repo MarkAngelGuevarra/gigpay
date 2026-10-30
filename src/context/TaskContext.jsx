@@ -483,7 +483,20 @@ export const TaskProvider = ({ children }) => {
     if (releaseResult?.explorerUrl && !releaseResult?.isDemo) {
       addToast(`Escrow released on Testnet! Tx: ${releaseResult.hash.slice(0, 10)}...`, "success");
     }
+
+    return releaseResult || { success: true };
   };
+
+  // Milestone Approval & Release Action (R2 & R3 Pilot Tester Requirement)
+  const approveMilestone = async (taskId, milestoneIndex = 0) => {
+    const targetId = (taskId && typeof taskId === 'object') ? taskId.id : taskId;
+    if (!targetId) {
+      throw new Error("Invalid milestone identifier provided.");
+    }
+    return await updateTaskStatus(targetId, 'Completed');
+  };
+
+  const handleReleaseFunds = approveMilestone;
 
   // 9. 1-Click CSV Export for Public Verification Ledger (Deliverable 2 - Armielyn Requirement)
   const exportVerificationCsv = () => {
@@ -524,6 +537,8 @@ export const TaskProvider = ({ children }) => {
       isLoading, 
       addTask, 
       updateTaskStatus, 
+      approveMilestone,
+      handleReleaseFunds,
       submitProofOfWork, 
       raiseDispute, 
       resolveDispute,

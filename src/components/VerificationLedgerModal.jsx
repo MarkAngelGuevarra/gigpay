@@ -61,7 +61,8 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           border: '1px solid rgba(0, 242, 254, 0.35)',
           borderRadius: '16px',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 242, 254, 0.12)',
-          padding: '2rem',
+          padding: 'clamp(1.25rem, 3.5vw, 2rem)',
+          boxSizing: 'border-box',
           position: 'relative',
           margin: '0 auto',
           color: '#f8fafc'
@@ -75,13 +76,13 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           title="Exit Public Ledger (Esc)"
           style={{
             position: 'absolute',
-            top: '1.25rem',
-            right: '1.25rem',
+            top: '1rem',
+            right: '1rem',
             background: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid rgba(255, 255, 255, 0.18)',
             borderRadius: '50%',
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -106,13 +107,13 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', paddingRight: '3.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
+          <div style={{ maxWidth: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-              <ShieldCheck color="#00f2fe" size={26} />
-              <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#ffffff', fontWeight: 700 }}>
+              <ShieldCheck color="#00f2fe" size={24} style={{ flexShrink: 0 }} />
+              <h3 style={{ margin: 0, fontSize: 'clamp(1.1rem, 4vw, 1.4rem)', color: '#ffffff', fontWeight: 700, wordBreak: 'break-word' }}>
                 Public On-Chain Verification Ledger
               </h3>
-              <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)' }}>
+              <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)', whiteSpace: 'nowrap' }}>
                 Protocol 22 Testnet
               </span>
             </div>
