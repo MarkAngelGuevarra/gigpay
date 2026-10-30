@@ -62,17 +62,20 @@ const LandingPage = () => {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.6rem',
-            padding: '0.4rem 1rem',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.4rem 0.85rem',
             borderRadius: '999px',
             background: 'rgba(0, 242, 254, 0.08)',
             border: '1px solid rgba(0, 242, 254, 0.25)',
             marginBottom: '1.5rem',
-            boxShadow: '0 0 20px rgba(0, 242, 254, 0.15)'
+            boxShadow: '0 0 20px rgba(0, 242, 254, 0.15)',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}
         >
-          <img src="/logo.png" alt="GigPay" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#00f2fe', letterSpacing: '0.5px' }}>
+          <img src="/logo.png" alt="GigPay" style={{ width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0 }} />
+          <span style={{ fontSize: 'clamp(0.72rem, 3.2vw, 0.85rem)', fontWeight: 600, color: '#00f2fe', letterSpacing: '0.3px', textAlign: 'center', wordBreak: 'break-word' }}>
             Powered by Stellar Soroban · SCF Instaward 2026
           </span>
         </motion.div>

@@ -80,7 +80,7 @@ const Navbar = () => {
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
       </a>
-      <div className="navbar-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div className="navbar-actions">
         <a
           href="https://forms.gle/oLGjJRcxg5LZ5bC96"
           target="_blank"
@@ -151,7 +151,7 @@ const Navbar = () => {
               </span>
             )}
             {publicKey ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
+              <div className="navbar-wallet-pills" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {/* Live Testnet Network & Balance Pill */}
                 <div style={{
                   display: 'flex',
