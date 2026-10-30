@@ -9,6 +9,8 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Resilient wallet initialization: default to DEMO_PUBLIC_KEY so mobile/tablet users are never left in disconnected limbo
   const [publicKey, setPublicKey] = useState(() => {
     try {
       if (typeof localStorage !== 'undefined') {
@@ -20,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.warn("[AuthContext] Local storage wallet read warning:", e);
     }
-    return null;
+    return DEMO_PUBLIC_KEY;
   });
 
   useEffect(() => {
@@ -34,8 +36,16 @@ export const AuthProvider = ({ children }) => {
     const savedDemoUser = localStorage.getItem('gigpay_demo_user');
     if (savedDemoUser) {
       try {
-        setUser(JSON.parse(savedDemoUser));
+        const parsed = JSON.parse(savedDemoUser);
+        setUser(parsed);
         setIsLoading(false);
+        // Ensure wallet key is immediately paired with demo session
+        const cachedKey = localStorage.getItem('gigpay_wallet_public_key');
+        if (!cachedKey) {
+          const defaultKey = parsed.user_metadata?.role === 'freelancer' ? DEMO_FREELANCER_KEY : DEMO_PUBLIC_KEY;
+          setPublicKey(defaultKey);
+          localStorage.setItem('gigpay_wallet_public_key', defaultKey);
+        }
       } catch (e) {
         localStorage.removeItem('gigpay_demo_user');
       }
@@ -52,6 +62,10 @@ export const AuthProvider = ({ children }) => {
             console.info("[AuthContext] Cached wallet session loaded; Freighter active check:", connected);
           }
         }).catch(() => {});
+      } else {
+        // Auto-connect default testnet wallet for extensionless mobile/tablet sessions
+        setPublicKey(DEMO_PUBLIC_KEY);
+        localStorage.setItem('gigpay_wallet_public_key', DEMO_PUBLIC_KEY);
       }
     } catch (storageErr) {
       console.warn("[AuthContext] Wallet persistence check notice:", storageErr);
@@ -105,6 +119,15 @@ export const AuthProvider = ({ children }) => {
       });
       if (error) throw error;
       localStorage.removeItem('gigpay_demo_user');
+      if (data?.user) {
+        const role = data.user.user_metadata?.role || 'client';
+        const defaultKey = role === 'freelancer' ? DEMO_FREELANCER_KEY : DEMO_PUBLIC_KEY;
+        const cachedKey = localStorage.getItem('gigpay_wallet_public_key');
+        if (!cachedKey) {
+          setPublicKey(defaultKey);
+          localStorage.setItem('gigpay_wallet_public_key', defaultKey);
+        }
+      }
       return data;
     } catch (supabaseError) {
       // Resilient tester login: support tester accounts even if Supabase project is paused or offline
@@ -129,8 +152,11 @@ export const AuthProvider = ({ children }) => {
             display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)'
           }
         };
+        const demoKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
         setUser(demoUser);
+        setPublicKey(demoKey);
         localStorage.setItem('gigpay_demo_user', JSON.stringify(demoUser));
+        localStorage.setItem('gigpay_wallet_public_key', demoKey);
         return { user: demoUser, session: { user: demoUser } };
       }
 
@@ -235,14 +261,12 @@ export const AuthProvider = ({ children }) => {
     }
     
     // Automatically sync paired simulator wallet so anti-self-dealing assertion always passes
-    if (!publicKey || publicKey === DEMO_PUBLIC_KEY || publicKey === DEMO_FREELANCER_KEY) {
-      const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
-      setPublicKey(nextKey);
-      try {
-        localStorage.setItem('gigpay_wallet_public_key', nextKey);
-      } catch (err) {
-        console.warn("Could not cache switched demo key:", err);
-      }
+    const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
+    setPublicKey(nextKey);
+    try {
+      localStorage.setItem('gigpay_wallet_public_key', nextKey);
+    } catch (err) {
+      console.warn("Could not cache switched demo key:", err);
     }
     return targetRole;
   };

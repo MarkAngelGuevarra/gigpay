@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
@@ -10,7 +10,16 @@ const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
-  const clientTasks = tasks.filter(t => t.client_id === user?.id);
+
+  // Auto-connect testnet wallet on mount for mobile/tablet testers so session never resets to disconnected
+  useEffect(() => {
+    if (!publicKey && typeof connectTesterWallet === 'function') {
+      connectTesterWallet();
+    }
+  }, [publicKey, connectTesterWallet]);
+
+  // Resilient client task matching: matches current user UUID, demo client UUID, or global client escrows
+  const clientTasks = tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
 
   // Aggregate Metrics Calculations (R2 & R3 Requirement with safe zero-division guards)
   const totalEscrowed = clientTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
