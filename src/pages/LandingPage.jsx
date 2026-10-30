@@ -81,7 +81,7 @@ const LandingPage = () => {
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          style={{ fontSize: '4.5rem', marginBottom: '1.5rem', lineHeight: 1.1, letterSpacing: '-1px' }}
+          style={{ fontSize: 'clamp(2.1rem, 7.5vw, 4.5rem)', marginBottom: '1.5rem', lineHeight: 1.15, letterSpacing: '-1px', wordBreak: 'break-word' }}
         >
           Instant Payouts.<br />
           <span style={{ background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -93,7 +93,7 @@ const LandingPage = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          style={{ color: 'var(--text-muted)', fontSize: '1.25rem', maxWidth: '650px', margin: '0 auto 3rem auto' }}
+          style={{ color: 'var(--text-muted)', fontSize: 'clamp(1rem, 3.5vw, 1.25rem)', maxWidth: '650px', margin: '0 auto 2.5rem auto', padding: '0 0.5rem' }}
         >
           The decentralized payment platform for gig workers in APAC. Get paid in USDC the second your job is done, directly to your Stellar wallet.
         </motion.p>
@@ -102,12 +102,13 @@ const LandingPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}
+          className="hero-cta-group"
+          style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}
         >
-          <Link to="/freelancer" className="btn btn-primary" style={{ padding: '1rem 2.5rem', fontSize: '1.125rem', borderRadius: '2rem' }}>
+          <Link to="/freelancer" className="btn btn-primary hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}>
             I'm a Freelancer <ArrowRight size={20} />
           </Link>
-          <Link to="/client" className="btn btn-outline" style={{ padding: '1rem 2.5rem', fontSize: '1.125rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.03)' }}>
+          <Link to="/client" className="btn btn-outline hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.03)' }}>
             I'm a Client
           </Link>
         </motion.div>

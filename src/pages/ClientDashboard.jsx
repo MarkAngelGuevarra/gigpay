@@ -208,17 +208,19 @@ const ClientDashboard = () => {
                     </div>
                     
                     {/* Action Buttons */}
-                    {task.status === 'In Progress' && (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button 
-                          className="btn btn-outline" 
-                          onClick={() => setTaskToDispute(task.id)}
-                          disabled={isTransacting}
-                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#ef4444', color: '#ef4444' }}
-                          title="Freeze escrow funds and log dispute"
-                        >
-                          <AlertTriangle size={13} /> Freeze & Dispute
-                        </button>
+                    {(task.status === 'In Progress' || task.status === 'Available') && (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {task.status === 'In Progress' && (
+                          <button 
+                            className="btn btn-outline" 
+                            onClick={() => setTaskToDispute(task.id)}
+                            disabled={isTransacting}
+                            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#ef4444', color: '#ef4444' }}
+                            title="Freeze escrow funds and log dispute"
+                          >
+                            <AlertTriangle size={13} /> Freeze & Dispute
+                          </button>
+                        )}
                         <button 
                           className="btn btn-primary" 
                           onClick={() => initiateApproval(task.id)}

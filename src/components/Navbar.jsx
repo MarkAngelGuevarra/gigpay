@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -79,7 +80,7 @@ const Navbar = () => {
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
       </a>
-      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div className="navbar-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <a
           href="https://forms.gle/oLGjJRcxg5LZ5bC96"
           target="_blank"
@@ -217,9 +218,14 @@ const Navbar = () => {
       )}
 
       {/* Wallet Onboarding Modal */}
-      {showOnboardingModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, backdropFilter: 'blur(8px)' }}>
-          <div className="glass-panel animate-fade-in" style={{ width: '90%', maxWidth: '500px', padding: '2.5rem', position: 'relative' }}>
+      {showOnboardingModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowOnboardingModal(false);
+          }}
+          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(5,10,24,0.92)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999, backdropFilter: 'blur(10px)' }}
+        >
+          <div className="glass-panel animate-fade-in" style={{ width: '90%', maxWidth: '500px', backgroundColor: '#0d1527', border: '1px solid rgba(0,242,254,0.3)', padding: '2.5rem', position: 'relative', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--accent)' }}>
               <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '0.75rem', borderRadius: '1rem' }}>
                 <Wallet size={32} />
@@ -276,7 +282,8 @@ const Navbar = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Public Verification Ledger Modal (Deliverable 2) */}
