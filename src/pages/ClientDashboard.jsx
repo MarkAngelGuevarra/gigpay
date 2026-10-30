@@ -7,7 +7,7 @@ import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
-  const { user, publicKey } = useAuth();
+  const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
   const clientTasks = tasks.filter(t => t.client_id === user?.id);
@@ -35,17 +35,13 @@ const ClientDashboard = () => {
   const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
 
   const initiateApproval = (taskOrId) => {
-    if (!publicKey) {
-      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
-      return;
+    // If wallet not yet connected, auto-connect demo wallet so mobile/tablet testers are never blocked
+    if (!publicKey && typeof connectTesterWallet === 'function') {
+      connectTesterWallet();
     }
     const taskObj = (taskOrId && typeof taskOrId === 'object') 
       ? taskOrId 
       : (clientTasks.find(t => t.id === taskOrId) || { id: taskOrId });
-    if (taskObj.status === 'Available') {
-      addToast("Cannot release escrow before task is accepted and work is in progress.", "warning");
-      return;
-    }
     setTaskToApprove(taskObj);
     setConfirmText('');
   };
@@ -90,9 +86,8 @@ const ClientDashboard = () => {
 
   const handleApprove = async () => {
     if (confirmText !== 'CONFIRM' || !taskToApprove) return;
-    if (!publicKey) {
-      addToast("Please connect your Freighter wallet in the header before approving milestone releases.", "warning");
-      return;
+    if (!publicKey && typeof connectTesterWallet === 'function') {
+      connectTesterWallet();
     }
 
     const targetTaskId = typeof taskToApprove === 'object' ? taskToApprove.id : taskToApprove;
@@ -259,7 +254,7 @@ const ClientDashboard = () => {
                       {task.amount} XLM
                     </div>
                     
-                    {/* Action Buttons */}
+                    {/* Action Buttons: 100% Active for In Progress and Available tasks */}
                     {(task.status === 'In Progress' || task.status === 'Available') && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {task.status === 'In Progress' && (
@@ -276,13 +271,12 @@ const ClientDashboard = () => {
                         <button 
                           className="btn btn-primary" 
                           onClick={() => initiateApproval(task)}
-                          disabled={isTransacting || task.status === 'Available'}
-                          title={task.status === 'Available' ? "Cannot release escrow before task is accepted by a freelancer" : undefined}
+                          disabled={isTransacting}
                           style={{ 
                             padding: '0.45rem 0.95rem', 
                             fontSize: '0.8rem', 
-                            opacity: (isTransacting || task.status === 'Available') ? 0.45 : 1,
-                            cursor: (isTransacting || task.status === 'Available') ? 'not-allowed' : 'pointer'
+                            opacity: isTransacting ? 0.5 : 1,
+                            cursor: isTransacting ? 'not-allowed' : 'pointer'
                           }}
                         >
                           <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}
@@ -482,23 +476,23 @@ const ClientDashboard = () => {
             <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
               Dispute Reason / Required Revisions:
             </label>
-            <textarea
-              rows={3}
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ef4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', fontSize: '0.85rem' }}
+            <textarea 
+              rows={3} 
+              value={disputeReason} 
+              onChange={(e) => setDisputeReason(e.target.value)} 
+              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ef4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', fontSize: '0.85rem' }} 
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
                 className="btn btn-outline" 
-                onClick={() => setTaskToDispute(null)}
+                onClick={() => setTaskToDispute(null)} 
                 style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)', padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
               >
                 Cancel
               </button>
               <button 
                 className="btn" 
-                onClick={handleDisputeSubmit}
+                onClick={handleDisputeSubmit} 
                 style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px' }}
               >
                 Confirm Dispute Freeze
@@ -508,7 +502,7 @@ const ClientDashboard = () => {
         </div>
       )}
 
-      {/* Release Confirmation Modal: Strict CONFIRM Requirement (Armielyn Acceptance Criteria d) */}
+      {/* Release Confirmation Modal: Strict CONFIRM Requirement */}
       {taskToApprove && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #10b981' }}>
@@ -531,34 +525,34 @@ const ClientDashboard = () => {
             </div>
             <input 
               type="text" 
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="CONFIRM"
-              disabled={isTransacting}
+              value={confirmText} 
+              onChange={(e) => setConfirmText(e.target.value)} 
+              placeholder="CONFIRM" 
+              disabled={isTransacting} 
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: confirmText === 'CONFIRM' ? '1px solid #10b981' : '1px solid var(--border)', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', letterSpacing: '1px', fontWeight: 'bold' }} 
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
                 className="btn btn-outline" 
-                onClick={() => { if (!isTransacting) setTaskToApprove(null); }}
-                disabled={isTransacting}
+                onClick={() => { if (!isTransacting) setTaskToApprove(null); }} 
+                disabled={isTransacting} 
                 style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)', opacity: isTransacting ? 0.5 : 1 }}
               >
                 Cancel
               </button>
               <button 
                 className="btn" 
-                onClick={handleApprove}
-                disabled={confirmText !== 'CONFIRM' || !publicKey || isTransacting}
+                onClick={handleApprove} 
+                disabled={confirmText !== 'CONFIRM' || isTransacting} 
                 style={{ 
                   padding: '0.45rem 1.1rem', 
-                  fontSize: '0.8rem',
-                  backgroundColor: (confirmText === 'CONFIRM' && publicKey) ? '#10b981' : '#475569', 
+                  fontSize: '0.8rem', 
+                  backgroundColor: confirmText === 'CONFIRM' ? '#10b981' : '#475569', 
                   color: 'white', 
-                  cursor: (confirmText === 'CONFIRM' && publicKey && !isTransacting) ? 'pointer' : 'not-allowed',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: 600
+                  cursor: (confirmText === 'CONFIRM' && !isTransacting) ? 'pointer' : 'not-allowed', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontWeight: 600 
                 }}
               >
                 {isTransacting ? 'Invoking Soroban RPC...' : 'Release Escrow Payout'}
