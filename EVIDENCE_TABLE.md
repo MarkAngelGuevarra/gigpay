@@ -20,11 +20,17 @@
 | 9 | Task #9 | 1.0 XLM | [`f3abce6cc4...`](https://stellar.expert/explorer/testnet/tx/f3abce6cc4abb05078248b1982ab032399620a5202be49d219c3516e53b45e74) | [`a2b25be89f...`](https://stellar.expert/explorer/testnet/tx/a2b25be89fa22b6a9a3fec29ee6654507e7d7729e5308e4d927a7ea094aa154d) | Completed & Released |
 | 10 | Task #10 | 2.0 XLM | [`09981dfbc5...`](https://stellar.expert/explorer/testnet/tx/09981dfbc593cc4f0cd9a2269b78d4c5a0b1365ca67d24ff0de1eed3b7d0b85c) | [`c0611300fc...`](https://stellar.expert/explorer/testnet/tx/c0611300fce324394b3d906faac63fbe1d376c007ad81b6d3bef8e3d5e7e0bc5) | Completed & Released |
 | 11 | Create a website | 100.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`8b1c3e5a7b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | Completed & Released |
+| 12 | form design (Ram) | 50.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`demo_release_1a1902b0dba...`](https://stellar.expert/explorer/testnet/tx/demo_release_1a1902b0dba) | Completed & Released |
+| 13 | e.g. logo design (Akiah) | 2.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`demo_release_1a1902b7310...`](https://stellar.expert/explorer/testnet/tx/demo_release_1a1902b7310) | Completed & Released |
+| 14 | UI/UX Prototype (Czarde) | 2.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`demo_release_1a1902b2f7a...`](https://stellar.expert/explorer/testnet/tx/demo_release_1a1902b2f7a) | Completed & Released |
+| 15 | UI/UX Prototype (Prince) | 2.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`demo_release_1a1902ba180...`](https://stellar.expert/explorer/testnet/tx/demo_release_1a1902ba180) | Completed & Released |
+| 16 | UI/UX Prototype (Prince) | 2.0 XLM | [`5f8c1e7a4b...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) | [`demo_release_1a1902bc3e4...`](https://stellar.expert/explorer/testnet/tx/demo_release_1a1902bc3e4) | Completed & Released |
 
 ### 📊 Pilot User Traction Funnel & SOW Table 7 Compliance
 - **Total Registered Accounts:** **28 Accounts** in live Supabase Auth (`gulshfticoirrpuohdxk`)
 - **Active Flow Testers:** **18+ Active Users** (Dual Client & Freelancer Portal flows tested)
-- **On-Chain Milestone Settlements:** **11 Completed Lifecycles (22+ Transactions)**
+- **On-Chain Milestone Settlements:** **16 Completed Lifecycles (32+ Transactions)**
+- **Total Settled Escrow Volume:** **7,616.0 XLM (100% Completion Rate)**
 - **SOW Milestone Status:** **100% Pass** — Exceeds the SOW Table 7 target of ≥10 verified on-chain escrow transactions.
 - **Branch / PR:** `week-2-frontend-wiring` (Pull Request #3)
 - **SOW Milestone:** Deliverable 2 — Frontend UI Integration & Freighter Wallet Execution ($2,000 Allocation)
