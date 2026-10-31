@@ -92,7 +92,7 @@ const CLIENT_STEPS = [
     title: 'Connect Testnet Wallet',
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
-    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. First, let\'s get your wallet ready. On mobile, you do NOT need any extension—our instant Testnet wallet is already funded with 10,000 XLM for you!',
+    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—our instant Testnet wallet is already funded with 10,000 XLM for you!',
     description: 'Connect your Freighter Wallet or use the built-in instant Stellar Testnet wallet to sign Soroban smart contract operations.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
@@ -103,8 +103,8 @@ const CLIENT_STEPS = [
     title: 'Lock Milestone Escrow',
     badge: 'Step 2 of 4 • Fund Escrow',
     icon: Lock,
-    teacherVoice: 'Now, let\'s create an escrow task! Tap below to 1-click auto-fill sample milestone data (2 XLM) and highlight the "Lock Funds in Escrow" button.',
-    description: 'Deposit native XLM into the Soroban escrow contract (Protocol 22). Funds are locked safely until you review and approve deliverables.',
+    teacherVoice: 'Create an escrow task! Tap below to 1-click auto-fill sample milestone data (2 XLM) and highlight "Lock Funds in Escrow".',
+    description: 'Deposit native XLM into the Soroban escrow contract (Protocol 22). Funds are locked safely until you review deliverables.',
     actionLabel: '⚡ Fill Sample Task (2 XLM)',
     actionType: 'fill_sample_task',
     tip: 'Smart contract CAUU2O...7RD3 holds the funds. Self-dealing protection blocks matching client and freelancer addresses.'
@@ -114,7 +114,7 @@ const CLIENT_STEPS = [
     title: 'Review Work or Dispute',
     badge: 'Step 3 of 4 • Review & Quality',
     icon: FileCheck,
-    teacherVoice: 'Once the freelancer submits proof, review their deliverables! You can safely test both the release flow and dispute freeze mechanism.',
+    teacherVoice: 'Once the freelancer submits proof, review deliverables! You can test both the release flow and dispute freeze mechanism.',
     description: 'Inspect attached GitHub PRs, live demo URLs, or Google Docs. If specs are not met, the dispute button freezes escrow payout on-chain.',
     actionLabel: '1-Click Switch to Freelancer',
     actionType: 'switch_to_freelancer',
@@ -125,7 +125,7 @@ const CLIENT_STEPS = [
     title: 'Authorize Release',
     badge: 'Step 4 of 4 • On-Chain Settlement',
     icon: CheckCircle2,
-    teacherVoice: 'Deliverables verified! Tap below to open the release authorization modal, type CONFIRM, and trigger the Soroban approve_task method on Stellar Testnet.',
+    teacherVoice: 'Deliverables verified! Tap below to open release authorization, type CONFIRM, and trigger the Soroban approve_task method on Stellar Testnet.',
     description: 'Releases the locked XLM directly to the freelancer\'s wallet and mints a public immutable verification proof on StellarExpert.',
     actionLabel: 'Approve & Release Milestone',
     actionType: 'scroll_escrows',
@@ -172,7 +172,7 @@ const FREELANCER_STEPS = [
     title: 'Submit Proof of Work',
     badge: 'Step 4 of 5 • Deliverable Proof',
     icon: Sparkles,
-    teacherVoice: 'Submit proof of your completed work! For fast pilot testing, tap below to auto-fill sample Google Docs and Loom demo links in 1 click.',
+    teacherVoice: 'Submit proof of your completed work! Tap below to auto-fill sample Google Docs and Loom demo links in 1 click.',
     description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample filler to test instantly.',
     actionLabel: '⚡ Auto-Fill Sample Deliverables',
     actionType: 'autofill_proof',
@@ -183,7 +183,7 @@ const FREELANCER_STEPS = [
     title: 'Instant Payout & Bank Off-Ramp',
     badge: 'Step 5 of 5 • Fiat Off-Ramp',
     icon: Landmark,
-    teacherVoice: 'The client released your escrow payment! Your earnings updated on the blockchain. Now tap below to test the simulated 0%-fee bank off-ramp to GCash or UnionBank!',
+    teacherVoice: 'The client released your escrow payment! Your earnings updated on the blockchain. Now test the simulated 0%-fee bank off-ramp!',
     description: 'Once client approves the milestone, convert XLM into local fiat (UnionBank, GCash, DBS, Revolut) via the simulated off-ramp.',
     actionLabel: '🏦 Open Bank Off-Ramp',
     actionType: 'open_bank_modal',
@@ -223,7 +223,6 @@ export default function PilotGuideWidget() {
     };
   });
 
-  // Track state across lifecycle to trigger reactive auto-advance popups
   const isMountedRef = useRef(false);
   const prevTasksCountRef = useRef(tasks?.length || 0);
   const prevTasksRef = useRef(tasks || []);
@@ -264,8 +263,7 @@ export default function PilotGuideWidget() {
   const activeStepData = steps[currentStep - 1] || steps[0];
   const StepIcon = activeStepData.icon;
 
-  // Reactive Step Advancement: Automatically detects when a user followed the instruction on the page,
-  // pops up the next instruction, and removes itself once followed
+  // Reactive Step Advancement: Smoothly detects action completions without full-screen interruptions
   useEffect(() => {
     if (!isMountedRef.current) {
       isMountedRef.current = true;
@@ -278,19 +276,19 @@ export default function PilotGuideWidget() {
     const currentTasks = tasks || [];
     const prevTasks = prevTasksRef.current || [];
 
-    // Client Step 1 -> Step 2: Auto-advance upon wallet connection
+    // Client Step 1 -> Step 2 upon wallet connection
     if (isClient && state.clientStep === 1 && publicKey && !prevWalletRef.current) {
       setState(prev => ({ ...prev, clientStep: 2, isMinimized: false }));
       addToast('🎉 Testnet Wallet Connected! Next: Lock Milestone Escrow.', 'success');
     }
 
-    // Client Step 2 -> Step 3: Auto-advance when client funds/creates task escrow
+    // Client Step 2 -> Step 3 when client creates/funds task escrow
     if (isClient && state.clientStep === 2 && currentTasks.length > prevTasksCountRef.current) {
       setState(prev => ({ ...prev, clientStep: 3, isMinimized: false }));
       addToast('🎉 Task funded in Soroban escrow! Step 3: Switch to Freelancer to accept.', 'success');
     }
 
-    // Freelancer Step 3 -> Step 4: Auto-advance when task is accepted (In Progress)
+    // Freelancer Step 3 -> Step 4 when task is accepted
     if (!isClient && state.freelancerStep === 3) {
       const newlyAccepted = currentTasks.some(t =>
         t.status === 'In Progress' &&
@@ -302,7 +300,7 @@ export default function PilotGuideWidget() {
       }
     }
 
-    // Freelancer Step 4 -> Step 5: Auto-advance when proof of work is submitted
+    // Freelancer Step 4 -> Step 5 when proof is submitted
     if (!isClient && state.freelancerStep === 4) {
       const newlySubmitted = currentTasks.some(t =>
         t.proof_attached &&
@@ -314,7 +312,7 @@ export default function PilotGuideWidget() {
       }
     }
 
-    // Client Step 4: Acknowledge payout release
+    // Client Step 4: Payout released
     if (isClient && state.clientStep === 4) {
       const newlyCompleted = currentTasks.some(t =>
         t.status === 'Completed' &&
@@ -374,9 +372,8 @@ export default function PilotGuideWidget() {
     }
   };
 
-  // Execute Action and IMMEDIATELY remove/minimize the modal so the user has an unobstructed mobile view
+  // Execute Action and smoothly fade/minimize the instruction card with 0 interruption
   const handleExecuteAction = async (actionType) => {
-    // Dismiss/minimize modal immediately to keep mobile screen completely clean
     setState(prev => ({ ...prev, isMinimized: true }));
 
     switch (actionType) {
@@ -768,24 +765,14 @@ export default function PilotGuideWidget() {
     );
   }
 
-  // Live Centered Guidance Modal (Pops up with direct instruction, closes/removes on action for zero mobile distraction)
+  // Non-Interruptive Fading Guidance Card (Floating gently in the corner without dimming or blocking the page)
   return (
     <>
       <style>{`
-        @keyframes pilotModalFadeIn {
+        @keyframes pilotFadeIn {
           from {
             opacity: 0;
-            backdrop-filter: blur(0px);
-          }
-          to {
-            opacity: 1;
-            backdrop-filter: blur(8px);
-          }
-        }
-        @keyframes pilotWidgetSlideUp {
-          from {
-            opacity: 0;
-            transform: translateY(18px) scale(0.96);
+            transform: translateY(16px) scale(0.97);
           }
           to {
             opacity: 1;
@@ -801,491 +788,348 @@ export default function PilotGuideWidget() {
           }
         }
         @media (max-width: 600px) {
-          .pilot-guide-backdrop {
-            padding: 12px !important;
-          }
           .pilot-guide-widget {
-            width: calc(100vw - 24px) !important;
-            max-width: calc(100vw - 24px) !important;
-            padding: 1rem 1rem 1.25rem 1rem !important;
-            border-radius: 16px !important;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 242, 254, 0.3) !important;
-          }
-          .pilot-guide-mobile-handle {
-            display: flex !important;
-          }
-        }
-        @media (min-width: 601px) {
-          .pilot-guide-mobile-handle {
-            display: none !important;
+            bottom: 14px !important;
+            right: 14px !important;
+            left: 14px !important;
+            width: calc(100vw - 28px) !important;
+            max-width: calc(100vw - 28px) !important;
+            padding: 1rem !important;
+            border-radius: 14px !important;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 242, 254, 0.25) !important;
           }
         }
       `}</style>
       <div
-        className="pilot-guide-backdrop"
-        onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
+        className="pilot-guide-widget"
         style={{
           position: 'fixed',
-          inset: 0,
-          background: 'rgba(5, 10, 24, 0.78)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          bottom: '24px',
+          right: '24px',
           zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
+          width: 'min(390px, calc(100vw - 32px))',
+          maxWidth: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100vh - 48px)',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          background: 'rgba(13, 21, 39, 0.94)',
+          border: '1.5px solid rgba(0, 242, 254, 0.35)',
+          borderRadius: '16px',
+          padding: '1.15rem',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.2)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          color: '#f8fafc',
           boxSizing: 'border-box',
-          animation: 'pilotModalFadeIn 0.25s ease forwards'
+          animation: 'pilotFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+          pointerEvents: 'auto'
         }}
       >
+        {/* Compact Header Bar */}
         <div
-          className="pilot-guide-widget"
-          onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'relative',
-            zIndex: 9999,
-            width: 'min(420px, calc(100vw - 32px))',
-            maxWidth: 'calc(100vw - 32px)',
-            maxHeight: 'calc(100vh - 48px)',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            background: 'rgba(13, 21, 39, 0.94)',
-            border: '1.5px solid rgba(0, 242, 254, 0.35)',
-            borderRadius: '18px',
-            padding: '1.35rem',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 242, 254, 0.25)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            color: '#f8fafc',
-            boxSizing: 'border-box',
-            animation: 'pilotWidgetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '0.65rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            paddingBottom: '0.55rem'
           }}
         >
-          {/* Mobile Drag / Touch Collapse Handle */}
-          <div
-            className="pilot-guide-mobile-handle"
-            onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
-            style={{
-              width: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-              paddingBottom: '0.65rem',
-              cursor: 'pointer'
-            }}
-          >
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span
               style={{
-                width: '44px',
-                height: '4px',
-                borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.3)'
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#10b981',
+                boxShadow: '0 0 8px #10b981',
+                animation: 'pilotPulseIndicator 2.2s infinite'
               }}
             />
+            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#ffffff', letterSpacing: '-0.2px' }}>
+              💡 Live Coach Guidance
+            </span>
           </div>
 
-          {/* Live Personal Teacher Header */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.85rem',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-              paddingBottom: '0.7rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: '#10b981',
-                  boxShadow: '0 0 10px #10b981',
-                  animation: 'pilotPulseIndicator 2.2s infinite'
-                }}
-              />
-              <div>
-                <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#ffffff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  🧑‍🏫 Live Pilot Coach
-                </span>
-                <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600, display: 'block' }}>
-                  ● Step-by-Step Guidance
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span
-                style={{
-                  background: isClient ? 'rgba(59, 130, 246, 0.22)' : 'rgba(139, 92, 246, 0.22)',
-                  color: isClient ? '#60a5fa' : '#c084fc',
-                  border: '1px solid ' + (isClient ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'),
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '999px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700
-                }}
-              >
-                {isClient ? 'Client' : 'Freelancer'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#cbd5e1',
-                  cursor: 'pointer',
-                  padding: '0.4rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  minWidth: '32px',
-                  minHeight: '32px',
-                  justifyContent: 'center'
-                }}
-                title="Minimize to Pill"
-              >
-                <ChevronDown size={17} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setState(prev => ({ ...prev, isDismissed: true }))}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#cbd5e1',
-                  cursor: 'pointer',
-                  padding: '0.4rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  minWidth: '32px',
-                  minHeight: '32px',
-                  justifyContent: 'center'
-                }}
-                title="Close Guide"
-              >
-                <X size={17} />
-              </button>
-            </div>
-          </div>
-
-          {/* Role Tabs */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.45rem',
-              background: 'rgba(0, 0, 0, 0.45)',
-              padding: '0.3rem',
-              borderRadius: '10px',
-              marginBottom: '0.9rem'
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => handleSelectTour('client')}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span
               style={{
-                flex: 1,
-                padding: '0.5rem 0.6rem',
-                borderRadius: '8px',
-                border: isClient ? '1.5px solid #00f2fe' : '1.5px solid transparent',
-                background: isClient ? 'rgba(0, 242, 254, 0.18)' : 'transparent',
-                color: isClient ? '#00f2fe' : '#94a3b8',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                minHeight: '38px',
-                touchAction: 'manipulation'
+                background: isClient ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+                color: isClient ? '#60a5fa' : '#c084fc',
+                border: '1px solid ' + (isClient ? 'rgba(59, 130, 246, 0.4)' : 'rgba(139, 92, 246, 0.4)'),
+                padding: '0.15rem 0.5rem',
+                borderRadius: '999px',
+                fontSize: '0.7rem',
+                fontWeight: 700
               }}
             >
-              👤 Client Tour (4)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectTour('freelancer')}
-              style={{
-                flex: 1,
-                padding: '0.5rem 0.6rem',
-                borderRadius: '8px',
-                border: !isClient ? '1.5px solid #c084fc' : '1.5px solid transparent',
-                background: !isClient ? 'rgba(192, 132, 252, 0.18)' : 'transparent',
-                color: !isClient ? '#c084fc' : '#94a3b8',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                minHeight: '38px',
-                touchAction: 'manipulation'
-              }}
-            >
-              💼 Freelancer (5)
-            </button>
-          </div>
-
-          {/* Step Progress Indicators */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.9rem' }}>
-            {steps.map((s) => {
-              const isCompleted = s.step < currentStep;
-              const isCurrent = s.step === currentStep;
-              return (
-                <button
-                  key={s.step}
-                  type="button"
-                  onClick={() => {
-                    setState(prev => ({
-                      ...prev,
-                      [isClient ? 'clientStep' : 'freelancerStep']: s.step
-                    }));
-                  }}
-                  style={{
-                    flex: 1,
-                    height: '6px',
-                    borderRadius: '999px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    background: isCurrent
-                      ? '#00f2fe'
-                      : isCompleted
-                      ? '#10b981'
-                      : 'rgba(255, 255, 255, 0.2)',
-                    boxShadow: isCurrent ? '0 0 10px #00f2fe' : 'none',
-                    transition: 'all 0.25s ease'
-                  }}
-                  title={`Jump to Step ${s.step}: ${s.title}`}
-                />
-              );
-            })}
-          </div>
-
-          {/* Current Step Card */}
-          <div
-            style={{
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '12px',
-              padding: '0.95rem',
-              marginBottom: '0.9rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.55rem' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '10px',
-                  background: 'rgba(0, 242, 254, 0.18)',
-                  color: '#00f2fe',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1.5px solid rgba(0, 242, 254, 0.35)',
-                  flexShrink: 0
-                }}
-              >
-                <StepIcon size={18} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.74rem', color: '#38bdf8', display: 'block', fontWeight: 700, letterSpacing: '0.3px' }}>
-                  {activeStepData.badge}
-                </span>
-                <h4 style={{ margin: 0, fontSize: '1.02rem', color: '#ffffff', fontWeight: 800 }}>
-                  {activeStepData.title}
-                </h4>
-              </div>
-            </div>
-
-            {/* Coach Voice Balloon */}
-            <div
-              style={{
-                background: 'rgba(0, 242, 254, 0.08)',
-                border: '1px solid rgba(0, 242, 254, 0.25)',
-                borderRadius: '8px',
-                padding: '0.65rem 0.8rem',
-                marginBottom: '0.7rem',
-                fontSize: '0.86rem',
-                color: '#f1f5f9',
-                lineHeight: 1.5,
-                fontWeight: 500
-              }}
-            >
-              {activeStepData.teacherVoice}
-            </div>
-
-            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.45, margin: '0 0 0.8rem 0' }}>
-              {activeStepData.description}
-            </p>
-
-            {/* Wallet status checkmark indicator */}
-            {isClient && currentStep === 1 && publicKey && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  fontSize: '0.8rem',
-                  color: '#34d399',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  padding: '0.45rem 0.7rem',
-                  borderRadius: '8px',
-                  marginBottom: '0.8rem',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  fontWeight: 600
-                }}
-              >
-                <CheckCircle2 size={15} />
-                <span>Wallet Connected: <code>{publicKey.slice(0, 5)}...{publicKey.slice(-4)}</code> (10,000 XLM)</span>
-              </div>
-            )}
-
-            {/* Primary Action Button (Executes action and immediately removes modal for zero distraction) */}
-            <button
-              type="button"
-              onClick={() => handleExecuteAction(activeStepData.actionType)}
-              className="btn btn-primary"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.55rem',
-                minHeight: '44px',
-                borderRadius: '8px',
-                touchAction: 'manipulation',
-                boxShadow: '0 4px 15px rgba(0, 242, 254, 0.35)'
-              }}
-            >
-              <Play size={16} /> {activeStepData.actionLabel}
-            </button>
-
-            {/* Secondary Dismiss Button: Let user do the step directly on mobile */}
+              {isClient ? 'Client' : 'Freelancer'}
+            </span>
             <button
               type="button"
               onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
               style={{
-                width: '100%',
-                padding: '0.55rem 0.8rem',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.14)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                borderRadius: '6px',
                 color: '#cbd5e1',
-                borderRadius: '8px',
                 cursor: 'pointer',
-                marginBottom: '0.75rem',
-                touchAction: 'manipulation'
+                padding: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                minWidth: '28px',
+                minHeight: '28px',
+                justifyContent: 'center'
               }}
+              title="Minimize (Esc)"
             >
-              👉 Got It • Remove Modal & Let Me Do It on Screen
+              <X size={15} />
             </button>
+          </div>
+        </div>
 
-            {/* Pro Tip */}
+        {/* Role Toggle Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.35rem',
+            background: 'rgba(0, 0, 0, 0.4)',
+            padding: '0.25rem',
+            borderRadius: '8px',
+            marginBottom: '0.75rem'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => handleSelectTour('client')}
+            style={{
+              flex: 1,
+              padding: '0.4rem 0.5rem',
+              borderRadius: '6px',
+              border: isClient ? '1.5px solid #00f2fe' : '1.5px solid transparent',
+              background: isClient ? 'rgba(0, 242, 254, 0.16)' : 'transparent',
+              color: isClient ? '#00f2fe' : '#94a3b8',
+              fontWeight: 800,
+              fontSize: '0.76rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.3rem',
+              minHeight: '32px',
+              touchAction: 'manipulation'
+            }}
+          >
+            👤 Client (4)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectTour('freelancer')}
+            style={{
+              flex: 1,
+              padding: '0.4rem 0.5rem',
+              borderRadius: '6px',
+              border: !isClient ? '1.5px solid #c084fc' : '1.5px solid transparent',
+              background: !isClient ? 'rgba(192, 132, 252, 0.16)' : 'transparent',
+              color: !isClient ? '#c084fc' : '#94a3b8',
+              fontWeight: 800,
+              fontSize: '0.76rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.3rem',
+              minHeight: '32px',
+              touchAction: 'manipulation'
+            }}
+          >
+            💼 Freelancer (5)
+          </button>
+        </div>
+
+        {/* Step Progress Indicators */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.75rem' }}>
+          {steps.map((s) => {
+            const isCompleted = s.step < currentStep;
+            const isCurrent = s.step === currentStep;
+            return (
+              <button
+                key={s.step}
+                type="button"
+                onClick={() => {
+                  setState(prev => ({
+                    ...prev,
+                    [isClient ? 'clientStep' : 'freelancerStep']: s.step
+                  }));
+                }}
+                style={{
+                  flex: 1,
+                  height: '5px',
+                  borderRadius: '999px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  background: isCurrent
+                    ? '#00f2fe'
+                    : isCompleted
+                    ? '#10b981'
+                    : 'rgba(255, 255, 255, 0.2)',
+                  boxShadow: isCurrent ? '0 0 8px #00f2fe' : 'none',
+                  transition: 'all 0.25s ease'
+                }}
+                title={`Step ${s.step}: ${s.title}`}
+              />
+            );
+          })}
+        </div>
+
+        {/* Active Step Content */}
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
             <div
               style={{
-                fontSize: '0.76rem',
-                color: '#e2e8f0',
-                lineHeight: 1.4,
-                background: 'rgba(255, 255, 255, 0.05)',
-                padding: '0.5rem 0.7rem',
+                width: '28px',
+                height: '28px',
                 borderRadius: '8px',
-                borderLeft: '3.5px solid #00f2fe'
+                background: 'rgba(0, 242, 254, 0.16)',
+                color: '#00f2fe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(0, 242, 254, 0.35)',
+                flexShrink: 0
               }}
             >
-              💡 <strong style={{ color: '#00f2fe' }}>Coach Tip:</strong> {activeStepData.tip}
+              <StepIcon size={16} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: '#38bdf8', display: 'block', fontWeight: 700 }}>
+                {activeStepData.badge}
+              </span>
+              <h4 style={{ margin: 0, fontSize: '0.94rem', color: '#ffffff', fontWeight: 800 }}>
+                {activeStepData.title}
+              </h4>
             </div>
           </div>
 
-          {/* Footer Navigation */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem' }}>
+          {/* Direct Voice Balloon */}
+          <div
+            style={{
+              background: 'rgba(0, 242, 254, 0.08)',
+              border: '1px solid rgba(0, 242, 254, 0.22)',
+              borderRadius: '8px',
+              padding: '0.55rem 0.7rem',
+              marginBottom: '0.65rem',
+              fontSize: '0.82rem',
+              color: '#f1f5f9',
+              lineHeight: 1.45
+            }}
+          >
+            {activeStepData.teacherVoice}
+          </div>
+
+          <p style={{ display: 'none' }}>
+            {activeStepData.description}
+          </p>
+
+          {/* Quick Action Button (Executes action and immediately fades/minimizes) */}
+          <button
+            type="button"
+            onClick={() => handleExecuteAction(activeStepData.actionType)}
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              padding: '0.65rem 0.9rem',
+              fontSize: '0.86rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.45rem',
+              minHeight: '40px',
+              borderRadius: '8px',
+              touchAction: 'manipulation',
+              boxShadow: '0 4px 15px rgba(0, 242, 254, 0.35)'
+            }}
+          >
+            <Play size={15} /> {activeStepData.actionLabel}
+          </button>
+        </div>
+
+        {/* Footer Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={handleRestart}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              padding: '0.35rem 0.45rem',
+              touchAction: 'manipulation'
+            }}
+            title="Restart Tour from Step 1"
+          >
+            <RotateCcw size={13} /> Restart
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <button
               type="button"
-              onClick={handleRestart}
+              onClick={handlePrev}
+              disabled={currentStep === 1}
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#cbd5e1',
-                cursor: 'pointer',
-                fontSize: '0.82rem',
-                fontWeight: 600,
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                color: currentStep === 1 ? '#64748b' : '#f8fafc',
+                cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+                borderRadius: '6px',
+                padding: '0.4rem 0.7rem',
+                fontSize: '0.78rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.45rem 0.55rem',
-                minHeight: '38px',
+                gap: '0.25rem',
+                fontWeight: 700,
+                minHeight: '34px',
                 touchAction: 'manipulation'
               }}
-              title="Restart Tour from Step 1"
             >
-              <RotateCcw size={14} /> Restart
+              <ArrowLeft size={13} /> Back
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-              <button
-                type="button"
-                onClick={handlePrev}
-                disabled={currentStep === 1}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: currentStep === 1 ? '#64748b' : '#f8fafc',
-                  cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-                  borderRadius: '8px',
-                  padding: '0.5rem 0.8rem',
-                  fontSize: '0.82rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  fontWeight: 700,
-                  minHeight: '38px',
-                  touchAction: 'manipulation'
-                }}
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNext}
-                style={{
-                  background: currentStep === totalSteps
-                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                    : 'linear-gradient(135deg, #00f2fe 0%, #38bdf8 100%)',
-                  border: 'none',
-                  color: '#070a12',
-                  cursor: 'pointer',
-                  borderRadius: '8px',
-                  padding: '0.5rem 0.95rem',
-                  fontSize: '0.84rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontWeight: 800,
-                  boxShadow: '0 0 14px rgba(0, 242, 254, 0.4)',
-                  minHeight: '38px',
-                  touchAction: 'manipulation'
-                }}
-              >
-                {currentStep === totalSteps ? 'Finish Tour 🎉' : <>Next <ArrowRight size={14} /></>}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleNext}
+              style={{
+                background: currentStep === totalSteps
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'linear-gradient(135deg, #00f2fe 0%, #38bdf8 100%)',
+                border: 'none',
+                color: '#070a12',
+                cursor: 'pointer',
+                borderRadius: '6px',
+                padding: '0.4rem 0.85rem',
+                fontSize: '0.78rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontWeight: 800,
+                boxShadow: '0 0 12px rgba(0, 242, 254, 0.35)',
+                minHeight: '34px',
+                touchAction: 'manipulation'
+              }}
+            >
+              {currentStep === totalSteps ? 'Finish 🎉' : <>Next <ArrowRight size={13} /></>}
+            </button>
           </div>
         </div>
       </div>
