@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,12 +8,14 @@ import { requestWalletSignature } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const FreelancerDashboard = () => {
-  const { user, publicKey } = useAuth();
+  const { user, publicKey, switchRole } = useAuth();
   const { tasks, isLoading, updateTaskStatus, submitProofOfWork } = useTasks();
   const { addToast } = useToast();
+  const navigate = useNavigate();
+
   const availableTasks = tasks.filter(t => t.status === 'Available');
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && t.freelancer_id === user?.id);
-  const completedTasks = tasks.filter(t => t.status === 'Completed' && t.freelancer_id === user?.id);
+  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
+  const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   
   const totalEarned = completedTasks.reduce((sum, task) => sum + (Number(task.amount) || 0), 0);
 
@@ -136,6 +139,41 @@ const FreelancerDashboard = () => {
 
   return (
     <div className="animate-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
+            <h2 style={{ margin: 0 }}>Freelancer Portal</h2>
+            <span style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(139, 92, 246, 0.4)' }}>
+              Freelancer View
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+            Discover funded client escrows, accept jobs with 1-click, and submit verifiable deliverables.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            switchRole('client');
+            addToast("Switched to Client Mode! Create escrow tasks and approve payouts.", "info");
+            navigate('/client');
+          }}
+          className="btn btn-outline"
+          style={{
+            borderColor: 'rgba(59, 130, 246, 0.5)',
+            background: 'rgba(59, 130, 246, 0.1)',
+            color: '#60a5fa',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.82rem',
+            padding: '0.5rem 0.85rem'
+          }}
+        >
+          <ArrowLeft size={14} /> Switch to Client Portal
+        </button>
+      </div>
+
       {/* Earnings Overview Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '3rem' }}>
         <div className="glass-panel" style={{ flex: '1 1 250px', borderLeft: '4px solid var(--accent)' }}>

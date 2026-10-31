@@ -12,7 +12,7 @@ import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
-const ProtectedRoute = ({ children, requiredRole }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, isLoading } = useAuth();
   
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading session...</div>;
@@ -21,11 +21,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/auth" />;
   }
 
-  const isSimulation = user.is_simulation_mode || user.user_metadata?.is_simulation_mode;
-  if (!isSimulation && requiredRole && user.user_metadata?.role !== requiredRole) {
-    return <Navigate to="/" />;
-  }
-
+  // Any authenticated user can seamlessly experience both Client and Freelancer flows
   return children;
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,9 +8,10 @@ import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 
 const ClientDashboard = () => {
-  const { user, publicKey, connectTesterWallet } = useAuth();
+  const { user, publicKey, connectTesterWallet, switchRole } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // Auto-connect testnet wallet on mount for mobile/tablet testers so session never resets to disconnected
   useEffect(() => {
@@ -51,6 +53,10 @@ const ClientDashboard = () => {
     const taskObj = (taskOrId && typeof taskOrId === 'object') 
       ? taskOrId 
       : (clientTasks.find(t => t.id === taskOrId) || { id: taskOrId });
+    if (taskObj.status === 'Available') {
+      addToast("Cannot release escrow: Task must first be accepted by a freelancer.", "warning");
+      return;
+    }
     setTaskToApprove(taskObj);
     setConfirmText('');
   };
@@ -157,11 +163,37 @@ const ClientDashboard = () => {
     <div className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2>Client Portal</h2>
-          <p style={{ color: 'var(--text-muted)' }}>
-            Manage your funded Stellar Soroban escrow tasks, inspect freelancer proof-of-work, and approve milestone payouts.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
+            <h2 style={{ margin: 0 }}>Client Portal</h2>
+            <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+              Client View
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+            Manage funded Stellar Soroban escrow tasks, review freelancer deliverables, and release payouts.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            switchRole('freelancer');
+            addToast("Switched to Freelancer Mode! Discover available tasks and accept jobs.", "info");
+            navigate('/freelancer');
+          }}
+          className="btn btn-outline"
+          style={{
+            borderColor: 'rgba(139, 92, 246, 0.5)',
+            background: 'rgba(139, 92, 246, 0.1)',
+            color: '#c084fc',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.82rem',
+            padding: '0.5rem 0.85rem'
+          }}
+        >
+          Switch to Freelancer Portal <ArrowRight size={14} />
+        </button>
       </div>
 
       {/* Aggregate Balance & Escrow Metrics Cards (R2 & R3 Pilot Requirement) */}
@@ -280,12 +312,13 @@ const ClientDashboard = () => {
                         <button 
                           className="btn btn-primary" 
                           onClick={() => initiateApproval(task)}
-                          disabled={isTransacting}
+                          disabled={isTransacting || task.status === 'Available'}
+                          title={task.status === 'Available' ? "Cannot release escrow before task is accepted by a freelancer" : undefined}
                           style={{ 
                             padding: '0.45rem 0.95rem', 
                             fontSize: '0.8rem', 
-                            opacity: isTransacting ? 0.5 : 1,
-                            cursor: isTransacting ? 'not-allowed' : 'pointer'
+                            opacity: (isTransacting || task.status === 'Available') ? 0.45 : 1,
+                            cursor: (isTransacting || task.status === 'Available') ? 'not-allowed' : 'pointer'
                           }}
                         >
                           <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}

@@ -243,30 +243,63 @@ export const AuthProvider = ({ children }) => {
     const currentRole = user?.user_metadata?.role || 'client';
     const targetRole = roleOverride || (currentRole === 'client' ? 'freelancer' : 'client');
     const isClient = targetRole === 'client';
-    const updatedUser = {
-      id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
-      email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
-      is_simulation_mode: true,
-      user_metadata: {
-        role: targetRole,
-        display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
-        is_simulation_mode: true
+    const isSimulation = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || user?.id?.startsWith?.('demo-'));
+
+    let updatedUser;
+    if (isSimulation || !user) {
+      updatedUser = {
+        id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
+        email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
+        is_simulation_mode: true,
+        user_metadata: {
+          role: targetRole,
+          display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
+          is_simulation_mode: true
+        }
+      };
+      try {
+        localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn("Could not cache switched user:", e);
       }
-    };
-    setUser(updatedUser);
-    try {
-      localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
-    } catch (e) {
-      console.warn("Could not cache switched user:", e);
+    } else {
+      updatedUser = {
+        ...user,
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          role: targetRole
+        }
+      };
+      // Asynchronously sync role to Supabase metadata and profiles table without blocking
+      try {
+        supabase.auth.updateUser({
+          data: { role: targetRole }
+        }).catch(err => console.warn("Supabase background role sync notice:", err));
+
+        if (user.id && !user.id.startsWith?.('demo-')) {
+          supabase
+            .from('profiles')
+            .update({ role: targetRole })
+            .eq('id', user.id)
+            .catch(err => console.warn("Supabase profiles table role sync notice:", err));
+        }
+      } catch (e) {
+        console.warn("Supabase updateUser invocation notice:", e);
+      }
     }
+
+    setUser(updatedUser);
     
     // Automatically sync paired simulator wallet so anti-self-dealing assertion always passes
-    const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
-    setPublicKey(nextKey);
-    try {
-      localStorage.setItem('gigpay_wallet_public_key', nextKey);
-    } catch (err) {
-      console.warn("Could not cache switched demo key:", err);
+    const cachedKey = typeof localStorage !== 'undefined' ? localStorage.getItem('gigpay_wallet_public_key') : null;
+    if (!cachedKey || cachedKey.startsWith('GBDEMO_') || cachedKey === DEMO_PUBLIC_KEY || cachedKey === DEMO_FREELANCER_KEY) {
+      const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
+      setPublicKey(nextKey);
+      try {
+        localStorage.setItem('gigpay_wallet_public_key', nextKey);
+      } catch (err) {
+        console.warn("Could not cache switched demo key:", err);
+      }
     }
     return targetRole;
   };
@@ -311,7 +344,8 @@ export const AuthProvider = ({ children }) => {
       connectEphemeralWallet,
       switchRole,
       loginSimulationMode,
-      isSimulationMode
+      isSimulationMode,
+      activeRole: user?.user_metadata?.role || 'client'
     }}>
       {children}
     </AuthContext.Provider>

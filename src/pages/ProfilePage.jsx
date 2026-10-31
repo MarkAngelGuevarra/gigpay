@@ -4,6 +4,8 @@ import { useToast } from '../context/ToastContext';
 import { supabase } from '../lib/supabase';
 import { Save, User } from 'lucide-react';
 
+const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
+
 const ProfilePage = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -25,6 +27,20 @@ const ProfilePage = () => {
   }, [user]);
 
   const fetchProfile = async () => {
+    if (!user) return;
+    const isSim = !!(user.is_simulation_mode || user.user_metadata?.is_simulation_mode || !isUuid(user.id));
+    if (isSim) {
+      setProfile({
+        display_name: user.user_metadata?.display_name || (user.email?.includes?.('client') ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)'),
+        bio: 'Dual-Role Pilot Tester exploring Stellar Soroban smart contract escrows on GigPay.',
+        company_name: user.email?.includes?.('client') ? 'Acme Corp' : '',
+        portfolio_url: user.email?.includes?.('freelancer') ? 'https://github.com/gigpay-pilot' : '',
+        role: user.user_metadata?.role || 'client'
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -60,6 +76,12 @@ const ProfilePage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const isSim = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || !isUuid(user?.id));
+    if (isSim) {
+      addToast('Profile saved in simulation mode!', 'success');
+      return;
+    }
+
     try {
       setSaving(true);
       

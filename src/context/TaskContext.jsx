@@ -13,6 +13,8 @@ const GIGPAY_SHARED_TASKS_KEY = 'gigpay_shared_tasks';
 const GIGPAY_LEGACY_CACHE_KEY = 'gigpay_tasks_cache_v2';
 const GIGPAY_LEDGER_CACHE_KEY = 'gigpay_verification_ledger_v1';
 
+const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 // Default tasks ensuring the 100 XLM website milestone approved by tester is permanently visible across devices
 const DEFAULT_INITIAL_TASKS = [
   {
@@ -448,18 +450,20 @@ export const TaskProvider = ({ children }) => {
         explorerUrl: explorerUrl
       });
 
-      try {
-        await supabase
-          .from('tasks')
-          .insert([{
-            title: task.title,
-            amount: task.amount,
-            status: 'Available',
-            client_id: user?.id || 'demo-client-uuid-001',
-            contract_id: GIGPAY_ESCROW_CONTRACT_ID
-          }]);
-      } catch (dbErr) {
-        console.warn("Supabase insert notice (using local synced state):", dbErr);
+      if (isUuid(user?.id)) {
+        try {
+          await supabase
+            .from('tasks')
+            .insert([{
+              title: task.title,
+              amount: task.amount,
+              status: 'Available',
+              client_id: user.id,
+              contract_id: GIGPAY_ESCROW_CONTRACT_ID
+            }]);
+        } catch (dbErr) {
+          console.warn("Supabase insert notice (using local synced state):", dbErr);
+        }
       }
 
       if (fundResult?.explorerUrl && !fundResult?.isDemo) {
@@ -487,10 +491,12 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...proofData } : t));
 
-    try {
-      await supabase.from('tasks').update(proofData).eq('id', id);
-    } catch (dbErr) {
-      console.warn("Supabase proof-of-work update notice:", dbErr);
+    if (isUuid(id)) {
+      try {
+        await supabase.from('tasks').update(proofData).eq('id', id);
+      } catch (dbErr) {
+        console.warn("Supabase proof-of-work update notice:", dbErr);
+      }
     }
 
     addToast("Proof of work submitted! The client can now review your deliverables.", "success");
@@ -510,10 +516,12 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...disputeData } : t));
 
-    try {
-      await supabase.from('tasks').update(disputeData).eq('id', id);
-    } catch (dbErr) {
-      console.warn("Supabase dispute notice:", dbErr);
+    if (isUuid(id)) {
+      try {
+        await supabase.from('tasks').update(disputeData).eq('id', id);
+      } catch (dbErr) {
+        console.warn("Supabase dispute notice:", dbErr);
+      }
     }
 
     addToast("Task has been marked as Disputed. Escrow release is frozen.", "warning");
@@ -531,10 +539,12 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...resolvedData } : t));
 
-    try {
-      await supabase.from('tasks').update(resolvedData).eq('id', id);
-    } catch (dbErr) {
-      console.warn("Supabase dispute resolve notice:", dbErr);
+    if (isUuid(id)) {
+      try {
+        await supabase.from('tasks').update(resolvedData).eq('id', id);
+      } catch (dbErr) {
+        console.warn("Supabase dispute resolve notice:", dbErr);
+      }
     }
 
     addToast("Dispute resolved! Escrow workflow resumed to In Progress.", "success");
@@ -596,13 +606,15 @@ export const TaskProvider = ({ children }) => {
       throw signErr;
     }
 
-    try {
-      await supabase
-        .from('tasks')
-        .update(updatedFields)
-        .eq('id', id);
-    } catch (dbErr) {
-      console.warn("Supabase update notice (using permanent local state):", dbErr);
+    if (isUuid(id)) {
+      try {
+        await supabase
+          .from('tasks')
+          .update(updatedFields)
+          .eq('id', id);
+      } catch (dbErr) {
+        console.warn("Supabase update notice (using permanent local state):", dbErr);
+      }
     }
 
     if (releaseResult?.explorerUrl && !releaseResult?.isDemo) {

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet } from 'lucide-react';
+import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet, connectTesterWallet } = useAuth();
+  const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, activeRole } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -123,33 +123,67 @@ const Navbar = () => {
         </button>
         {user ? (
           <>
-            {user.user_metadata?.role === 'client' && (
-              <Link to="/client" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Client Portal</Link>
-            )}
-            {user.user_metadata?.role === 'freelancer' && (
-              <Link to="/freelancer" className="btn btn-outline" style={{ padding: '0.42rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Freelancer Portal</Link>
-            )}
+            <Link 
+              to="/client" 
+              className="btn btn-outline" 
+              style={{ 
+                padding: '0.42rem 0.75rem', 
+                fontSize: '0.8rem', 
+                whiteSpace: 'nowrap',
+                borderColor: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : 'var(--text-muted)'
+              }}
+            >
+              Client Portal
+            </Link>
+            <Link 
+              to="/freelancer" 
+              className="btn btn-outline" 
+              style={{ 
+                padding: '0.42rem 0.75rem', 
+                fontSize: '0.8rem', 
+                whiteSpace: 'nowrap',
+                borderColor: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                background: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.12)' : 'transparent',
+                color: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? '#a78bfa' : 'var(--text-muted)'
+              }}
+            >
+              Freelancer Portal
+            </Link>
             
-            {/* Visual Role Badge for Demo Clarity */}
-            {user.user_metadata?.role && (
-              <span style={{
-                background: user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
-                color: user.user_metadata.role === 'client' ? '#60a5fa' : '#a78bfa',
+            {/* Interactive 1-Click Role Switcher Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextRole = switchRole();
+                addToast(`Active role switched to ${nextRole.toUpperCase()}!`, 'success');
+                navigate(nextRole === 'client' ? '/client' : '/freelancer');
+              }}
+              title="Click to toggle active role between Client and Freelancer"
+              style={{
+                background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+                color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : '#a78bfa',
                 padding: '0.28rem 0.65rem',
                 borderRadius: '999px',
                 fontSize: '0.72rem',
                 fontWeight: 'bold',
                 letterSpacing: '0.8px',
                 textTransform: 'uppercase',
-                border: `1px solid ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
+                border: `1px solid ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
                 display: 'flex',
                 alignItems: 'center',
+                gap: '0.35rem',
                 whiteSpace: 'nowrap',
-                boxShadow: `0 0 10px ${user.user_metadata.role === 'client' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`
-              }}>
-                {user.user_metadata.role}
-              </span>
-            )}
+                cursor: 'pointer',
+                boxShadow: `0 0 10px ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <ArrowLeftRight size={11} />
+              <span>{user.user_metadata?.role || activeRole || 'client'}</span>
+              <span style={{ fontSize: '0.62rem', opacity: 0.75, textTransform: 'none', background: 'rgba(255,255,255,0.12)', padding: '0.08rem 0.3rem', borderRadius: '3px' }}>switch</span>
+            </button>
             {publicKey ? (
               <div className="navbar-wallet-pills" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {/* Live Testnet Network & Balance Pill */}
