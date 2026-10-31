@@ -10,6 +10,7 @@ import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import PilotGuideWidget from './components/PilotGuideWidget';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -63,6 +64,7 @@ function App() {
                   />
                 </Routes>
               </div>
+              <PilotGuideWidget />
             </Router>
           </TaskProvider>
         </ToastProvider>
