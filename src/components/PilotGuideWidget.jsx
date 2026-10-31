@@ -19,7 +19,10 @@ import {
   Check,
   UserCheck,
   Briefcase,
-  Play
+  Play,
+  HelpCircle,
+  Eye,
+  Smartphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -65,12 +68,31 @@ function waitForElement(selectorOrFn, timeout = 1200) {
   });
 }
 
+function spotlightElement(el) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const prevTransition = el.style.transition;
+  const prevBoxShadow = el.style.boxShadow;
+  const prevOutline = el.style.outline;
+  
+  el.style.transition = 'all 0.3s ease';
+  el.style.boxShadow = '0 0 25px #00f2fe, 0 0 10px rgba(0, 242, 254, 0.8)';
+  el.style.outline = '2px solid #00f2fe';
+  
+  setTimeout(() => {
+    el.style.boxShadow = prevBoxShadow;
+    el.style.outline = prevOutline;
+    el.style.transition = prevTransition;
+  }, 2600);
+}
+
 const CLIENT_STEPS = [
   {
     step: 1,
     title: 'Connect Testnet Wallet',
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
+    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. First, let\'s get your wallet ready. On mobile, you do NOT need any extension—our instant Testnet wallet is already funded with 10,000 XLM for you!',
     description: 'Connect your Freighter Wallet or use the built-in instant Stellar Testnet wallet to sign Soroban smart contract operations.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
@@ -81,6 +103,7 @@ const CLIENT_STEPS = [
     title: 'Lock Milestone Escrow',
     badge: 'Step 2 of 4 • Fund Contract',
     icon: Lock,
+    teacherVoice: 'Now let\'s lock your first escrow milestone into Soroban contract CAUU2O...7RD3. Tap the button below to auto-fill a 2 XLM sample milestone, then tap "Lock Funds in Escrow" on the page.',
     description: 'Fund a milestone in the Stellar Soroban escrow contract (CAUU2O...7RD3). 0% platform fee means 100% of funds go to work.',
     actionLabel: '⚡ Fill Sample Task (2 XLM)',
     actionType: 'fill_sample_task',
@@ -91,6 +114,7 @@ const CLIENT_STEPS = [
     title: 'Review Work or Dispute',
     badge: 'Step 3 of 4 • Deliverable Review',
     icon: ShieldAlert,
+    teacherVoice: 'The freelancer has submitted deliverables! You can inspect the attached Google Doc or Loom demo. If work isn\'t right, test "Freeze & Dispute" to halt funds immediately.',
     description: 'Review submitted work (GitHub PR, Loom, docs). If deliverables need revision, raise a dispute to freeze escrow funds instantly.',
     actionLabel: 'Switch to Freelancer Mode ↗',
     actionType: 'switch_to_freelancer',
@@ -101,6 +125,7 @@ const CLIENT_STEPS = [
     title: 'Authorize Release',
     badge: 'Step 4 of 4 • Final Settlement',
     icon: CheckCircle2,
+    teacherVoice: 'Time to release the payment! Tap below to open the release confirmation modal, then type CONFIRM in all-caps. This triggers the trustless on-chain Soroban release.',
     description: 'Authorize final milestone settlement. Type CONFIRM in all-caps to verify approval before irreversible on-chain release.',
     actionLabel: 'Authorize Escrow Release',
     actionType: 'scroll_escrows',
@@ -114,6 +139,7 @@ const FREELANCER_STEPS = [
     title: 'Switch to Freelancer Role',
     badge: 'Step 1 of 5 • Role Persona',
     icon: UserCheck,
+    teacherVoice: 'Now you\'re in Freelancer Mode! Here you can browse open jobs funded by clients, accept smart contract escrows, and receive direct crypto payouts.',
     description: 'Switch persona to Freelancer to discover open jobs, accept escrow contracts, and submit verified deliverables.',
     actionLabel: '1-Click Switch to Freelancer',
     actionType: 'switch_to_freelancer_role',
@@ -124,6 +150,7 @@ const FREELANCER_STEPS = [
     title: 'Discover Available Tasks',
     badge: 'Step 2 of 5 • Job Discovery',
     icon: Briefcase,
+    teacherVoice: 'Browse the "Available Funded Tasks" feed. Every milestone is already funded by clients and safely locked in the smart contract before you begin work.',
     description: 'Browse client-funded milestones. Smart contracts hold funds in escrow so you are guaranteed payment upon approval.',
     actionLabel: 'Scroll to Available Tasks',
     actionType: 'scroll_available',
@@ -134,6 +161,7 @@ const FREELANCER_STEPS = [
     title: 'Accept Escrow Contract',
     badge: 'Step 3 of 5 • Contract Binding',
     icon: FileCheck,
+    teacherVoice: 'Tap "Accept Work" on any open task. This binds your public key to the smart contract as the designated payout beneficiary.',
     description: 'Accept an open task to lock the agreement. The escrow state transitions cleanly from Available to In Progress.',
     actionLabel: 'Scroll to Accept Job',
     actionType: 'scroll_accept',
@@ -144,6 +172,7 @@ const FREELANCER_STEPS = [
     title: 'Submit Proof of Work',
     badge: 'Step 4 of 5 • Deliverable Proof',
     icon: Sparkles,
+    teacherVoice: 'Submit proof of your completed work! For fast pilot testing, tap below to auto-fill sample Google Docs and Loom demo links in 1 click.',
     description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample filler to test instantly.',
     actionLabel: '⚡ Auto-Fill Sample Deliverables',
     actionType: 'autofill_proof',
@@ -154,6 +183,7 @@ const FREELANCER_STEPS = [
     title: 'Instant Payout & Bank Off-Ramp',
     badge: 'Step 5 of 5 • Fiat Off-Ramp',
     icon: Landmark,
+    teacherVoice: 'The client released your escrow payment! Your earnings updated on the blockchain. Now tap below to test the simulated 0%-fee bank off-ramp to GCash or UnionBank!',
     description: 'Once client approves the milestone, convert XLM into local fiat (UnionBank, GCash, DBS, Revolut) via the simulated off-ramp.',
     actionLabel: '🏦 Open Bank Off-Ramp',
     actionType: 'open_bank_modal',
@@ -234,7 +264,7 @@ export default function PilotGuideWidget() {
         [isClient ? 'clientStep' : 'freelancerStep']: currentStep + 1
       }));
     } else {
-      addToast(`🎉 Congratulations! You have completed the ${isClient ? 'Client' : 'Freelancer'} Tour!`, 'success');
+      addToast(`🎉 Awesome job! You completed the ${isClient ? 'Client' : 'Freelancer'} onboarding tour!`, 'success');
       setState(prev => ({ ...prev, isMinimized: true }));
     }
   };
@@ -277,11 +307,13 @@ export default function PilotGuideWidget() {
           }
           if (typeof connectTesterWallet === 'function') {
             await connectTesterWallet();
-            addToast('Stellar Testnet wallet connected successfully!', 'success');
+            addToast('Stellar Testnet wallet connected with 10,000 XLM!', 'success');
           } else if (typeof connectWallet === 'function') {
             await connectWallet();
             addToast('Freighter wallet connected!', 'success');
           }
+          const walletBtn = document.querySelector('.btn-outline');
+          if (walletBtn) spotlightElement(walletBtn);
         } catch (err) {
           addToast('Wallet connection notice: ' + (err?.message || err), 'warning');
         }
@@ -295,8 +327,7 @@ export default function PilotGuideWidget() {
         if (location.pathname !== '/client') {
           navigate('/client');
         }
-        
-        // Exclude the guide widget itself to avoid recursive self-clicks
+
         const sampleBtn = await waitForElement(() => {
           return Array.from(document.querySelectorAll('button')).find(b =>
             !b.closest('.pilot-guide-widget') && b.textContent.includes('Fill Sample Task')
@@ -305,6 +336,7 @@ export default function PilotGuideWidget() {
 
         if (sampleBtn) {
           sampleBtn.click();
+          spotlightElement(sampleBtn);
         } else {
           const titleInput = await waitForElement(() => {
             return document.querySelector('input[placeholder*="Logo Design"]') ||
@@ -317,12 +349,19 @@ export default function PilotGuideWidget() {
 
           if (titleInput) setNativeValue(titleInput, 'UI/UX Prototype & Soroban Integration');
           if (amountInput) setNativeValue(amountInput, '2');
-          addToast('Sample 2 XLM milestone loaded! Click "Lock Funds in Escrow".', 'success');
+          addToast('Sample 2 XLM milestone loaded! Tap "Lock Funds in Escrow".', 'success');
         }
 
-        const form = document.querySelector('form');
-        if (form) {
-          form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const lockBtn = await waitForElement(() => {
+          return Array.from(document.querySelectorAll('button')).find(b =>
+            !b.closest('.pilot-guide-widget') && b.textContent.includes('Lock Funds in Escrow')
+          );
+        }, 600);
+        if (lockBtn) {
+          spotlightElement(lockBtn);
+        } else {
+          const form = document.querySelector('form');
+          if (form) spotlightElement(form);
         }
         break;
       }
@@ -351,13 +390,13 @@ export default function PilotGuideWidget() {
         }, 1200);
 
         if (approveBtn) {
-          approveBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          spotlightElement(approveBtn);
           approveBtn.click();
-          addToast('Milestone Release Modal opened: type CONFIRM to release.', 'info');
+          addToast('Milestone Release Modal opened: type CONFIRM in all-caps to release.', 'info');
         } else {
           const panels = document.querySelectorAll('.glass-panel');
           if (panels && panels.length > 1) {
-            panels[1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            spotlightElement(panels[1]);
           }
           addToast('Accept a task in Freelancer mode first to unlock release.', 'info');
         }
@@ -386,7 +425,7 @@ export default function PilotGuideWidget() {
         }, 1200);
 
         if (targetHeading) {
-          targetHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          spotlightElement(targetHeading);
         }
         break;
       }
@@ -402,10 +441,8 @@ export default function PilotGuideWidget() {
         }, 1200);
 
         if (acceptBtn) {
-          acceptBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          acceptBtn.style.boxShadow = '0 0 20px #00f2fe';
-          setTimeout(() => { if (acceptBtn) acceptBtn.style.boxShadow = ''; }, 2500);
-          addToast('Click "Accept Work" to lock agreement in Soroban escrow!', 'info');
+          spotlightElement(acceptBtn);
+          addToast('Tap "Accept Work" to lock agreement in Soroban escrow!', 'info');
         } else {
           addToast('No open available tasks right now. Create one in Client Mode first!', 'info');
         }
@@ -416,8 +453,7 @@ export default function PilotGuideWidget() {
         if (location.pathname !== '/freelancer') {
           navigate('/freelancer');
         }
-        
-        // Check if proof form is already open before toggling
+
         let autoFillBtn = Array.from(document.querySelectorAll('button')).find(b =>
           !b.closest('.pilot-guide-widget') && b.textContent.includes('1-Click Auto-Fill Sample')
         );
@@ -430,7 +466,7 @@ export default function PilotGuideWidget() {
           }, 1200);
 
           if (expandBtn) {
-            expandBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            spotlightElement(expandBtn);
             expandBtn.click();
             autoFillBtn = await waitForElement(() => {
               return Array.from(document.querySelectorAll('button')).find(b =>
@@ -442,6 +478,7 @@ export default function PilotGuideWidget() {
 
         if (autoFillBtn) {
           autoFillBtn.click();
+          spotlightElement(autoFillBtn);
         } else {
           const docInput = document.querySelector('input[placeholder*="docs.google.com"]');
           const notesInput = document.querySelector('textarea[placeholder*="description of work"]');
@@ -467,9 +504,7 @@ export default function PilotGuideWidget() {
         }, 1200);
 
         if (withdrawBtn) {
-          withdrawBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          withdrawBtn.style.boxShadow = '0 0 20px #00f2fe';
-          setTimeout(() => { if (withdrawBtn) withdrawBtn.style.boxShadow = ''; }, 2500);
+          spotlightElement(withdrawBtn);
           if (withdrawBtn.disabled) {
             addToast('Connect wallet to unlock Withdraw to Bank off-ramp.', 'warning');
           } else {
@@ -502,33 +537,35 @@ export default function PilotGuideWidget() {
           onClick={() => setState(prev => ({ ...prev, isDismissed: false, isMinimized: false }))}
           style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
+            bottom: '20px',
+            right: '20px',
             zIndex: 9999,
             cursor: 'pointer',
             background: 'rgba(13, 21, 39, 0.94)',
-            border: '1px solid rgba(0, 242, 254, 0.45)',
+            border: '1px solid rgba(0, 242, 254, 0.6)',
             borderRadius: '999px',
-            padding: '0.55rem 0.95rem',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 242, 254, 0.35)',
+            padding: '0.65rem 1.15rem',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 242, 254, 0.4)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             color: '#00f2fe',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.45rem',
-            fontSize: '0.8rem',
-            fontWeight: 700,
+            gap: '0.5rem',
+            fontSize: '0.86rem',
+            fontWeight: 800,
             animation: 'pilotPillGlow 3s infinite',
             maxWidth: 'calc(100vw - 32px)',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            touchAction: 'manipulation',
+            minHeight: '44px'
           }}
-          title="Open Pilot Guide"
+          title="Open Live Pilot Coach"
         >
           <span
             style={{
-              width: '8px',
-              height: '8px',
+              width: '10px',
+              height: '10px',
               borderRadius: '50%',
               background: '#00f2fe',
               boxShadow: '0 0 8px #00f2fe'
@@ -540,14 +577,14 @@ export default function PilotGuideWidget() {
     );
   }
 
-  // Minimized Sleek Pill
+  // Minimized Sleek Pill (Touch Optimized)
   if (state.isMinimized) {
     return (
       <>
         <style>{`
           @keyframes pilotGlowPulse {
             0%, 100% {
-              box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.6);
+              box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
               transform: scale(1);
             }
             50% {
@@ -555,51 +592,66 @@ export default function PilotGuideWidget() {
               transform: scale(1.02);
             }
           }
+          @media (max-width: 600px) {
+            .pilot-guide-min-pill {
+              bottom: 16px !important;
+              right: 16px !important;
+              left: 16px !important;
+              justify-content: space-between !important;
+              width: auto !important;
+              max-width: calc(100vw - 32px) !important;
+            }
+          }
         `}</style>
         <div
+          className="pilot-guide-min-pill"
           onClick={() => setState(prev => ({ ...prev, isMinimized: false }))}
           style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
+            bottom: '20px',
+            right: '20px',
             zIndex: 9999,
             cursor: 'pointer',
             background: 'rgba(13, 21, 39, 0.94)',
-            border: '1px solid rgba(0, 242, 254, 0.45)',
+            border: '1.5px solid rgba(0, 242, 254, 0.65)',
             borderRadius: '999px',
-            padding: '0.65rem 1.15rem',
-            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.65), 0 0 20px rgba(0, 242, 254, 0.35)',
+            padding: '0.7rem 1.25rem',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.75), 0 0 24px rgba(0, 242, 254, 0.4)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.65rem',
-            fontSize: '0.84rem',
-            fontWeight: 600,
+            gap: '0.75rem',
+            fontSize: '0.88rem',
+            fontWeight: 700,
             maxWidth: 'calc(100vw - 32px)',
             boxSizing: 'border-box',
             transition: 'all 0.25s ease',
-            userSelect: 'none'
+            userSelect: 'none',
+            touchAction: 'manipulation',
+            minHeight: '46px'
           }}
           role="button"
           tabIndex={0}
-          title="Expand Pilot Guide"
+          title="Expand Live Pilot Coach"
         >
-          <span
-            style={{
-              display: 'inline-block',
-              width: '9px',
-              height: '9px',
-              borderRadius: '50%',
-              background: '#00f2fe',
-              boxShadow: '0 0 10px #00f2fe',
-              animation: 'pilotGlowPulse 2.4s infinite'
-            }}
-          />
-          <span style={{ color: '#f8fafc', fontWeight: 600 }}>
-            🚀 Pilot Guide (Step {currentStep}/{totalSteps}) ▾
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                background: '#00f2fe',
+                boxShadow: '0 0 10px #00f2fe',
+                animation: 'pilotGlowPulse 2.4s infinite'
+              }}
+            />
+            <span style={{ color: '#ffffff', fontWeight: 700 }}>
+              🚀 Pilot Guide (Step {currentStep}/{totalSteps}) ▾
+            </span>
+          </div>
           <button
             type="button"
             onClick={(e) => {
@@ -607,13 +659,17 @@ export default function PilotGuideWidget() {
               setState(prev => ({ ...prev, isDismissed: true }));
             }}
             style={{
-              background: 'transparent',
+              background: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
-              color: '#94a3b8',
+              borderRadius: '50%',
+              color: '#cbd5e1',
               cursor: 'pointer',
-              padding: '0 0 0 0.25rem',
+              width: '26px',
+              height: '26px',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '0.35rem'
             }}
             title="Dismiss Guide"
           >
@@ -624,14 +680,14 @@ export default function PilotGuideWidget() {
     );
   }
 
-  // Expanded Floating Card
+  // Expanded Floating Card / Mobile Bottom Sheet
   return (
     <>
       <style>{`
         @keyframes pilotWidgetSlideUp {
           from {
             opacity: 0;
-            transform: translateY(16px) scale(0.96);
+            transform: translateY(20px) scale(0.96);
           }
           to {
             opacity: 1;
@@ -640,17 +696,32 @@ export default function PilotGuideWidget() {
         }
         @keyframes pilotPulseIndicator {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.6);
+            box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.8);
           }
           50% {
-            box-shadow: 0 0 0 8px rgba(0, 242, 254, 0);
+            box-shadow: 0 0 0 10px rgba(0, 242, 254, 0);
           }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
           .pilot-guide-widget {
-            bottom: 16px !important;
-            right: 16px !important;
-            max-width: calc(100vw - 32px) !important;
+            bottom: 0px !important;
+            right: 0px !important;
+            left: 0px !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            border-radius: 20px 20px 0 0 !important;
+            max-height: 82vh !important;
+            padding: 1.15rem 1.15rem 1.6rem 1.15rem !important;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(0, 242, 254, 0.25) !important;
+            border-bottom: none !important;
+          }
+          .pilot-guide-mobile-handle {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 601px) {
+          .pilot-guide-mobile-handle {
+            display: none !important;
           }
         }
       `}</style>
@@ -661,91 +732,132 @@ export default function PilotGuideWidget() {
           bottom: '24px',
           right: '24px',
           zIndex: 9999,
-          width: 'min(380px, calc(100vw - 32px))',
+          width: 'min(410px, calc(100vw - 32px))',
           maxWidth: 'calc(100vw - 32px)',
           maxHeight: 'calc(100vh - 48px)',
           overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
           background: 'rgba(13, 21, 39, 0.94)',
-          border: '1px solid rgba(0, 242, 254, 0.35)',
-          borderRadius: '16px',
-          padding: '1.25rem',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 242, 254, 0.2)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          border: '1.5px solid rgba(0, 242, 254, 0.45)',
+          borderRadius: '18px',
+          padding: '1.35rem',
+          boxShadow: '0 24px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.25)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           color: '#f8fafc',
           boxSizing: 'border-box',
           animation: 'pilotWidgetSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          fontFamily: "'Inter', sans-serif"
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
         }}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Mobile Drag / Touch Collapse Handle */}
+        <div
+          className="pilot-guide-mobile-handle"
+          onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
+          style={{
+            width: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingBottom: '0.65rem',
+            cursor: 'pointer'
+          }}
+        >
+          <div
+            style={{
+              width: '44px',
+              height: '4px',
+              borderRadius: '999px',
+              background: 'rgba(255, 255, 255, 0.3)'
+            }}
+          />
+        </div>
+
+        {/* Live Personal Teacher Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '0.9rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            paddingBottom: '0.75rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
             <span
               style={{
                 display: 'inline-block',
                 width: '10px',
                 height: '10px',
                 borderRadius: '50%',
-                background: '#00f2fe',
-                boxShadow: '0 0 10px #00f2fe',
+                background: '#10b981',
+                boxShadow: '0 0 10px #10b981',
                 animation: 'pilotPulseIndicator 2.2s infinite'
               }}
             />
-            <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#ffffff', letterSpacing: '-0.2px' }}>
-              🚀 Pilot Guide
-            </span>
+            <div>
+              <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#ffffff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                🧑‍🏫 Live Pilot Coach
+              </span>
+              <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600, display: 'block' }}>
+                ● Direct Guidance Active
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <span
               style={{
-                background: isClient ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+                background: isClient ? 'rgba(59, 130, 246, 0.22)' : 'rgba(139, 92, 246, 0.22)',
                 color: isClient ? '#60a5fa' : '#c084fc',
-                border: '1px solid ' + (isClient ? 'rgba(59, 130, 246, 0.4)' : 'rgba(139, 92, 246, 0.4)'),
-                padding: '0.15rem 0.5rem',
+                border: '1px solid ' + (isClient ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'),
+                padding: '0.2rem 0.55rem',
                 borderRadius: '999px',
-                fontSize: '0.7rem',
+                fontSize: '0.72rem',
                 fontWeight: 700
               }}
             >
-              {isClient ? 'Client Mode' : 'Freelancer'}
+              {isClient ? 'Client' : 'Freelancer'}
             </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <button
               type="button"
               onClick={() => setState(prev => ({ ...prev, isMinimized: true }))}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 border: 'none',
-                borderRadius: '6px',
-                color: '#94a3b8',
+                borderRadius: '8px',
+                color: '#cbd5e1',
                 cursor: 'pointer',
-                padding: '0.3rem',
+                padding: '0.4rem',
                 display: 'flex',
                 alignItems: 'center',
-                transition: 'color 0.2s'
+                minWidth: '32px',
+                minHeight: '32px',
+                justifyContent: 'center'
               }}
               title="Minimize to Pill"
             >
-              <ChevronDown size={15} />
+              <ChevronDown size={17} />
             </button>
             <button
               type="button"
               onClick={() => setState(prev => ({ ...prev, isDismissed: true }))}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 border: 'none',
-                borderRadius: '6px',
-                color: '#94a3b8',
+                borderRadius: '8px',
+                color: '#cbd5e1',
                 cursor: 'pointer',
-                padding: '0.3rem',
+                padding: '0.4rem',
                 display: 'flex',
                 alignItems: 'center',
-                transition: 'color 0.2s'
+                minWidth: '32px',
+                minHeight: '32px',
+                justifyContent: 'center'
               }}
               title="Close Guide"
             >
-              <X size={15} />
+              <X size={17} />
             </button>
           </div>
         </div>
@@ -754,11 +866,11 @@ export default function PilotGuideWidget() {
         <div
           style={{
             display: 'flex',
-            gap: '0.4rem',
-            background: 'rgba(0, 0, 0, 0.35)',
-            padding: '0.25rem',
-            borderRadius: '8px',
-            marginBottom: '0.9rem'
+            gap: '0.45rem',
+            background: 'rgba(0, 0, 0, 0.45)',
+            padding: '0.3rem',
+            borderRadius: '10px',
+            marginBottom: '0.95rem'
           }}
         >
           <button
@@ -766,19 +878,21 @@ export default function PilotGuideWidget() {
             onClick={() => handleSelectTour('client')}
             style={{
               flex: 1,
-              padding: '0.4rem 0.5rem',
-              borderRadius: '6px',
-              border: isClient ? '1px solid rgba(0, 242, 254, 0.5)' : '1px solid transparent',
-              background: isClient ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
+              padding: '0.55rem 0.6rem',
+              borderRadius: '8px',
+              border: isClient ? '1.5px solid #00f2fe' : '1.5px solid transparent',
+              background: isClient ? 'rgba(0, 242, 254, 0.18)' : 'transparent',
               color: isClient ? '#00f2fe' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.78rem',
+              fontWeight: 800,
+              fontSize: '0.82rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem'
+              gap: '0.4rem',
+              minHeight: '40px',
+              touchAction: 'manipulation'
             }}
           >
             👤 Client Tour (4)
@@ -788,19 +902,21 @@ export default function PilotGuideWidget() {
             onClick={() => handleSelectTour('freelancer')}
             style={{
               flex: 1,
-              padding: '0.4rem 0.5rem',
-              borderRadius: '6px',
-              border: !isClient ? '1px solid rgba(192, 132, 252, 0.5)' : '1px solid transparent',
-              background: !isClient ? 'rgba(192, 132, 252, 0.15)' : 'transparent',
+              padding: '0.55rem 0.6rem',
+              borderRadius: '8px',
+              border: !isClient ? '1.5px solid #c084fc' : '1.5px solid transparent',
+              background: !isClient ? 'rgba(192, 132, 252, 0.18)' : 'transparent',
               color: !isClient ? '#c084fc' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.78rem',
+              fontWeight: 800,
+              fontSize: '0.82rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem'
+              gap: '0.4rem',
+              minHeight: '40px',
+              touchAction: 'manipulation'
             }}
           >
             💼 Freelancer (5)
@@ -808,8 +924,8 @@ export default function PilotGuideWidget() {
         </div>
 
         {/* Step Progress Indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.85rem' }}>
-          {steps.map((s, idx) => {
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.95rem' }}>
+          {steps.map((s) => {
             const isCompleted = s.step < currentStep;
             const isCurrent = s.step === currentStep;
             return (
@@ -824,7 +940,7 @@ export default function PilotGuideWidget() {
                 }}
                 style={{
                   flex: 1,
-                  height: '6px',
+                  height: '7px',
                   borderRadius: '999px',
                   border: 'none',
                   cursor: 'pointer',
@@ -833,8 +949,8 @@ export default function PilotGuideWidget() {
                     ? '#00f2fe'
                     : isCompleted
                     ? '#10b981'
-                    : 'rgba(255, 255, 255, 0.15)',
-                  boxShadow: isCurrent ? '0 0 8px #00f2fe' : 'none',
+                    : 'rgba(255, 255, 255, 0.2)',
+                  boxShadow: isCurrent ? '0 0 10px #00f2fe' : 'none',
                   transition: 'all 0.25s ease'
                 }}
                 title={`Jump to Step ${s.step}: ${s.title}`}
@@ -843,145 +959,172 @@ export default function PilotGuideWidget() {
           })}
         </div>
 
-        {/* Current Step Card */}
+        {/* Current Step Card with Live Direct Teaching Voice */}
         <div
           style={{
-            background: 'rgba(0, 0, 0, 0.28)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '10px',
-            padding: '0.9rem',
-            marginBottom: '0.9rem'
+            background: 'rgba(0, 0, 0, 0.35)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '0.95rem'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.55rem' }}>
             <div
               style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                background: 'rgba(0, 242, 254, 0.15)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
+                background: 'rgba(0, 242, 254, 0.18)',
                 color: '#00f2fe',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid rgba(0, 242, 254, 0.3)'
+                border: '1px solid rgba(0, 242, 254, 0.4)',
+                flexShrink: 0
               }}
             >
-              <StepIcon size={15} />
+              <StepIcon size={18} />
             </div>
             <div>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.76rem', color: '#38bdf8', display: 'block', fontWeight: 700, letterSpacing: '0.3px' }}>
                 {activeStepData.badge}
               </span>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#ffffff', fontWeight: 700 }}>
+              <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 800 }}>
                 {activeStepData.title}
               </h4>
             </div>
           </div>
 
-          <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.45, margin: '0 0 0.75rem 0' }}>
+          {/* Coach Voice Balloon */}
+          <div
+            style={{
+              background: 'rgba(0, 242, 254, 0.08)',
+              border: '1px solid rgba(0, 242, 254, 0.25)',
+              borderRadius: '8px',
+              padding: '0.65rem 0.8rem',
+              marginBottom: '0.75rem',
+              fontSize: '0.88rem',
+              color: '#f1f5f9',
+              lineHeight: 1.55,
+              fontWeight: 500
+            }}
+          >
+            {activeStepData.teacherVoice}
+          </div>
+
+          <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 0.85rem 0' }}>
             {activeStepData.description}
           </p>
 
-          {/* Wallet status pill if Step 1 of client */}
+          {/* Wallet status checkmark indicator */}
           {isClient && currentStep === 1 && publicKey && (
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                fontSize: '0.74rem',
+                gap: '0.45rem',
+                fontSize: '0.8rem',
                 color: '#34d399',
-                background: 'rgba(16, 185, 129, 0.12)',
-                padding: '0.3rem 0.55rem',
-                borderRadius: '6px',
-                marginBottom: '0.7rem',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
+                background: 'rgba(16, 185, 129, 0.15)',
+                padding: '0.45rem 0.7rem',
+                borderRadius: '8px',
+                marginBottom: '0.85rem',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                fontWeight: 600
               }}
             >
-              <CheckCircle2 size={13} />
-              <span>Wallet Active: <code>{publicKey.slice(0, 5)}...{publicKey.slice(-4)}</code></span>
+              <CheckCircle2 size={15} />
+              <span>Wallet Connected: <code>{publicKey.slice(0, 5)}...{publicKey.slice(-4)}</code> (10,000 XLM)</span>
             </div>
           )}
 
-          {/* Action Trigger Button */}
+          {/* Large, Touch-Friendly Action Button */}
           <button
             type="button"
             onClick={() => handleExecuteAction(activeStepData.actionType)}
             className="btn btn-primary"
             style={{
               width: '100%',
-              padding: '0.55rem 0.85rem',
-              fontSize: '0.82rem',
-              fontWeight: 700,
+              padding: '0.75rem 1rem',
+              fontSize: '0.9rem',
+              fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.45rem',
-              marginBottom: '0.6rem'
+              gap: '0.5rem',
+              marginBottom: '0.75rem',
+              minHeight: '46px',
+              borderRadius: '8px',
+              touchAction: 'manipulation',
+              boxShadow: '0 4px 15px rgba(0, 242, 254, 0.35)'
             }}
           >
-            <Play size={14} /> {activeStepData.actionLabel}
+            <Play size={16} /> {activeStepData.actionLabel}
           </button>
 
           {/* Pro Tip */}
           <div
             style={{
-              fontSize: '0.73rem',
-              color: '#94a3b8',
-              lineHeight: 1.35,
-              background: 'rgba(255, 255, 255, 0.03)',
-              padding: '0.4rem 0.55rem',
-              borderRadius: '6px',
-              borderLeft: '3px solid #00f2fe'
+              fontSize: '0.78rem',
+              color: '#e2e8f0',
+              lineHeight: 1.45,
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '0.5rem 0.7rem',
+              borderRadius: '8px',
+              borderLeft: '3.5px solid #00f2fe'
             }}
           >
-            💡 <strong style={{ color: '#e2e8f0' }}>Tip:</strong> {activeStepData.tip}
+            💡 <strong style={{ color: '#00f2fe' }}>Coach Tip:</strong> {activeStepData.tip}
           </div>
         </div>
 
         {/* Footer Navigation */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem' }}>
           <button
             type="button"
             onClick={handleRestart}
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#94a3b8',
+              color: '#cbd5e1',
               cursor: 'pointer',
-              fontSize: '0.75rem',
+              fontSize: '0.82rem',
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.3rem 0.4rem',
-              transition: 'color 0.2s'
+              gap: '0.35rem',
+              padding: '0.45rem 0.55rem',
+              minHeight: '40px',
+              touchAction: 'manipulation'
             }}
             title="Restart Tour from Step 1"
           >
-            <RotateCcw size={12} /> Restart
+            <RotateCcw size={14} /> Restart
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
             <button
               type="button"
               onClick={handlePrev}
               disabled={currentStep === 1}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 color: currentStep === 1 ? '#64748b' : '#f8fafc',
                 cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-                borderRadius: '6px',
-                padding: '0.38rem 0.65rem',
-                fontSize: '0.75rem',
+                borderRadius: '8px',
+                padding: '0.55rem 0.85rem',
+                fontSize: '0.82rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.25rem',
-                fontWeight: 600
+                gap: '0.3rem',
+                fontWeight: 700,
+                minHeight: '40px',
+                touchAction: 'manipulation'
               }}
             >
-              <ArrowLeft size={12} /> Back
+              <ArrowLeft size={14} /> Back
             </button>
 
             <button
@@ -994,17 +1137,19 @@ export default function PilotGuideWidget() {
                 border: 'none',
                 color: '#070a12',
                 cursor: 'pointer',
-                borderRadius: '6px',
-                padding: '0.38rem 0.75rem',
-                fontSize: '0.75rem',
+                borderRadius: '8px',
+                padding: '0.55rem 1rem',
+                fontSize: '0.84rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                fontWeight: 700,
-                boxShadow: '0 0 12px rgba(0, 242, 254, 0.35)'
+                gap: '0.35rem',
+                fontWeight: 800,
+                boxShadow: '0 0 14px rgba(0, 242, 254, 0.4)',
+                minHeight: '40px',
+                touchAction: 'manipulation'
               }}
             >
-              {currentStep === totalSteps ? 'Finish Tour 🎉' : <>Next <ArrowRight size={12} /></>}
+              {currentStep === totalSteps ? 'Finish Tour 🎉' : <>Next <ArrowRight size={14} /></>}
             </button>
           </div>
         </div>
