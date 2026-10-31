@@ -21,7 +21,13 @@ const ClientDashboard = () => {
   }, [publicKey, connectTesterWallet]);
 
   // Resilient client task matching: matches current user UUID, demo client UUID, or global client escrows
-  const clientTasks = tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
+  // Admin/Tester Escrow Mode: allows project admin to view and release all community escrows directly
+  const [viewAllEscrows, setViewAllEscrows] = useState(true);
+
+  // Resilient client task matching: matches all community escrows in admin/tester view, or user UUID
+  const clientTasks = viewAllEscrows
+    ? tasks
+    : tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
 
   // Aggregate Metrics Calculations (R2 & R3 Requirement with safe zero-division guards)
   const totalEscrowed = clientTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
@@ -167,6 +173,25 @@ const ClientDashboard = () => {
             <h2 style={{ margin: 0 }}>Client Portal</h2>
             <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
               Client View
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewAllEscrows(prev => !prev)}
+              style={{
+                cursor: 'pointer',
+                background: viewAllEscrows ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                color: viewAllEscrows ? '#34d399' : 'var(--text-muted)',
+                border: '1px solid ' + (viewAllEscrows ? '#10b981' : 'var(--border)'),
+                borderRadius: '999px',
+                fontSize: '0.72rem',
+                padding: '0.2rem 0.6rem',
+                fontWeight: 600
+              }}
+              title="Toggle between viewing all community escrows or only your own"
+            >
+              {viewAllEscrows ? '👁️ Viewing All Community Escrows (Admin)' : '👤 Viewing Only My Escrows'}
+            </button>
+            <span style={{ display: 'none' }}>
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>
