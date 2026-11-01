@@ -6,12 +6,19 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
+import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
 const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet, switchRole } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
   const navigate = useNavigate();
+
+  const {
+    isCompleted: isPilotCompleted,
+    openFormLink,
+    markCompleted: markPilotCompleted
+  } = usePilotFeedbackState();
 
   // Auto-connect testnet wallet on mount for mobile/tablet testers so session never resets to disconnected
   useEffect(() => {
@@ -285,15 +292,67 @@ const ClientDashboard = () => {
                 >
                   ⚡ Fill Sample Task (2 XLM)
                 </button>
-                <a
-                  href="https://forms.gle/oLGjJRcxg5LZ5bC96"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 1rem', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', textDecoration: 'none' }}
-                >
-                  📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
-                </a>
+                {isPilotCompleted ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.85rem',
+                      padding: '0.55rem 1rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(0, 245, 160, 0.12)',
+                      border: '1px solid rgba(0, 245, 160, 0.45)',
+                      color: 'var(--accent, #00f5a0)',
+                      fontWeight: 600
+                    }}
+                  >
+                    <CheckCircle2 size={14} /> ✅ Pilot Verified ✨
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <a
+                      href={PILOT_FORM_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => openFormLink('client_card_clicked')}
+                      className="btn btn-outline"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontSize: '0.85rem',
+                        padding: '0.55rem 1rem',
+                        borderColor: 'rgba(0, 242, 254, 0.45)',
+                        color: '#00f2fe',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        markPilotCompleted();
+                        addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+                      }}
+                      className="btn btn-outline"
+                      title="Confirm you completed the form"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontSize: '0.85rem',
+                        padding: '0.55rem 0.85rem',
+                        borderColor: 'rgba(0, 245, 160, 0.4)',
+                        background: 'rgba(0, 245, 160, 0.08)',
+                        color: 'var(--accent, #00f5a0)'
+                      }}
+                    >
+                      <CheckCircle2 size={14} /> I've Completed It
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : null}

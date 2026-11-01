@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
+import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
 const Navbar = () => {
   const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, activeRole } = useAuth();
@@ -16,6 +17,14 @@ const Navbar = () => {
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [balance, setBalance] = useState(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  const {
+    isCompleted: isPilotCompleted,
+    isSnoozed: isPilotSnoozed,
+    isFormOpened: isPilotFormOpened,
+    openFormLink,
+    markCompleted: markPilotCompleted
+  } = usePilotFeedbackState();
 
   useEffect(() => {
     let isMounted = true;
@@ -81,27 +90,105 @@ const Navbar = () => {
         <span className="logo-text">GigPay</span>
       </a>
       <div className="navbar-actions">
-        <a
-          href="https://forms.gle/oLGjJRcxg5LZ5bC96"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-outline"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.42rem 0.75rem',
-            borderColor: 'rgba(0, 242, 254, 0.45)',
-            background: 'rgba(0, 242, 254, 0.08)',
-            color: '#00f2fe',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            textDecoration: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          🚀 Pilot Tester Form <ExternalLink size={13} />
-        </a>
+        {/* Dynamic Pilot Feedback Status Pill */}
+        {isPilotCompleted ? (
+          <button
+            type="button"
+            onClick={() => addToast('✨ Pilot Tester Status: Verified! Thank you for shaping GigPay.', 'info')}
+            className="btn btn-outline"
+            title="Pilot Tester Status Verified"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.42rem 0.75rem',
+              borderColor: 'rgba(0, 245, 160, 0.45)',
+              background: 'rgba(0, 245, 160, 0.1)',
+              color: 'var(--accent, #00f5a0)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              boxShadow: '0 0 10px rgba(0, 245, 160, 0.15)'
+            }}
+          >
+            ✅ Pilot Verified ✨
+          </button>
+        ) : isPilotFormOpened ? (
+          <button
+            type="button"
+            onClick={() => {
+              markPilotCompleted();
+              addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+            }}
+            className="btn btn-outline"
+            title="Click to confirm you completed the form"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.42rem 0.75rem',
+              borderColor: 'rgba(245, 158, 11, 0.6)',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: '#fbbf24',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              boxShadow: '0 0 10px rgba(245, 158, 11, 0.25)'
+            }}
+          >
+            ❓ Completed Form? Confirm
+          </button>
+        ) : isPilotSnoozed ? (
+          <a
+            href={PILOT_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => openFormLink('navbar_clicked')}
+            className="btn btn-outline"
+            title="Pilot form reminder snoozed - click to open"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.42rem 0.75rem',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: 'var(--text-muted, #94a3b8)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            ⏳ Pilot Form (Snoozed) <ExternalLink size={13} />
+          </a>
+        ) : (
+          <a
+            href={PILOT_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => openFormLink('navbar_clicked')}
+            className="btn btn-outline"
+            title="Complete 60s pilot feedback form"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.42rem 0.75rem',
+              borderColor: 'rgba(0, 242, 254, 0.5)',
+              background: 'rgba(0, 242, 254, 0.12)',
+              color: '#00f2fe',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 0 12px rgba(0, 242, 254, 0.25)'
+            }}
+          >
+            🚀 Pilot Intake (Required) <ExternalLink size={13} />
+          </a>
+        )}
         <button
           type="button"
           onClick={() => setShowLedgerModal(true)}

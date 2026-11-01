@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PilotGuideWidget from './components/PilotGuideWidget';
+import PilotIntakeBanner from './components/PilotIntakeBanner';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -33,6 +34,7 @@ function App() {
         <ToastProvider>
           <TaskProvider>
             <Router>
+              <PilotIntakeBanner />
               <div className="container">
                 <Navbar />
                 <Routes>

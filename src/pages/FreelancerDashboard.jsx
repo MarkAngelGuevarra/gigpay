@@ -6,12 +6,19 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
+import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
 const FreelancerDashboard = () => {
   const { user, publicKey, switchRole } = useAuth();
   const { tasks, isLoading, updateTaskStatus, submitProofOfWork } = useTasks();
   const { addToast } = useToast();
   const navigate = useNavigate();
+
+  const {
+    isCompleted: isPilotCompleted,
+    openFormLink,
+    markCompleted: markPilotCompleted
+  } = usePilotFeedbackState();
 
   const availableTasks = tasks.filter(t => t.status === 'Available');
   const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
@@ -210,6 +217,57 @@ const FreelancerDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Pilot Tester Notice Card */}
+      {!isPilotCompleted && (
+        <div 
+          className="glass-panel" 
+          style={{ 
+            marginBottom: '1.5rem', 
+            padding: '1.25rem 1.5rem', 
+            border: '1px solid rgba(0, 242, 254, 0.3)', 
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(9, 13, 22, 0.85) 100%)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ flex: '1 1 300px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', border: '1px solid rgba(0, 242, 254, 0.35)', textTransform: 'uppercase' }}>
+                  ⚡ Freelancer Pilot Cohort
+                </span>
+                <h4 style={{ margin: 0, fontSize: '1rem', color: '#fff' }}>Early Tester Feedback & Reward Pool</h4>
+              </div>
+              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                Help evaluate instant milestone payouts & bank off-ramp on Stellar Soroban! Take 60 seconds to complete the tester intake form to qualify for reward pool distributions.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <a
+                href={PILOT_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => openFormLink('freelancer_card_clicked')}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem', textDecoration: 'none' }}
+              >
+                <span>Complete 60s Form</span> <ExternalLink size={13} />
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  markPilotCompleted();
+                  addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+                }}
+                className="btn btn-outline"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.85rem', borderColor: 'rgba(0, 245, 160, 0.4)', background: 'rgba(0, 245, 160, 0.08)', color: 'var(--accent, #00f5a0)' }}
+              >
+                <CheckCircle2 size={13} /> I've Completed It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Available Jobs */}
       <h3 style={{ marginBottom: '1.5rem' }}>Available Funded Tasks</h3>
