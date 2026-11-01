@@ -321,9 +321,9 @@ const ClientDashboard = () => {
                     </div>
                     
                     {/* Action Buttons: 100% Active for In Progress and Available tasks */}
-                    {(task.status === 'In Progress' || task.status === 'Available') && (
+                    {(task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {task.status === 'In Progress' && (
+                        {(task.status === 'In Progress' || task.status === 'Under Review') && (
                           <button 
                             className="btn btn-outline" 
                             onClick={() => setTaskToDispute(task.id)}

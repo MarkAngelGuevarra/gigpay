@@ -394,7 +394,7 @@ export const formatStellarError = (error) => {
  */
 export const isValidStellarAddress = (address) => {
   if (!address || typeof address !== 'string') return false;
-  if (address === DEMO_PUBLIC_KEY) return true;
+  if (address === DEMO_PUBLIC_KEY || address === DEMO_FREELANCER_KEY || address.startsWith('GBDEMO_')) return true;
   return StellarSdk.StrKey.isValidEd25519PublicKey(address);
 };
 

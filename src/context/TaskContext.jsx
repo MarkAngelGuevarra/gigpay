@@ -60,13 +60,13 @@ const getLocalTasks = () => {
     if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_INITIAL_TASKS;
 
     // Ensure the completed 100 XLM milestone is preserved in cached list
-    const hasWebsiteTask = parsed.some(t => (t.title || '').toLowerCase().includes('website'));
+    const hasWebsiteTask = parsed.some(t => t.id === 'task-website-100');
     if (!hasWebsiteTask) {
       return [DEFAULT_INITIAL_TASKS[0], ...parsed];
     }
     // If present, enforce Completed status so stale cache never resets it
     return parsed.map(t => {
-      if ((t.title || '').toLowerCase().includes('website')) {
+      if (t.id === 'task-website-100') {
         return { ...t, status: 'Completed', amount: t.amount || '100' };
       }
       return t;
@@ -422,8 +422,9 @@ export const TaskProvider = ({ children }) => {
       const txHash = fundResult?.hash || ('sim-tx-' + Date.now());
       const explorerUrl = fundResult?.explorerUrl || `https://stellar.expert/explorer/testnet/tx/${txHash}`;
 
+      const generatedId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : ('task-' + Date.now());
       const newTask = {
-        id: 'task-' + Date.now(),
+        id: generatedId,
         title: task.title,
         amount: String(task.amount),
         status: 'Available',
@@ -458,7 +459,10 @@ export const TaskProvider = ({ children }) => {
               title: task.title,
               amount: task.amount,
               status: 'Available',
+              id: isUuid(generatedId) ? generatedId : undefined,
               client_id: user.id,
+              tx_hash: txHash,
+              explorer_url: explorerUrl,
               contract_id: GIGPAY_ESCROW_CONTRACT_ID
             }]);
         } catch (dbErr) {
@@ -481,6 +485,7 @@ export const TaskProvider = ({ children }) => {
     if (!task) throw new Error("Task not found");
 
     const proofData = {
+      status: 'Under Review',
       github_pr_url: githubPrUrl || null,
       doc_url: docUrl || null,
       loom_url: loomUrl || null,

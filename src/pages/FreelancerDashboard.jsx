@@ -14,7 +14,7 @@ const FreelancerDashboard = () => {
   const navigate = useNavigate();
 
   const availableTasks = tasks.filter(t => t.status === 'Available');
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
+  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   
   const totalEarned = completedTasks.reduce((sum, task) => sum + (Number(task.amount) || 0), 0);
