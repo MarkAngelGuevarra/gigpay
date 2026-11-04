@@ -64,6 +64,8 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  {/* Unknown or mistyped URLs (e.g. /ledger) go home instead of rendering a blank page. */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </div>
               <PilotGuideWidget />
