@@ -57,7 +57,7 @@ GigPay's Month 2 engagement fulfills all 4 deliverables specified in our approve
 
 ### 4. Comprehensive Testing Suite & Clean-Install Logs (Deliverable 4 — $1,000)
 * **Automated Tests:** 6 test suites with **76 total passing assertions** (`npm test`), plus 4/4 native Rust contract tests (`cargo test`).
-* **Multi-OS Validation:** Full clean-install logs verified across Windows 11, macOS Apple Silicon, and Ubuntu Linux. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+* **Clean-Install Validation:** Verified from a fresh clone on Windows 11; Linux and macOS runs still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 
 ---
 
@@ -68,7 +68,8 @@ Run the full automated test suite locally:
 npm test
 ```
 
-### Test Suite Coverage Matrix (76 Assertions — 100% Green)
+### Test Suites
+`npm test` runs 38 tests: the 22-test regression suite, 10 escrow-integrity tests and 6 ledger-integrity tests. The suites below run individually with `node <file>`; some call Stellar Testnet.
 * `soroban_sim.test.js`: Soroban Protocol 22 RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
 * `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).

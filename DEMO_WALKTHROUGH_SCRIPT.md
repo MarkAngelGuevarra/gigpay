@@ -41,5 +41,5 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 #### **3:00 – 3:45 | Public Verification Ledger & Automated Test Suite**
 - *"Finally, let's check our verification evidence. I'll click 'Public Ledger' in the top bar. Reviewers can see every single on-chain invocation, contract ID `CAUU2O5Z...`, transaction hashes, and direct Stellar Expert links."*
 - *"With 1 click, I can click 'Export CSV' to download the full evidence ledger."*
-- *"In the terminal, running `npm test` executes our full 18-test regression suite with 100% passing tests."*
+- *"In the terminal, `npm test` runs 38 automated tests: the 22-test regression suite plus the escrow- and ledger-integrity checks."*
 - *"Thank you to the Stellar Development Foundation and Rise In for supporting GigPay!"*
