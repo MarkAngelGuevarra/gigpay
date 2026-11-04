@@ -91,12 +91,12 @@ runTest(5, "Freelancer Tour defines all 5 required pilot steps", () => {
   assert.ok(widgetSrc.includes("title: 'Discover Available Tasks'"), "Step 2 must be Discover Available Tasks");
   assert.ok(widgetSrc.includes("title: 'Accept Escrow Contract'"), "Step 3 must be Accept Escrow Contract");
   assert.ok(widgetSrc.includes("title: 'Submit Proof of Work'"), "Step 4 must be Submit Proof of Work");
-  assert.ok(widgetSrc.includes("title: 'Instant Payout & Bank Off-Ramp'"), "Step 5 must be Instant Payout & Bank Off-Ramp");
+  assert.ok(widgetSrc.includes("title: 'Get Paid & Check It On-Chain'"), "Step 5 must point testers to the on-chain payout");
   
   // In-card actions
   assert.ok(widgetSrc.includes("1-Click Switch to Freelancer"), "Must include 1-click persona switch button");
   assert.ok(widgetSrc.includes("⚡ Auto-Fill Sample Deliverables"), "Must include 1-click proof auto-fill button");
-  assert.ok(widgetSrc.includes("🏦 Open Bank Off-Ramp"), "Must include bank off-ramp modal action");
+  assert.ok(widgetSrc.includes("Check My Balance on Stellar Expert") && !widgetSrc.includes("Withdraw to Bank"), "Step 5 must link to Stellar Expert, not a fake bank flow");
 });
 
 runTest(6, "Widget controls support minimize, dismiss, and tour restart", () => {

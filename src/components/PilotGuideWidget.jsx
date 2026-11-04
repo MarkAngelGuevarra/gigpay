@@ -154,18 +154,18 @@ const FREELANCER_STEPS = [
     description: 'Review task milestones, XLM reward amounts, and client details. Funds are guaranteed by the escrow contract.',
     actionLabel: 'Scroll to Available Tasks',
     actionType: 'scroll_available',
-    tip: 'All listed tasks are 100% funded and locked in Soroban contract CAUU2O...7RD3.'
+    tip: 'Tasks marked "locked on-chain" are funded in Soroban contract CAUU2O...7RD3. Each card also shows which payout address it pays.'
   },
   {
     step: 3,
     title: 'Accept Escrow Contract',
     badge: 'Step 3 of 5 • Lock Agreement',
     icon: Check,
-    teacherVoice: 'Found a task you like? Tap "Accept Work" to lock your wallet address as the exclusive beneficiary on the Soroban smart contract.',
-    description: 'Accepting binds your public key to the contract milestone, moving the task to "In Progress".',
+    teacherVoice: 'Found a task that pays your payout address? Tap "Accept Work" to take it on.',
+    description: 'The payout address is set by the client when they fund the escrow. Accepting moves the task to "In Progress" so the client knows you are working on it.',
     actionLabel: 'Accept Open Task',
     actionType: 'scroll_accept',
-    tip: 'Once accepted, no other freelancer can claim this escrow milestone.'
+    tip: 'You can only accept tasks whose escrow pays your own payout address.'
   },
   {
     step: 4,
@@ -180,14 +180,14 @@ const FREELANCER_STEPS = [
   },
   {
     step: 5,
-    title: 'Instant Payout & Bank Off-Ramp',
-    badge: 'Step 5 of 5 • Fiat Off-Ramp',
+    title: 'Get Paid & Check It On-Chain',
+    badge: 'Step 5 of 5 • On-Chain Payout',
     icon: Landmark,
-    teacherVoice: 'The client released your escrow payment! Your earnings updated on the blockchain. Now test the simulated 0%-fee bank off-ramp!',
-    description: 'Once client approves the milestone, convert XLM into local fiat (UnionBank, GCash, DBS, Revolut) via the simulated off-ramp.',
-    actionLabel: '🏦 Open Bank Off-Ramp',
-    actionType: 'open_bank_modal',
-    tip: 'Simulates instant off-ramp settlement with zero FX markup.'
+    teacherVoice: 'Proof submitted! When the client approves, the escrow pays your payout address directly on Stellar Testnet.',
+    description: 'After approval, open your account on Stellar Expert to see the payment arrive. Testnet XLM is practice money; bank or GCash withdrawal is not part of this pilot.',
+    actionLabel: '🔎 Check My Balance on Stellar Expert',
+    actionType: 'open_explorer',
+    tip: 'Payment lands within seconds of the client approving the task.'
   }
 ];
 
@@ -310,7 +310,7 @@ export default function PilotGuideWidget() {
       );
       if (newlySubmitted) {
         setState(prev => ({ ...prev, freelancerStep: 5, isMinimized: false }));
-        addToast('🎉 Deliverables submitted! Step 5: Instant Payout & Bank Off-Ramp.', 'success');
+        addToast('🎉 Deliverables submitted! Step 5: Get Paid & Check It On-Chain.', 'success');
       }
     }
 
@@ -572,26 +572,21 @@ export default function PilotGuideWidget() {
         break;
       }
 
-      case 'open_bank_modal': {
+      case 'open_explorer': {
         if (location.pathname !== '/freelancer') {
           navigate('/freelancer');
         }
-        const withdrawBtn = await waitForElement(() => {
-          return Array.from(document.querySelectorAll('button')).find(b =>
-            !b.closest('.pilot-guide-widget') && b.textContent.includes('Withdraw to Bank')
+        const explorerLink = await waitForElement(() => {
+          return Array.from(document.querySelectorAll('a')).find(a =>
+            !a.closest('.pilot-guide-widget') && a.textContent.includes('Check my balance on Stellar Expert')
           );
         }, 1200);
 
-        if (withdrawBtn) {
-          spotlightElement(withdrawBtn);
-          if (withdrawBtn.disabled) {
-            addToast('Connect wallet to unlock Withdraw to Bank off-ramp.', 'warning');
-          } else {
-            withdrawBtn.click();
-            addToast('Opening simulated Bank Off-Ramp modal...', 'info');
-          }
+        if (explorerLink) {
+          spotlightElement(explorerLink);
+          addToast('Tap the highlighted link to see your Testnet balance on Stellar Expert.', 'info');
         } else {
-          addToast('Withdraw to Bank button is available on the Freelancer Portal.', 'info');
+          addToast('Connect your wallet on the Freelancer Portal to see your balance link.', 'warning');
         }
         break;
       }
