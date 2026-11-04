@@ -4,7 +4,8 @@ import {
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
   simulateFundTask,
   simulateApproveTask,
-  validateEscrowParties
+  validateEscrowParties,
+  resolveOnChainTaskId
 } from '../lib/stellar.js';
 import { EventEmitter } from 'events';
 
@@ -206,10 +207,12 @@ class SimulatedBrowserWindow {
     const task = this.tasks.find(t => t.id === taskId);
     if (!task) throw new Error(`Task ${taskId} not found in Window ${this.windowId}`);
 
-    if (newStatus === 'Completed') {
+    // Only simulate approve_task when this task has a real on-chain escrow ID. This harness funds
+    // tasks off-chain, and the library now refuses to release a guessed escrow ID.
+    if (newStatus === 'Completed' && resolveOnChainTaskId(task) !== null) {
       await simulateApproveTask({
         clientAddress: this.publicKey,
-        taskId: taskId
+        taskId: task
       });
     }
 

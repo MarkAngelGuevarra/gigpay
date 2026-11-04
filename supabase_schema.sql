@@ -62,6 +62,10 @@ create table public.tasks (
   freelancer_id uuid references public.profiles(id),
   client_id uuid references public.profiles(id) not null,
   contract_id text,
+  -- Escrow identity (migration add_task_escrow_identity_columns, Nov 2026)
+  on_chain_task_id bigint check (on_chain_task_id is null or (on_chain_task_id between 1 and 4294967295)),
+  client_wallet text check (client_wallet is null or client_wallet ~ '^G[A-Z2-7]{55}$'),
+  freelancer_wallet text check (freelancer_wallet is null or freelancer_wallet ~ '^G[A-Z2-7]{55}$'),
   github_pr_url text,
   doc_url text,
   loom_url text,

@@ -30,11 +30,71 @@ export const isDemoWallet = (key) => {
   return str === DEMO_PUBLIC_KEY || str === DEMO_FREELANCER_KEY || str.startsWith('GBDEMO_');
 };
 
+// Placeholder hashes returned ONLY by the offline demo path (no wallet, or a seeded mock task).
+// Results carrying them always have isDemo: true and no explorer link. They are deliberately not
+// 64-hex strings, so they can never be mistaken for, or resolve to, a real Stellar transaction.
+export const DEMO_FUND_TX_HASH = 'demo-offline-fund';
+export const DEMO_RELEASE_TX_HASH = 'demo-offline-release';
+
+// Before Nov 2026 the demo path reused these two REAL Sprint 1 Testnet transactions as placeholders.
+// They remain valid evidence for their own ledger rows; they are only used to recognise old cached
+// tasks that were funded in demo mode (no on_chain_task_id) so their release stays a demo release.
+const LEGACY_DEMO_PLACEHOLDER_HASHES = new Set([
+  '40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda',
+  'c0611300fce324394b3d906faac63fbe1d376c007ad81b6d3bef8e3d5e7e0bc5'
+]);
+
+/**
+ * True when a hash is a simulation placeholder rather than a confirmed transaction.
+ */
+export const isSimulatedTxHash = (hash) => {
+  if (!hash || typeof hash !== 'string') return true;
+  return hash === DEMO_FUND_TX_HASH || hash === DEMO_RELEASE_TX_HASH || /^(demo|sim|rel|resilient)[-_]/.test(hash);
+};
+
+/**
+ * The auto-signing simulator wallet exists for Testnet pilots only. It keeps its secret key in
+ * browser storage, so it must never sign on Mainnet, where that key would control real funds.
+ */
+export const isEphemeralSignerAllowed = (network = NETWORK) => network === 'TESTNET';
+
+// Friendbot routinely takes 10-25s to answer; an 8s cap left new simulator wallets unfunded.
+const FRIENDBOT_TIMEOUT_MS = 30000;
+
+const requestFriendbotFunding = async (publicKey) => {
+  try {
+    await withTimeout(
+      fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`),
+      FRIENDBOT_TIMEOUT_MS
+    );
+  } catch (err) {
+    console.warn("[Friendbot] Ephemeral funding notice:", err.message);
+  }
+};
+
+/**
+ * Makes sure a simulator wallet exists on Testnet before it signs. Covers a fresh wallet whose
+ * Friendbot request is still settling and a stored wallet whose first funding attempt failed.
+ * Returns false if the account still is not visible on Horizon after the retries.
+ */
+export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, delayMs = 2000 } = {}) => {
+  if ((await getAccountBalance(publicKey)).active) return true;
+  await requestFriendbotFunding(publicKey);
+  for (let i = 0; i < attempts; i++) {
+    if ((await getAccountBalance(publicKey)).active) return true;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+};
+
 /**
  * Generates an authentic ephemeral Stellar Ed25519 keypair and requests Friendbot testnet funding.
  * Enables extensionless university students to generate real on-chain transaction hashes on Stellar Expert.
  */
 export const createEphemeralTestnetWallet = async () => {
+  if (!isEphemeralSignerAllowed()) {
+    throw new Error('The simulator wallet is only available on Stellar Testnet.');
+  }
   const keypair = StellarSdk.Keypair.random();
   const publicKey = keypair.publicKey();
   const secretKey = keypair.secret();
@@ -44,19 +104,15 @@ export const createEphemeralTestnetWallet = async () => {
       sessionStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
       sessionStorage.setItem('gigpay_ephemeral_seckey', secretKey);
     }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
+      localStorage.setItem('gigpay_ephemeral_seckey', secretKey);
+    }
   } catch (e) {
     console.warn("Session storage notice:", e);
   }
 
-  // Request Friendbot testnet funding (10,000 test XLM)
-  try {
-    await withTimeout(
-      fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`),
-      8000
-    );
-  } catch (err) {
-    console.warn("[Friendbot] Ephemeral funding notice:", err.message);
-  }
+  await requestFriendbotFunding(publicKey);
 
   return {
     publicKey,
@@ -64,6 +120,38 @@ export const createEphemeralTestnetWallet = async () => {
     network: 'TESTNET',
     isEphemeral: true
   };
+};
+
+/**
+ * Retrieves or automatically provisions a real Friendbot-funded Testnet keypair
+ * for extensionless / mobile / simulator mode users so their actions execute on-chain.
+ */
+export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
+  if (!isEphemeralSignerAllowed()) return null;
+  try {
+    const storedSec = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_seckey')) ||
+                      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_seckey'));
+    const storedPub = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_pubkey')) ||
+                      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_pubkey'));
+
+    if (storedSec && storedPub && (requestedAddress === storedPub || isDemoWallet(requestedAddress))) {
+      return {
+        keypair: StellarSdk.Keypair.fromSecret(storedSec),
+        publicKey: storedPub
+      };
+    }
+
+    if (!requestedAddress || isDemoWallet(requestedAddress)) {
+      const created = await createEphemeralTestnetWallet();
+      return {
+        keypair: StellarSdk.Keypair.fromSecret(created.secretKey),
+        publicKey: created.publicKey
+      };
+    }
+  } catch (err) {
+    console.warn("[Ephemeral Signer] Provision notice:", err.message);
+  }
+  return null;
 };
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
@@ -374,6 +462,12 @@ export const formatStellarError = (error) => {
   if (msg.includes("Self-dealing")) {
     return msg;
   }
+  if (msg.includes("already approved")) {
+    return "This payment was already released to the freelancer. No new payment was sent.";
+  }
+  if (error?.name === 'NotFoundError' || msg === 'Not Found' || msg.includes('status code 404')) {
+    return "Your practice wallet is still being set up with free Testnet funds. Wait a few seconds, then try again. No money was moved.";
+  }
   if (msg.includes("HostError") || msg.includes("UnreachableCodeReached")) {
     return "This escrow was not funded by your connected wallet on-chain. Create a new task with 'Lock Funds in Escrow' to test live payment release.";
   }
@@ -489,9 +583,18 @@ export const pollSorobanTransactionWithBackoff = async (
     try {
       const txStatus = await sorobanServer.getTransaction(txHash);
       if (txStatus.status === 'SUCCESS') {
+        let returnValue = null;
+        try {
+          if (txStatus.returnValue) {
+            returnValue = Number(StellarSdk.scValToNative(txStatus.returnValue));
+          }
+        } catch {
+          // ignore returnValue parse warning
+        }
         return {
           status: 'SUCCESS',
           hash: txHash,
+          returnValue,
           explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
           attempts
         };
@@ -519,16 +622,16 @@ export const pollSorobanTransactionWithBackoff = async (
 /**
  * Executes the complete fund_task flow:
  * 1. Simulates & prepares the Soroban invocation transaction.
- * 2. Prompts Freighter wallet for user signature.
+ * 2. Signs via Freighter OR automatically via a real Friendbot-funded Ephemeral Testnet keypair in Simulator/Mobile mode.
  * 3. Submits signed transaction to Soroban Testnet RPC.
- * 4. Polls for final on-chain transaction confirmation.
+ * 4. Polls for final on-chain transaction confirmation and records the u32 onChainTaskId.
  *
  * @param {Object} params
  * @param {string} params.clientAddress - Public key of client
  * @param {string} [params.freelancerAddress] - Public key of freelancer
  * @param {number|string} params.amount - Escrow amount in XLM
  * @param {string} [params.tokenAddress] - SAC token contract
- * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
+ * @returns {Promise<{ success: boolean, hash: string, onChainTaskId?: number, clientAddress?: string, explorerUrl: string, isDemo: boolean }>}
  */
 export const submitFundTask = async ({
   clientAddress,
@@ -542,53 +645,66 @@ export const submitFundTask = async ({
     throw new Error(partyValidation.error);
   }
 
-  // 2. Pre-flight base reserve and gas fee check
-  const balanceCheck = await checkBalanceSufficiency(clientAddress, amount);
+  // 2. Resolve the signer: Ephemeral / Simulator / Extensionless mode signs on-chain automatically,
+  //    once its Testnet account is confirmed to exist.
+  const ephemeralSigner = await getOrProvisionEphemeralSigner(clientAddress);
+  const effectiveClientAddress = ephemeralSigner ? ephemeralSigner.publicKey : clientAddress;
+  if (ephemeralSigner && !(await ensureEphemeralAccountFunded(effectiveClientAddress))) {
+    throw new Error(formatStellarError({ name: 'NotFoundError', message: 'Not Found' }));
+  }
+
+  // 3. Pre-flight base reserve and gas fee check against the wallet that will actually pay
+  //    (checking the placeholder demo key here always reported 10,000 XLM).
+  const balanceCheck = await checkBalanceSufficiency(effectiveClientAddress, amount);
   if (!balanceCheck.sufficient) {
     throw new Error(balanceCheck.error);
   }
 
-  // Graceful fallback for demo or offline presentation
-  if (!clientAddress || isDemoWallet(clientAddress)) {
-    console.log(`[DEMO MODE] Simulating fund_task submission for ${amount} XLM`);
+  if (!effectiveClientAddress || isDemoWallet(effectiveClientAddress)) {
+    console.log(`[DEMO MODE] Offline fallback for fund_task (${amount} XLM)`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    const demoHash = 'demo_fund_' + Date.now().toString(16);
     return {
       success: true,
-      hash: demoHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${demoHash}`,
+      hash: DEMO_FUND_TX_HASH,
+      explorerUrl: null, // demo: no on-chain transaction to link
       isDemo: true
     };
   }
 
   try {
-    // 3. Prepare & simulate transaction
+    // 4. Prepare & simulate transaction on Soroban Testnet RPC
     const { preparedTx } = await simulateFundTask({
-      clientAddress,
+      clientAddress: effectiveClientAddress,
       freelancerAddress,
       amount,
       tokenAddress
     });
 
-    // 4. Request user signature via Freighter
-    const signResult = await withTimeout(
-      signTransaction(preparedTx.toXDR(), { 
-        network: NETWORK, 
-        networkPassphrase: PASSPHRASE,
-        accountToSign: clientAddress 
-      }),
-      30000
-    );
+    let signedTx;
+    if (ephemeralSigner && ephemeralSigner.keypair) {
+      preparedTx.sign(ephemeralSigner.keypair);
+      signedTx = preparedTx;
+    } else {
+      // Request user signature via Freighter
+      const signResult = await withTimeout(
+        signTransaction(preparedTx.toXDR(), { 
+          network: NETWORK, 
+          networkPassphrase: PASSPHRASE,
+          accountToSign: effectiveClientAddress 
+        }),
+        30000
+      );
 
-    if (signResult?.error) {
-      throw new Error(signResult.error);
+      if (signResult?.error) {
+        throw new Error(signResult.error);
+      }
+
+      const rawXdr = typeof signResult === 'string'
+        ? signResult
+        : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
+
+      signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
     }
-
-    const rawXdr = typeof signResult === 'string'
-      ? signResult
-      : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
-
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
 
     // 5. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
@@ -601,17 +717,42 @@ export const submitFundTask = async ({
 
     // 6. Resilient polling with exponential backoff
     const pollResult = await pollSorobanTransactionWithBackoff(txHash);
+    const onChainTaskId = pollResult.returnValue || null;
 
     return {
       success: true,
       hash: txHash,
+      onChainTaskId,
+      clientAddress: effectiveClientAddress,
       explorerUrl: pollResult.explorerUrl,
       isDemo: false
     };
   } catch (error) {
+    // A real signer attempted a real transaction. Never convert that failure into a success:
+    // the caller must roll back its optimistic card and show the user that no funds moved.
     console.error("[submitFundTask] Error:", error);
     throw new Error(formatStellarError(error));
   }
+};
+
+const U32_MAX = 4294967295;
+const toU32TaskId = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isInteger(num) && num > 0 && num <= U32_MAX ? num : null;
+};
+
+/**
+ * Resolves the u32 on-chain task ID that fund_task returned for this task.
+ * Returns null when it is unknown. Callers must NOT substitute a guess (such as the last task this
+ * browser funded, or #1): approve_task pays whichever escrow the ID names, so a guess can release
+ * a different freelancer's locked funds.
+ */
+export const resolveOnChainTaskId = (taskId) => {
+  if (taskId && typeof taskId === 'object') {
+    return toU32TaskId(taskId.on_chain_task_id);
+  }
+  return toU32TaskId(taskId);
 };
 
 /**
@@ -624,7 +765,7 @@ export const submitFundTask = async ({
  * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
  */
 export const simulateApproveTask = async ({ clientAddress, taskId }) => {
-  const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId || 1) : taskId;
+  const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId) : taskId;
   const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
   if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
     return {
@@ -635,8 +776,10 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
     };
   }
 
-  const rawNum = typeof resolvedTaskId === 'string' ? parseInt(String(resolvedTaskId).replace(/\D/g, ''), 10) : Number(resolvedTaskId);
-  const numericTaskId = Number.isFinite(rawNum) && rawNum > 0 ? (rawNum % 4294967295 || 1) : 1;
+  const numericTaskId = resolveOnChainTaskId(taskId);
+  if (numericTaskId === null) {
+    throw new Error(ESCROW_NOT_FOUND_MESSAGE);
+  }
   const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
   const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
@@ -654,13 +797,9 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
   const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), 10000);
 
   if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
-    console.warn(`[simulateApproveTask] Contract simulation notice: ${simResult.error}. Activating resilient approval fallback.`);
-    return {
-      simulation: simResult,
-      preparedTx: null,
-      minResourceFee: '100',
-      isDemo: true
-    };
+    // The contract rejected this release (wrong signer, already released, unknown task...).
+    // Surface it, same as simulateFundTask, instead of reporting a simulated success.
+    throw new Error(`Soroban simulation failed: ${simResult.error}`);
   }
 
   const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), 10000);
@@ -673,10 +812,27 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
   };
 };
 
+const ESCROW_NOT_FOUND_MESSAGE =
+  "We couldn't find this task's locked payment on Stellar Testnet, so nothing was released. Please refresh the page and try again.";
+
+const DISPUTE_FROZEN_MESSAGE =
+  "This payment is on hold because the task is in dispute. Resolve the dispute first, then release the payment.";
+
+const demoReleaseResult = async (label) => {
+  console.log(`[DEMO MODE] Simulating approve_task release for ${label}`);
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  return {
+    success: true,
+    hash: DEMO_RELEASE_TX_HASH,
+    explorerUrl: null, // demo: no on-chain transaction to link
+    isDemo: true
+  };
+};
+
 /**
  * Executes the complete approve_task flow:
  * 1. Simulates & prepares the Soroban release invocation.
- * 2. Prompts Freighter wallet for client authorization.
+ * 2. Signs via Freighter OR automatically via Ephemeral Testnet keypair in Simulator/Mobile mode.
  * 3. Submits signed transaction to Soroban Testnet RPC.
  * 4. Polls for final transaction confirmation.
  *
@@ -686,55 +842,61 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
  * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
  */
 export const submitApproveTask = async ({ clientAddress, taskId }) => {
-  const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId || 1) : taskId;
+  const taskRecord = (taskId && typeof taskId === 'object') ? taskId : null;
+  const resolvedTaskId = taskRecord ? (taskRecord.id || taskRecord.taskId) : taskId;
   const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
-  if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
-    console.log(`[DEMO MODE] Simulating approve_task release for Task #${resolvedTaskId}`);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const demoHash = 'demo_release_' + Date.now().toString(16);
-    return {
-      success: true,
-      hash: demoHash,
-      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${demoHash}`,
-      isDemo: true
-    };
+
+  // 0. Dispute freeze (SOW Deliverable 3b). The deployed contract has no dispute state, so this
+  // signing layer is the last point that can refuse a release while a task is Disputed.
+  if (taskRecord?.status === 'Disputed') {
+    throw new Error(DISPUTE_FROZEN_MESSAGE);
+  }
+
+  const ephemeralSigner = await getOrProvisionEphemeralSigner(clientAddress);
+  const effectiveClientAddress = ephemeralSigner ? ephemeralSigner.publicKey : clientAddress;
+
+  if (!effectiveClientAddress || isDemoWallet(effectiveClientAddress) || isMockTask) {
+    return demoReleaseResult(`Task #${resolvedTaskId}`);
+  }
+
+  // A task funded in demo mode has no on-chain escrow, so its release is a demo too (isDemo: true).
+  // A task funded on-chain whose ID is missing is an error: releasing by guesswork could pay the wrong escrow.
+  if (resolveOnChainTaskId(taskId) === null) {
+    if (taskRecord && (isSimulatedTxHash(taskRecord.tx_hash) || LEGACY_DEMO_PLACEHOLDER_HASHES.has(taskRecord.tx_hash))) {
+      return demoReleaseResult(`demo-funded Task #${resolvedTaskId}`);
+    }
+    throw new Error(ESCROW_NOT_FOUND_MESSAGE);
   }
 
   try {
-    // 1. Prepare & simulate transaction
-    const { preparedTx, isDemo } = await simulateApproveTask({ clientAddress, taskId });
+    // 1. Prepare & simulate transaction (throws if the contract would reject the release)
+    const { preparedTx } = await simulateApproveTask({ clientAddress: effectiveClientAddress, taskId });
 
-    if (isDemo || !preparedTx) {
-      console.log(`[RESILIENT FALLBACK] Simulating approve_task release for Task #${taskId}`);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const demoHash = 'resilient_release_' + Date.now().toString(16);
-      return {
-        success: true,
-        hash: demoHash,
-        explorerUrl: `https://stellar.expert/explorer/testnet/tx/${demoHash}`,
-        isDemo: true
-      };
+    let signedTx;
+    if (ephemeralSigner && ephemeralSigner.keypair) {
+      preparedTx.sign(ephemeralSigner.keypair);
+      signedTx = preparedTx;
+    } else {
+      // 2. Request user signature via Freighter
+      const signResult = await withTimeout(
+        signTransaction(preparedTx.toXDR(), { 
+          network: NETWORK, 
+          networkPassphrase: PASSPHRASE,
+          accountToSign: effectiveClientAddress 
+        }),
+        30000
+      );
+
+      if (signResult?.error) {
+        throw new Error(signResult.error);
+      }
+
+      const rawXdr = typeof signResult === 'string'
+        ? signResult
+        : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
+
+      signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
     }
-
-    // 2. Request user signature via Freighter
-    const signResult = await withTimeout(
-      signTransaction(preparedTx.toXDR(), { 
-        network: NETWORK, 
-        networkPassphrase: PASSPHRASE,
-        accountToSign: clientAddress 
-      }),
-      30000
-    );
-
-    if (signResult?.error) {
-      throw new Error(signResult.error);
-    }
-
-    const rawXdr = typeof signResult === 'string'
-      ? signResult
-      : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
-
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
 
     // 3. Submit transaction to Soroban RPC
     const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
@@ -755,6 +917,8 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
       isDemo: false
     };
   } catch (error) {
+    // Never report a failed release as a success: TaskContext rolls back the optimistic
+    // "Completed" state on throw, which is what keeps every open tab truthful.
     console.error("[submitApproveTask] Error:", error);
     throw new Error(formatStellarError(error));
   }

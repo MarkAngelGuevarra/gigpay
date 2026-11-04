@@ -132,12 +132,21 @@ async function runSorobanSimulationTests() {
   if (clampedU32 < 1 || clampedU32 > 4294967295) {
     throw new Error(`Task ID clamping out of u32 bounds: ${clampedU32}`);
   }
-  const approveSim = await simulateApproveTask({
-    clientAddress: validClient,
-    taskId: '1'
-  });
-  if (!approveSim || !approveSim.minResourceFee) {
-    throw new Error('simulateApproveTask failed to return valid simulation response');
+  // validClient did not fund on-chain task #1, so the contract must reject this release.
+  // simulateApproveTask now surfaces that rejection instead of returning a simulated success.
+  let approveSim = null;
+  let approveRejected = false;
+  try {
+    approveSim = await simulateApproveTask({
+      clientAddress: validClient,
+      taskId: '1'
+    });
+  } catch (simErr) {
+    approveRejected = true;
+    console.log(`Contract correctly rejected foreign release: ${simErr.message.slice(0, 90)}`);
+  }
+  if (!approveRejected && (!approveSim || approveSim.isDemo || !approveSim.minResourceFee)) {
+    throw new Error('simulateApproveTask masked a release outcome instead of returning a real simulation or rejecting');
   }
   console.log(`Clamped u32 Task ID: ${clampedU32} (within [1, 4294967295])`);
   console.log('✅ Test 9 Passed: u32 Task ID clamping and simulateApproveTask verified.\n');

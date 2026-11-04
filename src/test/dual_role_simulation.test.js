@@ -170,6 +170,7 @@ async function runDualRoleSimulationTestSuite() {
     status: 'Available',
     client_id: currentUser.id,
     contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+    on_chain_task_id: fundResult.onChainTaskId || null,
     tx_hash: fundResult.hash,
     explorer_url: fundResult.explorerUrl,
     created_at: new Date().toISOString()
@@ -256,9 +257,10 @@ async function runDualRoleSimulationTestSuite() {
 
   // --- TEST 7: Client Milestone Approval & Escrow Release ---
   console.log('\n--- Phase 7: Client Milestone Approval & Soroban Escrow Release ---');
+  // Pass the full task record (as TaskContext does) so the release targets this task's own escrow.
   const approveResult = await submitApproveTask({
     clientAddress: activePublicKey,
-    taskId: createdTask.id
+    taskId: getStoredTasks().find(t => t.id === createdTask.id) || createdTask
   });
 
   const updatedAfterApproval = getStoredTasks().map(t => {
