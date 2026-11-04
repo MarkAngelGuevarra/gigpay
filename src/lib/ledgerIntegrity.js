@@ -98,3 +98,12 @@ export const dedupeLedgerByTxHash = (records) => {
     return true;
   });
 };
+
+// Who an open task's escrow will pay, as seen by the current freelancer.
+export const describePayout = (task, myAddress) => {
+  const to = task?.freelancer_wallet;
+  if (!to) return { canAccept: true, color: 'var(--text-muted)', text: 'Payout address not recorded for this task.' };
+  if (myAddress && to === myAddress) return { canAccept: true, color: '#34d399', text: 'Pays your payout address.' };
+  if (isTeamWallet(to)) return { canAccept: true, color: '#fbbf24', text: "Pays GigPay's test wallet (practice task, not paid to you)." };
+  return { canAccept: false, color: '#f87171', text: `Reserved: pays another freelancer (${to.slice(0, 6)}…${to.slice(-4)}).` };
+};

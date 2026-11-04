@@ -290,7 +290,7 @@ runTest(13, "Enforcement UI preserves core escrow accessibility with no blocking
 
   // Verify escrow action buttons in Client and Freelancer dashboards remain completely intact
   assert.ok(clientSrc.includes("Lock Funds in Escrow"), "Client escrow button must exist and remain unobstructed");
-  assert.ok(freelancerSrc.includes("Withdraw to Bank"), "Freelancer withdraw button must remain unobstructed");
+  assert.ok(freelancerSrc.includes("Where your payment goes"), "Freelancer payment panel must remain unobstructed");
   assert.ok(freelancerSrc.includes("Accept Work"), "Freelancer accept work button must remain unobstructed");
 });
 

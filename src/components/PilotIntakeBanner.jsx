@@ -100,11 +100,11 @@ export default function PilotIntakeBanner() {
             {isFormOpened ? (
               <span>
                 <strong>Form opened in new tab!</strong> Once you finish submitting your feedback, click{' '}
-                <span style={{ color: 'var(--accent, #00f5a0)', fontWeight: 600 }}>"✓ I've Completed It"</span> to verify your tester rewards.
+                <span style={{ color: 'var(--accent, #00f5a0)', fontWeight: 600 }}>"✓ I've Completed It"</span> so we stop reminding you.
               </span>
             ) : (
               <span>
-                <strong>Official Pilot Feedback:</strong> Help us shape zero-fee Stellar Soroban escrows! Complete the 60s tester intake form to qualify for early reward pools.
+                <strong>Official Pilot Feedback:</strong> Help us improve GigPay: the tester form takes about a minute.
               </span>
             )}
           </div>

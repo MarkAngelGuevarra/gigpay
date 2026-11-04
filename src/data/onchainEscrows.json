@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-04 15:43 UTC",
+  "generatedAt": "2026-11-04 16:18 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -468,6 +468,18 @@
       "fundedAt": "2026-11-04T14:50:25Z",
       "releaseTxHash": "80909c0ca2f9d590dc02ac42062fca0002adda822ee08faffd7ceea80251156b",
       "releasedAt": "2026-11-04T14:50:50Z",
+      "walletKind": "Pays team wallet (test)"
+    },
+    {
+      "onChainTaskId": 40,
+      "amount": 350,
+      "clientWallet": "GDXOS36TRQOENBQO4XBYGNKG7FLMA4F42FSBSPEPQFPTN3FQBDJX4GCF",
+      "freelancerWallet": "GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3",
+      "released": true,
+      "fundTxHash": "14df20e38dcd4db93a6d0cdbb6f477970d6882936a0e1ea7b5c2caac44af1b57",
+      "fundedAt": "2026-11-04T16:12:55Z",
+      "releaseTxHash": "1ae0976c25c1e2e5e8b8a0548df114b6a5f1e9f818fe37d04935e345501059b9",
+      "releasedAt": "2026-11-04T16:13:10Z",
       "walletKind": "Pays team wallet (test)"
     }
   ]

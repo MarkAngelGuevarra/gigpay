@@ -56,7 +56,10 @@ export const isSimulatedTxHash = (hash) => {
  * The auto-signing simulator wallet exists for Testnet pilots only. It keeps its secret key in
  * browser storage, so it must never sign on Mainnet, where that key would control real funds.
  */
-export const isEphemeralSignerAllowed = (network = NETWORK) => network === 'TESTNET';
+export const isEphemeralSignerAllowed = (network = NETWORK) =>
+  network === 'TESTNET' && !(typeof globalThis !== 'undefined' && globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER === true);
+// GIGPAY_DISABLE_SIMULATOR_SIGNER lets test suites run the full flow in offline demo mode, so routine test
+// runs do not create escrows on the shared production contract (and pollute its evidence).
 
 // Friendbot routinely takes 10-25s to answer; an 8s cap left new simulator wallets unfunded.
 const FRIENDBOT_TIMEOUT_MS = 30000;

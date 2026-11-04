@@ -21,6 +21,7 @@ const {
   buildCompletedTaskLedgerRow,
   dedupeLedgerByTxHash
 } = await import('../src/lib/ledgerIntegrity.js');
+const ledgerMod = await import('../src/lib/ledgerIntegrity.js');
 const { DEMO_FUND_TX_HASH, DEMO_RELEASE_TX_HASH, DEFAULT_FREELANCER_TESTNET_ADDRESS, DEMO_PUBLIC_KEY } =
   await import('../src/lib/stellar.js');
 
@@ -77,6 +78,14 @@ test('Escrows from the Nov 3 scripted wallets are labeled and never count as out
   const row = labelLedgerRecord({ txHash: REAL_HASH, clientWallet: 'GCACSSN7J2Q2ZKHHLQ2H33T6KDFNJAWTPOBWXH6PI4KDQ3ZAA77XV5VF', freelancerWallet: 'GA3LTMJQEJYWEFPGVFRQBTG4ELFXYD2ATQAD2YB5FEECTBG7TCQQQRLJ' });
   assert.strictEqual(row.countsAsOutsideUser, false);
   assert.match(row.walletNote, /Scripted test wallet/);
+});
+
+test('Freelancers cannot accept a task whose escrow pays someone else', () => {
+  const { describePayout } = ledgerMod;
+  assert.strictEqual(describePayout({ freelancer_wallet: OUTSIDE_FREELANCER }, OUTSIDE_FREELANCER).canAccept, true);
+  assert.strictEqual(describePayout({ freelancer_wallet: OUTSIDE_FREELANCER }, OUTSIDE_CLIENT).canAccept, false);
+  assert.match(describePayout({ freelancer_wallet: DEFAULT_FREELANCER_TESTNET_ADDRESS }, OUTSIDE_CLIENT).text, /test wallet/);
+  assert.strictEqual(describePayout({}, OUTSIDE_CLIENT).canAccept, true);
 });
 
 test('Same transaction from two sources is listed once; placeholder rows are dropped', () => {

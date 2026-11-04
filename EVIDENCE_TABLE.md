@@ -17,7 +17,7 @@ All rows below are generated from the chain, and every row says which kind of wa
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-04 15:43 UTC from Stellar Testnet. 39 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 25 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-04 16:18 UTC from Stellar Testnet. 40 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 26 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|
@@ -25,8 +25,8 @@ _Generated 2026-11-04 15:43 UTC from Stellar Testnet. 39 escrows. Every funding 
 | Team test (founder's wallet → team default freelancer wallet) | 3 | 450 XLM |
 | Outside wallet | 1 | 2 XLM |
 | Scripted test (Nov 3, 2026) | 20 | 1166 XLM |
-| Pays team wallet (test) | 4 | 1400 XLM |
-| **Released on-chain** | **33** | **2236 XLM** |
+| Pays team wallet (test) | 5 | 1750 XLM |
+| **Released on-chain** | **34** | **2586 XLM** |
 | **Escrows from outside wallets** | **1** | 2 XLM |
 
 | # | Funded (UTC) | Client | Freelancer | Amount | Fund tx | Release tx | Released | Wallets |
@@ -70,6 +70,7 @@ _Generated 2026-11-04 15:43 UTC from Stellar Testnet. 39 escrows. Every funding 
 | 37 | 2026-11-04 13:57:55 | [`GD2PBTKQ…`](https://stellar.expert/explorer/testnet/account/GD2PBTKQK5WRCKUX2KKURGTULQQB2HRYNYDSTNQ2KJZRC6LZY62OOKI7) | [`GAATY4U2…`](https://stellar.expert/explorer/testnet/account/GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3) | 350 XLM | [`b870ce97ad…`](https://stellar.expert/explorer/testnet/tx/b870ce97ad16e3b258177002d7d7fc374bd9b8b311bfbde96697333631cf53f2) | [`fea7372c9a…`](https://stellar.expert/explorer/testnet/tx/fea7372c9ab76e584a33b5fc321ba91ead5c30a5b876bcda06dd42fe11e45fe2) | Yes | Pays team wallet (test) |
 | 38 | 2026-11-04 14:16:00 | [`GB7GVOUR…`](https://stellar.expert/explorer/testnet/account/GB7GVOURMH7NV4IZGF47WDHBR5SLZDXPEWQGLQU4HZ6MQGF7A5UDI36C) | [`GAATY4U2…`](https://stellar.expert/explorer/testnet/account/GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3) | 350 XLM | [`1e0a72e923…`](https://stellar.expert/explorer/testnet/tx/1e0a72e923a89e14b2779216e935e8decb3a83b8e16977bffe416014887c3b17) | [`14a89c43e3…`](https://stellar.expert/explorer/testnet/tx/14a89c43e36ff30a5efc904b04d95230ce9ba58b057ba70173e5d02d75ac5943) | Yes | Pays team wallet (test) |
 | 39 | 2026-11-04 14:50:25 | [`GB4RTSM6…`](https://stellar.expert/explorer/testnet/account/GB4RTSM6PJLZXCJF2Q5OOYV5LTISRQGCW2RZJDFRV5BM7457DY72ULBF) | [`GAATY4U2…`](https://stellar.expert/explorer/testnet/account/GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3) | 350 XLM | [`8c1b687ece…`](https://stellar.expert/explorer/testnet/tx/8c1b687eceaf639bdcc6229d0014a63f817ad2b8a1b05960683c7b5098ef8d05) | [`80909c0ca2…`](https://stellar.expert/explorer/testnet/tx/80909c0ca2f9d590dc02ac42062fca0002adda822ee08faffd7ceea80251156b) | Yes | Pays team wallet (test) |
+| 40 | 2026-11-04 16:12:55 | [`GDXOS36T…`](https://stellar.expert/explorer/testnet/account/GDXOS36TRQOENBQO4XBYGNKG7FLMA4F42FSBSPEPQFPTN3FQBDJX4GCF) | [`GAATY4U2…`](https://stellar.expert/explorer/testnet/account/GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3) | 350 XLM | [`14df20e38d…`](https://stellar.expert/explorer/testnet/tx/14df20e38dcd4db93a6d0cdbb6f477970d6882936a0e1ea7b5c2caac44af1b57) | [`1ae0976c25…`](https://stellar.expert/explorer/testnet/tx/1ae0976c25c1e2e5e8b8a0548df114b6a5f1e9f818fe37d04935e345501059b9) | Yes | Pays team wallet (test) |
 <!-- END GENERATED ESCROW TABLE -->
 
 ## User adoption: verified numbers

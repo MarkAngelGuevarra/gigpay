@@ -20,65 +20,21 @@ const isRealStellarAddress = (val) => typeof val === 'string' && /^G[A-Z2-7]{55}
 
 const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
-// Default tasks ensuring the 100 XLM website milestone approved by tester is permanently visible across devices
-const DEFAULT_INITIAL_TASKS = [
-  {
-    id: 'task-website-100',
-    title: 'Create a website',
-    amount: '100',
-    status: 'Completed',
-    client_id: 'demo-client-uuid-001',
-    freelancer_id: 'demo-freelancer-uuid-002',
-    contract_id: GIGPAY_ESCROW_CONTRACT_ID,
-    tx_hash: '40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda',
-    release_tx_hash: '40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda',
-    explorer_url: 'https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda',
-    created_at: '2026-10-30T07:54:00.000Z',
-    completed_at: '2026-10-30T08:02:14.000Z'
-  },
-  {
-    id: 'task-mock-1',
-    title: 'Soroban Escrow Smart Contract Audit',
-    amount: '500',
-    status: 'Available',
-    client_id: 'demo-client-uuid-001',
-    contract_id: GIGPAY_ESCROW_CONTRACT_ID,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'task-mock-2',
-    title: 'Freighter Wallet UX Optimization',
-    amount: '350',
-    status: 'In Progress',
-    client_id: 'demo-client-uuid-001',
-    freelancer_id: 'demo-freelancer-uuid-002',
-    contract_id: GIGPAY_ESCROW_CONTRACT_ID,
-    created_at: new Date().toISOString()
-  }
-];
+// Sample tasks are no longer seeded. The old seed injected a 'Create a website, 100 XLM, Completed' task
+// (and re-inserted it if removed) into every browser, so every new tester saw a payout that never happened.
+// Cached copies of those seeds are filtered out here so existing testers stop seeing them too.
+const RETIRED_SEED_TASK_IDS = new Set(['task-website-100', 'task-mock-1', 'task-mock-2']);
 
 const getLocalTasks = () => {
   try {
     const raw = localStorage.getItem(GIGPAY_SHARED_TASKS_KEY) || localStorage.getItem(GIGPAY_LEGACY_CACHE_KEY);
-    if (!raw) return DEFAULT_INITIAL_TASKS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_INITIAL_TASKS;
-
-    // Ensure the completed 100 XLM milestone is preserved in cached list
-    const hasWebsiteTask = parsed.some(t => t.id === 'task-website-100');
-    if (!hasWebsiteTask) {
-      return [DEFAULT_INITIAL_TASKS[0], ...parsed];
-    }
-    // If present, enforce Completed status so stale cache never resets it
-    return parsed.map(t => {
-      if (t.id === 'task-website-100') {
-        return { ...t, status: 'Completed', amount: t.amount || '100' };
-      }
-      return t;
-    });
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((t) => t && !RETIRED_SEED_TASK_IDS.has(t.id));
   } catch (err) {
     console.warn("[GigPay Sync] Local cache read warning:", err);
-    return DEFAULT_INITIAL_TASKS;
+    return [];
   }
 };
 
@@ -182,13 +138,13 @@ export const TaskProvider = ({ children }) => {
     const statusRank = { 'Completed': 3, 'Paid': 3, 'In Progress': 2, 'Under Review': 2, 'Disputed': 2, 'Available': 1 };
     const taskMap = new Map();
 
-    (incomingList || []).forEach(rawT => {
+    (incomingList || []).filter(t => t && !RETIRED_SEED_TASK_IDS.has(t.id)).forEach(rawT => {
       const t = sanitizeTaskRecord(rawT);
       const key = t.id || t.title;
       taskMap.set(key, t);
     });
 
-    (currentList || []).forEach(rawT => {
+    (currentList || []).filter(t => t && !RETIRED_SEED_TASK_IDS.has(t.id)).forEach(rawT => {
       const t = sanitizeTaskRecord(rawT);
       const key = t.id || t.title;
       if (taskMap.has(key)) {

@@ -123,28 +123,15 @@ runTest(3, "ClientDashboard: Dispute & Release modals produce 0px overflow acros
 // -----------------------------------------------------------------
 const freelancerDashboardSrc = readProjectFile('src/pages/FreelancerDashboard.jsx');
 
-runTest(4, "FreelancerDashboard: KYC Modal specifies fluid width and 100vw-capped maxWidth", () => {
-  const panelRegex = /<div className="glass-panel" style=\{\{([^}]+)\}\}>\s*<div[^>]*>\s*<ShieldAlert/g;
-  const match = panelRegex.exec(freelancerDashboardSrc);
-  assert.ok(match, "KYC Modal glass-panel must exist");
-  
-  const styleStr = match[1];
-  assert.ok(styleStr.includes("width: '100%'"), "KYC modal must have width: '100%'");
-  assert.ok(styleStr.includes("maxWidth: 'min(400px, calc(100vw - 2rem))'"), "KYC modal must have fluid maxWidth min(400px, calc(100vw - 2rem))");
-  assert.ok(styleStr.includes("boxSizing: 'border-box'"), "KYC modal must have boxSizing: 'border-box'");
-  assert.ok(!styleStr.match(/width:\s*['"]400px['"]/), "Fixed 400px width must not be present");
+runTest(4, "FreelancerDashboard: no simulated KYC check (it reported identity as verified without checking anything)", () => {
+  assert.ok(!freelancerDashboardSrc.includes('handleSimulateKyc'), "Simulated KYC handler must be removed");
+  assert.ok(!freelancerDashboardSrc.includes('Identity Verified successfully'), "No fake identity-verified message");
 });
 
-runTest(5, "FreelancerDashboard: Bank Off-Ramp Modal specifies fluid width and 100vw-capped maxWidth", () => {
-  const panelRegex = /<div className="glass-panel" style=\{\{([^}]+)\}\}>\s*<div[^>]*>\s*<Landmark/g;
-  const match = panelRegex.exec(freelancerDashboardSrc);
-  assert.ok(match, "Bank modal glass-panel must exist");
-  
-  const styleStr = match[1];
-  assert.ok(styleStr.includes("width: '100%'"), "Bank modal must have width: '100%'");
-  assert.ok(styleStr.includes("maxWidth: 'min(450px, calc(100vw - 2rem))'"), "Bank modal must have fluid maxWidth min(450px, calc(100vw - 2rem))");
-  assert.ok(styleStr.includes("boxSizing: 'border-box'"), "Bank modal must have boxSizing: 'border-box'");
-  assert.ok(!styleStr.match(/width:\s*['"]450px['"]/), "Fixed 450px width must not be present");
+runTest(5, "FreelancerDashboard: no simulated bank off-ramp; payment panel states where funds actually go", () => {
+  assert.ok(!freelancerDashboardSrc.includes('Successfully converted & transferred'), "No fake bank transfer confirmation");
+  assert.ok(!freelancerDashboardSrc.includes('accountNumber'), "Must not collect bank account numbers");
+  assert.ok(freelancerDashboardSrc.includes('Where your payment goes'), "Honest payment panel must be present");
 });
 
 runTest(6, "FreelancerDashboard: KYC & Bank modals produce 0px overflow across 375px, 390px, 430px", () => {
@@ -241,8 +228,8 @@ runTest(14, "Modal Overlays: All mobile modal backdrops include padding to preve
   const clientOverlayCount = (clientDashboardSrc.match(/position:\s*'fixed'[\s\S]*?padding:\s*'1rem'/g) || []).length;
   assert.ok(clientOverlayCount >= 2, "ClientDashboard modals must have 1rem backdrop padding");
 
-  const freelancerOverlayCount = (freelancerDashboardSrc.match(/position:\s*'fixed'[\s\S]*?padding:\s*'1rem'/g) || []).length;
-  assert.ok(freelancerOverlayCount >= 2, "FreelancerDashboard modals must have 1rem backdrop padding");
+  // FreelancerDashboard no longer opens modals (the simulated KYC and bank modals were removed).
+  assert.ok(!/position:s*'fixed'/.test(freelancerDashboardSrc) || /position:s*'fixed'[sS]*?padding:s*'1rem'/.test(freelancerDashboardSrc), "Any FreelancerDashboard modal backdrop must have 1rem padding");
 });
 
 // -----------------------------------------------------------------

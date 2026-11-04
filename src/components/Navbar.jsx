@@ -186,7 +186,7 @@ const Navbar = () => {
               boxShadow: '0 0 12px rgba(0, 242, 254, 0.25)'
             }}
           >
-            🚀 Pilot Intake (Required) <ExternalLink size={13} />
+            🚀 Tester Feedback Form <ExternalLink size={13} />
           </a>
         )}
         <button

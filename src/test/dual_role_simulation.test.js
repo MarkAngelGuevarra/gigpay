@@ -10,6 +10,14 @@ import {
   GIGPAY_ESCROW_CONTRACT_ID
 } from '../lib/stellar.js';
 
+// Routine runs must not create escrows on the shared production contract (they would show up in the
+// public evidence). Opt in to real Testnet writes with:
+//   GIGPAY_TESTNET_WRITES=1 node src/test/dual_role_simulation.test.js
+if (process.env.GIGPAY_TESTNET_WRITES !== '1') {
+  globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER = true;
+  console.log('[dual_role] Offline demo mode: no Testnet transactions will be created.');
+}
+
 // Setup Mock Browser Storage
 class MockLocalStorage {
   constructor() {

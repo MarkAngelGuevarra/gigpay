@@ -182,6 +182,18 @@ p {
 
 /* Mobile Responsive Optimizations */
 @media (max-width: 640px) {
+  /* Thumb-sized tap targets: several header and banner controls were 24-34px tall on phones. */
+  .btn,
+  .navbar-actions a,
+  .navbar-actions button,
+  .pilot-intake-banner button,
+  .pilot-intake-banner a {
+    min-height: 40px;
+  }
+  .pilot-guide-min-pill button[title="Dismiss Guide"] {
+    min-width: 36px;
+    min-height: 36px;
+  }
   h1 {
     font-size: clamp(1.75rem, 5vw, 2.5rem);
     line-height: 1.2;

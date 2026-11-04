@@ -218,7 +218,9 @@ export default function PilotGuideWidget() {
       clientStep: 1,
       freelancerStep: 1,
       activeTour: 'client',
-      isMinimized: false,
+      // On phones the open guide covers about a third of the screen, so first-time visitors start with
+      // the small "Pilot Guide" pill and open it when they want it. Desktop keeps it open.
+      isMinimized: typeof window !== 'undefined' && window.innerWidth < 640,
       isDismissed: false
     };
   });

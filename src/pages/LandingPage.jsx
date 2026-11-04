@@ -10,7 +10,7 @@ const features = [
     bgIcon: <Zap size={100} />,
     title: "Lightning Fast",
     shortDesc: "Powered by Stellar network, payments settle in under 5 seconds cross-border, directly to your wallet.",
-    longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles international payments in 3-5 seconds. By leveraging USDC, you bypass traditional banking hours, FX fees, and SWIFT delays.",
+    longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles international payments in 3-5 seconds. This pilot runs on Stellar Testnet with practice XLM; there are no banking hours, FX fees or SWIFT delays to wait for.",
     shadowColor: "rgba(59,130,246,0.3)",
     accentColor: "#00f2fe"
   },
@@ -98,7 +98,7 @@ const LandingPage = () => {
           transition={{ duration: 0.8, delay: 0.4 }}
           style={{ color: 'var(--text-muted)', fontSize: 'clamp(1rem, 3.5vw, 1.25rem)', maxWidth: '650px', margin: '0 auto 2.5rem auto', padding: '0 0.5rem' }}
         >
-          The decentralized payment platform for gig workers in APAC. Get paid in USDC the second your job is done, directly to your Stellar wallet.
+          Milestone escrow for Filipino freelancers on Stellar. The client locks the payment first, and it goes straight to your wallet the moment they approve your work. (Pilot on Stellar Testnet: practice money only.)
         </motion.p>
         
         <motion.div 
