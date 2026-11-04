@@ -1,10 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, ExternalLink, Download, X, Clock, CheckCircle2 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
-  const { ledgerRecords, exportVerificationCsv } = useTasks();
+  const { ledgerRecords, exportVerificationCsv, refreshLedgerRecords } = useTasks();
+  const prevOpenRef = useRef(false);
+
+  // Rehydrate live Supabase ledger strictly on modal open transition (false -> true)
+  useEffect(() => {
+    if (isOpen && !prevOpenRef.current && typeof refreshLedgerRecords === 'function') {
+      refreshLedgerRecords();
+    }
+    prevOpenRef.current = isOpen;
+  }, [isOpen, refreshLedgerRecords]);
 
   // Escape key listener for keyboard dismissal
   useEffect(() => {
@@ -115,6 +124,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
               </h3>
               <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)', whiteSpace: 'nowrap' }}>
                 Protocol 22 Testnet
+              </span>
+              <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(16, 185, 129, 0.3)', whiteSpace: 'nowrap' }}>
+                ● Live Synced with Supabase
               </span>
             </div>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>

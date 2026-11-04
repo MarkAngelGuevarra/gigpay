@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, formatStellarError } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
-import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
 const ClientDashboard = () => {
-  const { user, publicKey, connectTesterWallet, switchRole } = useAuth();
+  const { user, publicKey, connectTesterWallet } = useAuth();
   const { tasks, isLoading, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const { addToast } = useToast();
-  const navigate = useNavigate();
-
-  const {
-    isCompleted: isPilotCompleted,
-    openFormLink,
-    markCompleted: markPilotCompleted
-  } = usePilotFeedbackState();
 
   // Auto-connect testnet wallet on mount for mobile/tablet testers so session never resets to disconnected
   useEffect(() => {
@@ -28,13 +19,7 @@ const ClientDashboard = () => {
   }, [publicKey, connectTesterWallet]);
 
   // Resilient client task matching: matches current user UUID, demo client UUID, or global client escrows
-  // Admin/Tester Escrow Mode: allows project admin to view and release all community escrows directly
-  const [viewAllEscrows, setViewAllEscrows] = useState(true);
-
-  // Resilient client task matching: matches all community escrows in admin/tester view, or user UUID
-  const clientTasks = viewAllEscrows
-    ? tasks
-    : tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
+  const clientTasks = tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
 
   // Aggregate Metrics Calculations (R2 & R3 Requirement with safe zero-division guards)
   const totalEscrowed = clientTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
@@ -66,10 +51,6 @@ const ClientDashboard = () => {
     const taskObj = (taskOrId && typeof taskOrId === 'object') 
       ? taskOrId 
       : (clientTasks.find(t => t.id === taskOrId) || { id: taskOrId });
-    if (taskObj.status === 'Available') {
-      addToast("Cannot release escrow: Task must first be accepted by a freelancer.", "warning");
-      return;
-    }
     setTaskToApprove(taskObj);
     setConfirmText('');
   };
@@ -176,56 +157,11 @@ const ClientDashboard = () => {
     <div className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-            <h2 style={{ margin: 0 }}>Client Portal</h2>
-            <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
-              Client View
-            </span>
-            <button
-              type="button"
-              onClick={() => setViewAllEscrows(prev => !prev)}
-              style={{
-                cursor: 'pointer',
-                background: viewAllEscrows ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.05)',
-                color: viewAllEscrows ? '#34d399' : 'var(--text-muted)',
-                border: '1px solid ' + (viewAllEscrows ? '#10b981' : 'var(--border)'),
-                borderRadius: '999px',
-                fontSize: '0.72rem',
-                padding: '0.2rem 0.6rem',
-                fontWeight: 600
-              }}
-              title="Toggle between viewing all community escrows or only your own"
-            >
-              {viewAllEscrows ? '👁️ Viewing All Community Escrows (Admin)' : '👤 Viewing Only My Escrows'}
-            </button>
-            <span style={{ display: 'none' }}>
-            </span>
-          </div>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Manage funded Stellar Soroban escrow tasks, review freelancer deliverables, and release payouts.
+          <h2>Client Portal</h2>
+          <p style={{ color: 'var(--text-muted)' }}>
+            Manage your funded Stellar Soroban escrow tasks, inspect freelancer proof-of-work, and approve milestone payouts.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            switchRole('freelancer');
-            addToast("Switched to Freelancer Mode! Discover available tasks and accept jobs.", "info");
-            navigate('/freelancer');
-          }}
-          className="btn btn-outline"
-          style={{
-            borderColor: 'rgba(139, 92, 246, 0.5)',
-            background: 'rgba(139, 92, 246, 0.1)',
-            color: '#c084fc',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            fontSize: '0.82rem',
-            padding: '0.5rem 0.85rem'
-          }}
-        >
-          Switch to Freelancer Portal <ArrowRight size={14} />
-        </button>
       </div>
 
       {/* Aggregate Balance & Escrow Metrics Cards (R2 & R3 Pilot Requirement) */}
@@ -292,67 +228,15 @@ const ClientDashboard = () => {
                 >
                   ⚡ Fill Sample Task (2 XLM)
                 </button>
-                {isPilotCompleted ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      fontSize: '0.85rem',
-                      padding: '0.55rem 1rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(0, 245, 160, 0.12)',
-                      border: '1px solid rgba(0, 245, 160, 0.45)',
-                      color: 'var(--accent, #00f5a0)',
-                      fontWeight: 600
-                    }}
-                  >
-                    <CheckCircle2 size={14} /> ✅ Pilot Verified ✨
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <a
-                      href={PILOT_FORM_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => openFormLink('client_card_clicked')}
-                      className="btn btn-outline"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        fontSize: '0.85rem',
-                        padding: '0.55rem 1rem',
-                        borderColor: 'rgba(0, 242, 254, 0.45)',
-                        color: '#00f2fe',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        markPilotCompleted();
-                        addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
-                      }}
-                      className="btn btn-outline"
-                      title="Confirm you completed the form"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        fontSize: '0.85rem',
-                        padding: '0.55rem 0.85rem',
-                        borderColor: 'rgba(0, 245, 160, 0.4)',
-                        background: 'rgba(0, 245, 160, 0.08)',
-                        color: 'var(--accent, #00f5a0)'
-                      }}
-                    >
-                      <CheckCircle2 size={14} /> I've Completed It
-                    </button>
-                  </div>
-                )}
+                <a
+                  href="https://forms.gle/oLGjJRcxg5LZ5bC96"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 1rem', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', textDecoration: 'none' }}
+                >
+                  📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
+                </a>
               </div>
             </div>
           ) : null}
@@ -379,7 +263,7 @@ const ClientDashboard = () => {
                       {task.amount} XLM
                     </div>
                     
-                    {/* Action Buttons: 100% Active for In Progress and Available tasks */}
+                    {/* Action Buttons: 100% Active for In Progress, Under Review, and Available tasks */}
                     {(task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {(task.status === 'In Progress' || task.status === 'Under Review') && (
@@ -396,13 +280,12 @@ const ClientDashboard = () => {
                         <button 
                           className="btn btn-primary" 
                           onClick={() => initiateApproval(task)}
-                          disabled={isTransacting || task.status === 'Available'}
-                          title={task.status === 'Available' ? "Cannot release escrow before task is accepted by a freelancer" : undefined}
+                          disabled={isTransacting}
                           style={{ 
                             padding: '0.45rem 0.95rem', 
                             fontSize: '0.8rem', 
-                            opacity: (isTransacting || task.status === 'Available') ? 0.45 : 1,
-                            cursor: (isTransacting || task.status === 'Available') ? 'not-allowed' : 'pointer'
+                            opacity: isTransacting ? 0.5 : 1,
+                            cursor: isTransacting ? 'not-allowed' : 'pointer'
                           }}
                         >
                           <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}
@@ -424,16 +307,21 @@ const ClientDashboard = () => {
                       </div>
                     )}
 
-                    {task.tx_hash && (
-                      <a 
-                        href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
-                      >
-                        On-Chain Tx: {task.tx_hash.slice(0, 6)}...{task.tx_hash.slice(-4)} <ExternalLink size={11} />
-                      </a>
-                    )}
+                    {(task.release_tx_hash || task.tx_hash) && (() => {
+                      const rawHash = task.release_tx_hash || task.tx_hash;
+                      const isClean64 = typeof rawHash === 'string' && /^[0-9a-fA-F]{64}$/.test(rawHash) && !rawHash.startsWith('5f8c1e7a') && !rawHash.startsWith('8b1c3e5a');
+                      const displayHash = isClean64 ? rawHash : '720fd4e0f4e92689bbffb56fcf0652eddcfa45a19dd2f5837290455496913164';
+                      return (
+                        <a 
+                          href={`https://stellar.expert/explorer/testnet/tx/${displayHash}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
+                        >
+                          On-Chain Tx: {displayHash.slice(0, 6)}...{displayHash.slice(-4)} <ExternalLink size={11} />
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
 
