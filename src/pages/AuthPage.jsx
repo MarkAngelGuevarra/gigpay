@@ -317,13 +317,14 @@ const AuthPage = () => {
           </button>
         </div>
 
-        {/* Grant Reviewer Quick-Fill */}
-        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <div style={{ fontSize: '0.72rem', color: '#00f2fe', textAlign: 'center', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-            🔍 Grant Reviewer Quick-Fill (Shared Demo)
-          </div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '0.75rem' }}>
-            Pilot Testers: Use <strong>🚀 Sign Up (New Tester)</strong> above with your own email!
+        {/* Grant Reviewer Quick-Fill. Folded away so testers sign up with their own email: activity on these
+            shared accounts cannot be tied to a real person, so it never counts as tester traction. */}
+        <details style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <summary style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', cursor: 'pointer', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            For grant reviewers: shared demo accounts
+          </summary>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.5rem 0 0.75rem' }}>
+            Shared accounts for a quick look. Anything done here is a demo and is <strong>not counted as a tester</strong>. Pilot testers: please use <strong>🚀 Sign Up (New Tester)</strong> with your own email.
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -416,7 +417,7 @@ const AuthPage = () => {
           >
             ⚡ 1-Click Dual-Role Sandbox (Simulate Client & Freelancer)
           </button>
-        </div>
+        </details>
       </div>
     </div>
   );

@@ -14,10 +14,27 @@ An earlier version of this file, and of the app's public ledger, overstated GigP
 
 All rows below are generated from the chain, and every row says which kind of wallet was involved. Names are not attached to any wallet.
 
+## Sprint 2 on-chain traction
+
+<!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
+_Generated 2026-11-04 22:45 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
+
+| SOW metric | On-chain count |
+|:---|:---:|
+| Outside wallets with escrow activity (onboarded) | 2 |
+| Escrows funded between outside wallets | 1 |
+| End-to-end workflows released on-chain (activated) | 0 |
+| Repeat wallets (2+ escrows) | 0 (clients: 0, freelancers: 0) |
+
+| Week of (Mon, UTC) | New outside wallets | Escrows funded | Released | Cumulative wallets |
+|:---|:---:|:---:|:---:|:---:|
+| 2026-10-26 | 2 | 1 | 0 | 2 |
+<!-- END GENERATED TRACTION -->
+
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-04 16:18 UTC from Stellar Testnet. 40 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 26 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-04 22:45 UTC from Stellar Testnet. 40 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 26 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|

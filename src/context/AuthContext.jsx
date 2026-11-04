@@ -294,11 +294,16 @@ export const AuthProvider = ({ children }) => {
         }).catch(err => console.warn("Supabase background role sync notice:", err));
 
         if (user.id && !user.id.startsWith?.('demo-')) {
+          // The profiles role is what RLS checks when a client creates or a freelancer accepts a task.
+          // Supabase query builders have no .catch(): calling it threw before the request was sent, so
+          // the role never synced and a switched user's tasks were silently rejected by the database.
           supabase
             .from('profiles')
             .update({ role: targetRole })
             .eq('id', user.id)
-            .catch(err => console.warn("Supabase profiles table role sync notice:", err));
+            .then(({ error }) => {
+              if (error) console.warn("Supabase profiles table role sync notice:", error);
+            });
         }
       } catch (e) {
         console.warn("Supabase updateUser invocation notice:", e);

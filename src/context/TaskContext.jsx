@@ -349,7 +349,11 @@ export const TaskProvider = ({ children }) => {
               freelancer_wallet: isEvidence && isRealStellarAddress(recipientWallet) ? recipientWallet : null
             }]);
           // supabase-js reports errors in the result instead of throwing; surface them for debugging.
-          if (insertError) console.warn("Supabase insert notice (using local synced state):", insertError);
+          if (insertError) {
+            console.warn("Supabase insert notice (using local synced state):", insertError);
+            // Without the shared record the freelancer's device never sees this task, so say so.
+            addToast("This task was saved on this device only, so your freelancer can't see it yet. Sign out, sign in again as a client, and recreate it.", "warning");
+          }
         } catch (dbErr) {
           console.warn("Supabase insert notice (using local synced state):", dbErr);
         }

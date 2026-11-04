@@ -71,6 +71,17 @@ test("TEST 7: Freelancer must accept before submitting proof; client cannot rele
   assert.ok(read('src', 'pages', 'ClientDashboard.jsx').includes("taskObj.status === 'Available'"));
 });
 
+test('TEST 8: Role switch really syncs profiles.role (RLS checks it for task create/accept)', () => {
+  const auth = read('src', 'context', 'AuthContext.jsx');
+  const block = auth.slice(auth.indexOf(".from('profiles')"), auth.indexOf(".from('profiles')") + 400);
+  assert.ok(block.includes('.then('), 'profiles role update must be executed with .then()');
+  assert.ok(!/\.eq\('id', user\.id\)\s*\.catch\(/.test(auth), 'Supabase query builders have no .catch(); the request would never be sent');
+});
+
+test('TEST 9: A task the database rejects warns the tester instead of failing silently', () => {
+  assert.ok(read('src', 'context', 'TaskContext.jsx').includes("saved on this device only"));
+});
+
 console.log('==================================================================');
 console.log(`TOTAL EXECUTED: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);
 console.log('==================================================================');

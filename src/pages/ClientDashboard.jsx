@@ -553,10 +553,10 @@ const ClientDashboard = () => {
               <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: freelancerWallet.trim() ? 'var(--text-muted)' : '#fbbf24' }}>
                 {freelancerWallet.trim()
                   ? "The locked payment can only be released to this address."
-                  : "Left blank, the payment goes to GigPay's own test wallet, so it won't pay a real freelancer."}
+                  : "Left blank, the payment goes to GigPay's own test wallet: it won't pay a real freelancer and won't count as a pilot job."}
               </p>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Self-dealing protection active: Cannot assign to your own wallet.
+                You cannot pay your own address.
               </span>
             </div>
 
@@ -566,7 +566,7 @@ const ClientDashboard = () => {
               disabled={isTransacting}
               style={{ marginTop: '0.5rem', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
             >
-              <PlusCircle size={18} /> {isTransacting ? 'Invoking Soroban RPC...' : 'Lock Funds in Escrow'}
+              <PlusCircle size={18} /> {isTransacting ? 'Locking payment (about 10 seconds)...' : 'Lock Funds in Escrow'}
             </button>
           </form>
 
@@ -686,7 +686,7 @@ const ClientDashboard = () => {
                   fontWeight: 600 
                 }}
               >
-                {isTransacting ? 'Invoking Soroban RPC...' : 'Release Escrow Payout'}
+                {isTransacting ? 'Releasing payment (about 10 seconds)...' : 'Release Escrow Payout'}
               </button>
             </div>
           </div>

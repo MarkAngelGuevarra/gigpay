@@ -1,7 +1,8 @@
 // Rebuilds the on-chain escrow table in EVIDENCE_TABLE.md directly from Stellar Testnet.
 //
 //   node scripts/index_escrows.mjs            -> prints the markdown table
-//   node scripts/index_escrows.mjs --write    -> replaces the table between the markers in EVIDENCE_TABLE.md
+//   node scripts/index_escrows.mjs --write    -> replaces the traction and escrow tables in EVIDENCE_TABLE.md
+//                                                and src/data/onchainEscrows.json (run it weekly)
 //
 // Sources (no app data, nothing hand-entered):
 //   - GigPayEscrow.get_task(id) for each escrow: client, freelancer, amount, is_approved
@@ -128,6 +129,44 @@ for (const t of tasks) {
 lines.push(`<!-- END GENERATED ESCROW TABLE -->`);
 const table = lines.join('\n');
 
+// ---- Sprint 2 traction (outside wallets only) ------------------------------------------------
+// Follows the Customer Development Plan: team, QA, founder and scripted wallets are excluded, and an
+// escrow counts only when BOTH sides are outside wallets. These are wallets, not people: one person
+// can create several practice wallets, so pair these numbers with sign-up and feedback records.
+const counted = tasks.filter((t) => t.kind === 'Outside wallet');
+const weekOf = (iso) => {
+  const d = new Date(iso);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // Monday of that week
+  return d.toISOString().slice(0, 10);
+};
+const appearances = new Map();
+for (const t of counted) for (const w of [t.client, t.freelancer]) appearances.set(w, (appearances.get(w) || 0) + 1);
+const repeatOf = (role) => new Set(counted.map((t) => t[role]).filter((w, i, a) => a.indexOf(w) !== i)).size;
+const tr = [];
+tr.push('<!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->');
+tr.push(`_Generated ${generated} from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._`);
+tr.push('');
+tr.push('| SOW metric | On-chain count |');
+tr.push('|:---|:---:|');
+tr.push(`| Outside wallets with escrow activity (onboarded) | ${appearances.size} |`);
+tr.push(`| Escrows funded between outside wallets | ${counted.length} |`);
+tr.push(`| End-to-end workflows released on-chain (activated) | ${counted.filter((t) => t.approved).length} |`);
+tr.push(`| Repeat wallets (2+ escrows) | ${[...appearances.values()].filter((n) => n >= 2).length} (clients: ${repeatOf('client')}, freelancers: ${repeatOf('freelancer')}) |`);
+tr.push('');
+tr.push('| Week of (Mon, UTC) | New outside wallets | Escrows funded | Released | Cumulative wallets |');
+tr.push('|:---|:---:|:---:|:---:|:---:|');
+const seen = new Set();
+for (const wk of [...new Set(counted.map((t) => weekOf(t.fund.at)))].sort()) {
+  const xs = counted.filter((t) => weekOf(t.fund.at) === wk);
+  let fresh = 0;
+  for (const t of xs) for (const w of [t.client, t.freelancer]) if (!seen.has(w)) { seen.add(w); fresh++; }
+  tr.push(`| ${wk} | ${fresh} | ${xs.length} | ${xs.filter((t) => t.approved).length} | ${seen.size} |`);
+}
+if (!counted.length) tr.push('| — | 0 | 0 | 0 | 0 |');
+tr.push('<!-- END GENERATED TRACTION -->');
+const traction = tr.join('\n');
+
 if (process.argv.includes('--write')) {
   // Snapshot read by the app's public verification ledger (src/context/TaskContext.jsx).
   const snapshot = tasks.map((t) => ({
@@ -150,8 +189,13 @@ if (process.argv.includes('--write')) {
   const doc = fs.readFileSync(file, 'utf8');
   const re = /<!-- BEGIN GENERATED ESCROW TABLE[\s\S]*?<!-- END GENERATED ESCROW TABLE -->/;
   if (!re.test(doc)) throw new Error('markers not found in EVIDENCE_TABLE.md');
-  fs.writeFileSync(file, doc.replace(re, table));
-  console.log(`EVIDENCE_TABLE.md updated: ${tasks.length} escrows, ${outside.length} from outside wallets.`);
+  const reTraction = /<!-- BEGIN GENERATED TRACTION[\s\S]*?<!-- END GENERATED TRACTION -->/;
+  let next = doc.replace(re, table);
+  next = reTraction.test(next)
+    ? next.replace(reTraction, traction)
+    : next.replace('## On-chain escrows', `## Sprint 2 on-chain traction\n\n${traction}\n\n## On-chain escrows`);
+  fs.writeFileSync(file, next);
+  console.log(`EVIDENCE_TABLE.md updated: ${tasks.length} escrows, ${outside.length} from outside wallets, ${appearances.size} outside wallets counted.`);
 } else {
-  console.log(table);
+  console.log(`${traction}\n\n${table}`);
 }
