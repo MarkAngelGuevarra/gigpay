@@ -1,1 +1,0 @@
-C:\Users\Mark\Documents\antigravity\nifty-tesla\gigpay\contracts\gigpay_escrow\target\wasm32-unknown-unknown\release\gigpay_escrow.wasm: C:\Users\Mark\Documents\antigravity\nifty-tesla\gigpay\contracts\gigpay_escrow\src\lib.rs
