@@ -46,7 +46,7 @@ GigPay's Month 2 engagement fulfills all 4 deliverables specified in our approve
 
 ### 2. Zero-Barrier Onboarding & Public Verification Ledger (Deliverable 2 — $1,250)
 * **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate authentic ephemeral Ed25519 keypairs pre-funded with 10,000 XLM via Friendbot.
-* **Immutable Public Ledger Modal:** Real-time query of Supabase tasks and authentic student profiles with one-click Master CSV export for grant auditors.
+* **Public Verification Ledger:** Every escrow on the contract, generated from the chain (`node scripts/index_escrows.mjs`), with each row labeled outside user vs team/test wallet, plus one-click CSV export.
 * **Anti-Bot Filtering:** Strictly purges generic placeholders (`Demo Client`, `Freelancer`) to present verifiable student developer identities.
 
 ### 3. Dispute Mitigation Freeze & Proof-of-Work Verification (Deliverable 3 — $1,250)

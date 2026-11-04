@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { getAccountBalance } from '../lib/stellar';
+import { getAccountBalance, isSimulatorWallet } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -315,6 +315,11 @@ const Navbar = () => {
                 }}>
                   <span style={{ width: '7px', height: '7px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
+                  {isSimulatorWallet(publicKey) && (
+                    <span title="A practice wallet created in this browser. Testnet only: no real money." style={{ fontSize: '0.66rem', fontWeight: 700, color: '#fbbf24', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                      Practice
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (

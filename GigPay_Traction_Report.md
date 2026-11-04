@@ -7,6 +7,14 @@
 **Soroban Protocol Version:** Protocol 22  
 **Reporting Date:** Sunday, October 18, 2026  
 
+> **Correction added November 4, 2026.** Several figures in this report were overstated when it was written. Checked against the chain and the Supabase database as of Oct 18, 2026, the accurate figures are:
+> - **Registered accounts: 23, not 28.** Of these, **18** were real sign-ups and 5 were team test accounts created in July.
+> - **On-chain escrows: 14 funded and 10 released, all from team test wallets** (QA client and founder → team freelancer wallet). None were from testers' own wallets, so "11 completed milestones" and the 39.2% conversion claim were wrong.
+> - **"18+ active testers completed dual-role flows" is not supported** by any record we can find. 18 is the number of sign-ups, not of completed flows.
+> - **Testers' email addresses and handles have been removed** from this public report.
+>
+> Current, chain-verified numbers are in [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
+
 ---
 
 ## 1. Executive Summary
@@ -24,7 +32,7 @@ All smart contract logic is deployed, live, and publicly verifiable on the Stell
 * **Native XLM SAC Contract:** [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)
 * **WASM Hash:** `ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea`
 * **Deployer Account:** `GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E`
-* **Verifiable On-Chain Executions:** Over **20 verified transactions** across 10 complete escrow lifecycles (`fund_task` and `approve_task`) documented with direct hash links in [`EVIDENCE_TABLE.md`](EVIDENCE_TABLE.md).
+* **Verifiable On-Chain Executions:** 14 escrows funded and 10 released (24 transactions) by Oct 18, 2026, all from team test wallets, verifying the contract's `fund_task` and `approve_task` logic. See [`EVIDENCE_TABLE.md`](EVIDENCE_TABLE.md).
 
 ---
 
@@ -36,8 +44,7 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 * **Intake Form:** [`https://forms.gle/oLGjJRcxg5LZ5bC96`](https://forms.gle/oLGjJRcxg5LZ5bC96)
 * **Low-Friction Sign-Up Portal:** `https://gigpay.tech/auth?mode=signup` allows testers to register and test escrow release on mobile or desktop in **under 90 seconds** without requiring browser wallet extension installation.
 * **Verified Pilot Testers (Evidence Vault):**
-  * **User #01:** Prince Dale Limosnero (`princedale99@gmail.com` / `@princedale99` Telegram) — Client & Web3 UX Tester
-  * **User #02:** Ashley Loraine A. Mendoza (`mendozaoraine3@gmail.com` / Messenger) — Freelancer & Remote Worker Persona
+  * Tester names and contact details are kept in the intake form, not in this public report.
 * **Live User Onboarding Recordings (Loom):**
   * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 6 community members on camera (Clarence Ingal, Christian Daniel Gerlan, Ashley Loraine Mendoza, Ella Deladia, Prince Dale Limosnero, and Mark Angel Guevarra) demonstrating milestone creation, escrow lock, and mobile tester mode.
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
@@ -50,11 +57,11 @@ To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks
 | Funnel Stage | Metric | Verification Source | Evaluation Significance |
 | :--- | :--- | :--- | :--- |
 | **Stage 1: Top of Funnel Discovery** | **117+ Unique Visitors** | `@vercel/analytics` Production Telemetry | Organic reach across 15+ countries, 49% PH domestic focus. |
-| **Stage 2: User Registration (Acquisition)** | **28 Registered Pilot Accounts** | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Strong onboarding intent; includes real emails (`ram@gmail.com`, `akiahraffacebigting@gmail.com`, etc.). |
-| **Stage 3: Active Portal Flow Testers** | **18+ Active Testers** | Pilot Intake Form & Session Logs | Completed dual-role flows (Client task creation & Freelancer job acceptance). |
-| **Stage 4: Verified On-Chain Settlements** | **11 Completed Milestones (22+ Txs)** | Stellar Testnet Explorer (`CAUU2O...7RD3`) | **100% SOW Table 7 target met** (target was ≥10 on-chain escrow lifecycles). |
+| **Stage 2: User Registration (Acquisition)** | **18 real sign-ups** (23 accounts incl. 5 team test accounts) — *corrected Nov 4* | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Real onboarding interest from the community sessions. |
+| **Stage 3: Active Portal Flow Testers** | **Not measured** — *corrected Nov 4* | — | The earlier "18+ active testers" figure had no supporting record. |
+| **Stage 4: Verified On-Chain Settlements** | **10 releases, all from team test wallets** — *corrected Nov 4* | Stellar Testnet Explorer (`CAUU2O...7RD3`) | Proves the contract works end to end; no tester-owned wallet had settled an escrow yet. |
 
-> **Grant Evaluation Invariant:** In enterprise Web3 product benchmarks, a 39.2% on-chain conversion rate (11 on-chain settlements from 28 registered users) is exceptionally strong (standard Web3 conversion averages 5–15%). The 28 registered users reflect authentic acquisition interest, while the 11 completed on-chain milestones prove end-to-end cryptographic and smart contract settlement. This satisfies all SDF / Rise In Month 2 criteria.
+> **Correction (Nov 4, 2026):** The conversion-rate claim that stood here ("39.2%, 11 settlements from 28 users") was based on wrong numbers and has been removed. No tester-owned wallet had completed an on-chain escrow by Oct 18.
 
 ### 3.3 Public X (Twitter) Weekly Ship Posts
 Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X tagging `@StellarOrg`, `@PHI_stellar`, and `@riseinweb3`:
@@ -75,8 +82,8 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 | **Total Page Views** | **281 Total Page Views** | Deep multi-page exploration (2.4 pages/visit overall) |
 | **Top Page: Landing (/)** | **80 Visitors** | High initial discovery |
 | **Top Page: Auth (/auth)** | **50 Visitors** | **62.5% Sign-Up Intent Rate** |
-| **Registered User Accounts** | **28 Verified Real Accounts** | Live Supabase project `gulshfticoirrpuohdxk` (zero bot accounts) |
-| **Active Dual-Role Testers** | **18+ Active Flow Testers** | Tested both Client escrow funding & Freelancer payout releases |
+| **Registered User Accounts** | **18 real sign-ups + 5 team test accounts** (corrected Nov 4) | Live Supabase project `gulshfticoirrpuohdxk` |
+| **Active Dual-Role Testers** | **Not measured** (corrected Nov 4) | No record supports the earlier "18+" figure |
 | **Mobile Share** | **42% Mobile (Android 31%, iOS 11%)** | Strong mobile penetration validating simulator wallet |
 | **Core Geographic Market** | **49% Philippines (57 visitors / 185 page views)** | Domestic target audience averaging 3.25 pages/visit |
 
@@ -86,7 +93,7 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 
 Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Deliverable 3:
 * **Threat Mitigation Matrix:** Formally evaluates and resolves 8 threat categories (`THREAT-01` through `THREAT-08`), including unauthorized escrow release, self-dealing collusion, private key extraction, replay attacks, XSS, and RPC timeouts.
-* **Zero Private Key Custody:** Enforces client-side signing exclusively via Freighter Wallet API. Zero private keys exist in repository code, server memory, or database storage.
+* **Zero Server-Side Key Custody:** No private keys exist in repository code, server memory, or database storage. Freighter users sign in their wallet. *Note added Nov 4:* the Testnet-only practice wallet keeps its key in the tester's own browser storage; it is disabled on Mainnet.
 * **Automated Integration Testing:** 9 out of 9 passing Vitest assertions in [`src/test/soroban_sim.test.js`](src/test/soroban_sim.test.js), verifying `fund_task` simulation, `approve_task` release, exponential backoff, and `u32` task ID boundary clamping (`[1, 4294967295]`).
 
 ---

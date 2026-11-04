@@ -87,18 +87,8 @@ export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, de
   return false;
 };
 
-/**
- * Generates an authentic ephemeral Stellar Ed25519 keypair and requests Friendbot testnet funding.
- * Enables extensionless university students to generate real on-chain transaction hashes on Stellar Expert.
- */
-export const createEphemeralTestnetWallet = async () => {
-  if (!isEphemeralSignerAllowed()) {
-    throw new Error('The simulator wallet is only available on Stellar Testnet.');
-  }
-  const keypair = StellarSdk.Keypair.random();
-  const publicKey = keypair.publicKey();
-  const secretKey = keypair.secret();
-
+// Practice-wallet keys for extensionless / mobile testers (Testnet only; see isEphemeralSignerAllowed).
+const storeEphemeralKeys = (publicKey, secretKey) => {
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
@@ -111,6 +101,51 @@ export const createEphemeralTestnetWallet = async () => {
   } catch (e) {
     console.warn("Session storage notice:", e);
   }
+};
+
+const readStoredEphemeralPublicKey = () => {
+  try {
+    return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_pubkey')) ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_pubkey')) || null;
+  } catch {
+    return null;
+  }
+};
+
+/** True when this key is the practice wallet generated in this browser (used for the "Practice wallet" badge). */
+export const isSimulatorWallet = (key) => !!key && key === readStoredEphemeralPublicKey();
+
+/**
+ * Returns this browser's own practice (simulator) wallet address, creating one if needed.
+ * Synchronous so a "Use Test Wallet" tap responds instantly; Friendbot funding runs in the background
+ * and ensureEphemeralAccountFunded() waits for it before anything is signed.
+ *
+ * Every tester gets a distinct real Testnet address, unlike the shared DEMO keys (one of which is the
+ * team's own wallet), so a freelancer has a payout address of their own to give the client.
+ * Returns null where the simulator is not allowed (anything other than Testnet).
+ */
+export const provisionSimulatorWallet = () => {
+  if (!isEphemeralSignerAllowed()) return null;
+  const existing = readStoredEphemeralPublicKey();
+  if (existing) return existing;
+  const keypair = StellarSdk.Keypair.random();
+  storeEphemeralKeys(keypair.publicKey(), keypair.secret());
+  requestFriendbotFunding(keypair.publicKey());
+  return keypair.publicKey();
+};
+
+/**
+ * Generates a new ephemeral Testnet keypair, stores it for this browser, and waits for Friendbot funding.
+ */
+export const createEphemeralTestnetWallet = async () => {
+  if (!isEphemeralSignerAllowed()) {
+    throw new Error('The simulator wallet is only available on Stellar Testnet.');
+  }
+  const keypair = StellarSdk.Keypair.random();
+  const publicKey = keypair.publicKey();
+  const secretKey = keypair.secret();
+
+  storeEphemeralKeys(publicKey, secretKey);
 
   await requestFriendbotFunding(publicKey);
 

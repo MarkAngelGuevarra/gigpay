@@ -140,6 +140,25 @@ await test('Failed on-chain release rejects instead of returning a simulated suc
   assert.strictEqual(result, undefined);
 });
 
+await test('Practice wallet: a real per-browser address, never the shared team/demo key, stable across reloads', async () => {
+  const { provisionSimulatorWallet, isSimulatorWallet, isDemoWallet, DEFAULT_FREELANCER_TESTNET_ADDRESS } = await import('../src/lib/stellar.js');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true }); // no real Friendbot call from the test
+  try {
+    sessionStorage.clear(); localStorage.clear();
+    const first = provisionSimulatorWallet();
+    assert.ok(StellarSdk.StrKey.isValidEd25519PublicKey(first), 'must be a real Stellar address');
+    assert.strictEqual(isDemoWallet(first), false);
+    assert.notStrictEqual(first, DEFAULT_FREELANCER_TESTNET_ADDRESS, 'must not be the team wallet');
+    assert.strictEqual(provisionSimulatorWallet(), first, 'same browser keeps the same wallet');
+    assert.strictEqual(isSimulatorWallet(first), true);
+    sessionStorage.clear(); localStorage.clear();
+    assert.notStrictEqual(provisionSimulatorWallet(), first, 'another browser gets a different wallet');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 await test('Error messages stay plain-language for non-crypto users', () => {
   assert.match(formatStellarError(new Error('HostError: Error(WasmVm) "Task already approved"')), /already released/);
   const notFound = new Error('Not Found');

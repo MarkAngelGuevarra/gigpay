@@ -541,15 +541,20 @@ const ClientDashboard = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
-                Target Freelancer Wallet (Optional)
+                Freelancer's Payout Address
               </label>
-              <input 
-                type="text" 
-                placeholder="G... (Leave blank for public marketplace)" 
+              <input
+                type="text"
+                placeholder="G... (your freelancer copies this from their dashboard)"
                 value={freelancerWallet}
                 onChange={(e) => setFreelancerWallet(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white', fontSize: '0.85rem' }} 
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white', fontSize: '0.85rem' }}
               />
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: freelancerWallet.trim() ? 'var(--text-muted)' : '#fbbf24' }}>
+                {freelancerWallet.trim()
+                  ? "The locked payment can only be released to this address."
+                  : "Left blank, the payment goes to GigPay's own test wallet, so it won't pay a real freelancer."}
+              </p>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Self-dealing protection active: Cannot assign to your own wallet.
               </span>

@@ -132,10 +132,11 @@ runTest(9, "Mobile responsive sizing enforces fluid width capped at 100vw - 32px
   }
 });
 
-runTest(10, "Protected files invariant: EVIDENCE_TABLE.md and contracts are untouched", () => {
+runTest(10, "Protected files invariant: EVIDENCE_TABLE.md is chain-generated and contracts are untouched", () => {
   const evidenceSrc = readProjectFile('EVIDENCE_TABLE.md');
   assert.ok(evidenceSrc.includes("CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3"), "EVIDENCE_TABLE contract ID must remain intact");
-  assert.ok(evidenceSrc.includes("Verifiable On-Chain Transactions (SOW Table 7 Target: ≥ 10)"), "Evidence table must retain original verified transactions header");
+  // The escrow table must come from scripts/index_escrows.mjs (chain data), never be hand-edited.
+  assert.ok(evidenceSrc.includes("<!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->"), "Evidence table must be the chain-generated block");
 });
 
 // -------------------------------------------------------------

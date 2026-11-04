@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, ShieldCheck, Landmark, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature } from '../lib/stellar';
+import { requestWalletSignature, isDemoWallet, isSimulatorWallet } from '../lib/stellar';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -190,6 +190,44 @@ const FreelancerDashboard = () => {
           <ArrowLeft size={14} /> Switch to Client Portal
         </button>
       </div>
+
+      {/* Payout address: the contract fixes the recipient when the client funds the escrow, so the
+          freelancer must give the client this address BEFORE the task is funded. */}
+      {publicKey && !isDemoWallet(publicKey) && (
+        <div className="glass-panel" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #a78bfa' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+            <h4 style={{ margin: 0 }}>Your payout address</h4>
+            {isSimulatorWallet(publicKey) && (
+              <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 'bold', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                Practice wallet · Testnet only
+              </span>
+            )}
+          </div>
+          <p style={{ color: 'var(--text-muted)', margin: '0 0 0.6rem', fontSize: '0.88rem' }}>
+            Send this to your client before they lock the payment. GigPay pays the escrow to this address when they approve your work.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <code style={{ flex: '1 1 260px', minWidth: 0, overflowWrap: 'anywhere', background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.8rem' }}>
+              {publicKey}
+            </code>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(publicKey);
+                  addToast("Payout address copied. Send it to your client.", "success");
+                } catch {
+                  addToast("Couldn't copy automatically. Select the address and copy it.", "warning");
+                }
+              }}
+            >
+              <Copy size={14} /> Copy
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Earnings Overview Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '3rem' }}>

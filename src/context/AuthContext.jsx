@@ -1,29 +1,46 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet } from '../lib/stellar';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+// The shared DEMO keys are placeholders (DEMO_FREELANCER_KEY is the team's own Testnet wallet), so
+// activity under them can never count as a real tester's. Wherever the app would hand a tester a demo
+// key, give them this browser's own practice wallet instead (Testnet only; falls back to the demo key).
+const upgradeDemoKey = (key) => (key && isDemoWallet(key) ? (provisionSimulatorWallet() || key) : key);
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Resilient wallet initialization: default to DEMO_PUBLIC_KEY so mobile/tablet users are never left in disconnected limbo
-  const [publicKey, setPublicKey] = useState(() => {
+
+  // Resilient wallet initialization so mobile/tablet users are never left in disconnected limbo
+  const [publicKey, setRawPublicKey] = useState(() => {
     try {
       if (typeof localStorage !== 'undefined') {
         const savedKey = localStorage.getItem('gigpay_wallet_public_key');
         if (savedKey && (savedKey.startsWith('G') || savedKey.startsWith('GBDEMO_'))) {
-          return savedKey;
+          return upgradeDemoKey(savedKey);
         }
       }
     } catch (e) {
       console.warn("[AuthContext] Local storage wallet read warning:", e);
     }
-    return DEMO_PUBLIC_KEY;
+    return upgradeDemoKey(DEMO_PUBLIC_KEY);
   });
+
+  const setPublicKey = (key) => {
+    const next = upgradeDemoKey(key);
+    setRawPublicKey(next);
+    if (next && next !== key) {
+      try {
+        localStorage.setItem('gigpay_wallet_public_key', next);
+      } catch {
+        // storage unavailable: the key is still used for this session
+      }
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
