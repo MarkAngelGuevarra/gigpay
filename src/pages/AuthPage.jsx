@@ -17,6 +17,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
   const [role, setRole] = useState('client');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,6 +35,10 @@ const AuthPage = () => {
       return;
     }
 
+    if (!isLogin && !agreedPrivacy) {
+      addToast("Please read and accept the privacy notice to create your tester account.", "error");
+      return;
+    }
     if (!isLogin && cleanPassword !== confirmPassword.trim()) {
       addToast("Passwords do not match.", "error");
       return;
@@ -295,8 +300,26 @@ const AuthPage = () => {
             </div>
           )}
 
-          <button 
-            type="submit" 
+          {!isLogin && (
+            // Privacy notice and consent (Philippine Data Privacy Act, RA 10173): testers should know what the
+            // pilot collects, why, and that Stellar Testnet activity is public, before they create an account.
+            <label style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                required
+                checked={agreedPrivacy}
+                onChange={(e) => setAgreedPrivacy(e.target.checked)}
+                style={{ marginTop: '0.2rem', width: '18px', height: '18px', flexShrink: 0 }}
+              />
+              <span>
+                I agree that GigPay may store my email, my Testnet wallet address and my pilot tasks to run this test and to report pilot results to the Stellar Philippines Instawards program (as totals, never my email). Wallet activity on Stellar Testnet is public. I can ask for my data to be deleted at any time.{' '}
+                <a href="https://github.com/MarkAngelGuevarra/gigpay/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>Privacy notice</a>
+              </span>
+            </label>
+          )}
+
+          <button
+            type="submit"
             className="btn btn-primary" 
             style={{ marginTop: '1rem', opacity: isLoading ? 0.5 : 1 }}
             disabled={isLoading}
