@@ -652,7 +652,7 @@ const ClientDashboard = () => {
               </div>
             )}
             <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-              <strong>⚠️ Armielyn Reviewer Requirement:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
+              <strong>⚠️ Safety check:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
             </div>
             <input 
               type="text" 
