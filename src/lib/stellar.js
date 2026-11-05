@@ -1,5 +1,6 @@
 import freighterApi from '@stellar/freighter-api';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { isDisputeActive } from './taskLifecycle.js';
 
 const {
   isAllowed,
@@ -911,7 +912,8 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
 
   // 0. Dispute freeze (SOW Deliverable 3b). The deployed contract has no dispute state, so this
   // signing layer is the last point that can refuse a release while a task is Disputed.
-  if (taskRecord?.status === 'Disputed') {
+  // The dispute timestamps decide, not just the status, so a stale "In Progress" copy can't slip through.
+  if (isDisputeActive(taskRecord)) {
     throw new Error(DISPUTE_FROZEN_MESSAGE);
   }
 

@@ -53,6 +53,7 @@ Then fill in the 2-minute tester form: **https://forms.gle/oLGjJRcxg5LZ5bC96** â
    ```
    This updates the **Sprint 2 on-chain traction** table and the full escrow table in `EVIDENCE_TABLE.md`, and the public ledger snapshot in `src/data/onchainEscrows.json`. Every number comes from Stellar Testnet; nothing is typed in by hand.
 2. Commit and push the result, so the weekly commit history shows the evidence growing.
+   Also check the contract's lifetime: `node scripts/extend_contract_ttl.mjs` shows how many days are left; if it's under 30, run it with `--submit`. (The contract never extends its own storage; if it lapses, every fund/release fails until it's restored.)
 3. Match on-chain wallets to people privately: sign-up email + form response + wallet address. Keep that mapping **out of this public repo** (it contains personal data).
 4. Post the weekly update (X post tagging @StellarOrg, @PHI_stellar, @riseinweb3) with Stellar Expert links to new released escrows.
 

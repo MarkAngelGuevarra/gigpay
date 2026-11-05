@@ -5,6 +5,7 @@ import { useToast } from './ToastContext';
 import { requestWalletSignature, submitFundTask, submitApproveTask, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress, DEFAULT_FREELANCER_TESTNET_ADDRESS } from '../lib/stellar';
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
+import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
 
 const TaskContext = createContext();
 
@@ -135,7 +136,6 @@ export const TaskProvider = ({ children }) => {
 
   // Lifecycle Monotonic Merge: higher lifecycle status (Completed > In Progress > Available) is permanent
   const mergeTaskLists = (currentList, incomingList) => {
-    const statusRank = { 'Completed': 3, 'Paid': 3, 'In Progress': 2, 'Under Review': 2, 'Disputed': 2, 'Available': 1 };
     const taskMap = new Map();
 
     (incomingList || []).filter(t => t && !RETIRED_SEED_TASK_IDS.has(t.id)).forEach(rawT => {
@@ -149,10 +149,8 @@ export const TaskProvider = ({ children }) => {
       const key = t.id || t.title;
       if (taskMap.has(key)) {
         const incoming = taskMap.get(key);
-        const currentRank = statusRank[t.status] || 0;
-        const incomingRank = statusRank[incoming.status] || 0;
-        // Never allow a stale incoming record to demote a completed milestone
-        const winner = currentRank >= incomingRank ? { ...incoming, ...t } : { ...t, ...incoming };
+        // Rank for stages (never demote a completed milestone); dispute timestamps for Disputed <-> In Progress.
+        const winner = mergeTaskRecords(t, incoming);
         // Escrow identity is write-once: a side that lacks it (e.g. an older DB row) must not erase it.
         for (const field of ['on_chain_task_id', 'client_wallet', 'freelancer_wallet']) {
           winner[field] = winner[field] ?? t[field] ?? incoming[field] ?? null;
@@ -449,7 +447,7 @@ export const TaskProvider = ({ children }) => {
     const taskToUpdate = tasks.find(t => t.id === id || t.title === id);
     if (!taskToUpdate) return;
     
-    if (newStatus === 'Completed' && taskToUpdate.status === 'Disputed') {
+    if (newStatus === 'Completed' && isDisputeActive(taskToUpdate)) {
       throw new Error("Cannot release funds while task is in Disputed status. Dispute must be resolved first.");
     }
 
