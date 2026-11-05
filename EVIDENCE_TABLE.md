@@ -95,7 +95,7 @@ _Generated 2026-11-04 22:45 UTC from Stellar Testnet. 40 escrows. Every funding 
 | Source | Number | How to check |
 |:---|:---:|:---|
 | Pilot intake form responses | **13** | Google Form "GigPay Pilot Program — Early Tester & Freelancer Intake" |
-| Platform sign-ups, Oct 12 – Nov 3, 2026 (personal emails, excludes 5 July team accounts) | **~25** | Supabase Auth |
+| Platform sign-ups, Oct 12 – Nov 3, 2026 (personal emails; excludes the founder, the shared reviewer demo account and the July team accounts) | **23** (16 by Oct 18) | Supabase Auth, counted Nov 5 |
 | Sign-ups who created at least one task | **7** | Supabase `tasks` |
 | Recorded onboarding sessions and demos (Oct 16–17, 2026) | **5** | Loom |
 | Outside wallets that have funded an escrow on-chain | **1** (escrow #15, not yet released) | Table above |

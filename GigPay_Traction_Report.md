@@ -8,9 +8,9 @@
 **Reporting Date:** Sunday, October 18, 2026  
 
 > **Correction added November 4, 2026.** Several figures in this report were overstated when it was written. Checked against the chain and the Supabase database as of Oct 18, 2026, the accurate figures are:
-> - **Registered accounts: 23, not 28.** Of these, **18** were real sign-ups and 5 were team test accounts created in July.
+> - **Registered accounts: 23, not 28.** Of these, **16** were real sign-ups and 7 were team accounts (5 July test accounts, the founder's account and the shared reviewer demo account). *Recounted Nov 5: the Nov 4 correction had counted the founder and reviewer demo accounts as testers.*
 > - **On-chain escrows: 14 funded and 10 released, all from team test wallets** (QA client and founder → team freelancer wallet). None were from testers' own wallets, so "11 completed milestones" and the 39.2% conversion claim were wrong.
-> - **"18+ active testers completed dual-role flows" is not supported** by any record we can find. 18 is the number of sign-ups, not of completed flows.
+> - **"18+ active testers completed dual-role flows" is not supported** by any record we can find. 18 was not the number of completed flows; the real sign-up count was 16.
 > - **Testers' email addresses and handles have been removed** from this public report.
 >
 > Current, chain-verified numbers are in [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
@@ -57,7 +57,7 @@ To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks
 | Funnel Stage | Metric | Verification Source | Evaluation Significance |
 | :--- | :--- | :--- | :--- |
 | **Stage 1: Top of Funnel Discovery** | **117+ Unique Visitors** | `@vercel/analytics` Production Telemetry | Organic reach across 15+ countries, 49% PH domestic focus. |
-| **Stage 2: User Registration (Acquisition)** | **18 real sign-ups** (23 accounts incl. 5 team test accounts) — *corrected Nov 4* | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Real onboarding interest from the community sessions. |
+| **Stage 2: User Registration (Acquisition)** | **16 real sign-ups** (23 accounts incl. 7 team accounts) — *corrected Nov 4, recounted Nov 5* | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Real onboarding interest from the community sessions. |
 | **Stage 3: Active Portal Flow Testers** | **Not measured** — *corrected Nov 4* | — | The earlier "18+ active testers" figure had no supporting record. |
 | **Stage 4: Verified On-Chain Settlements** | **10 releases, all from team test wallets** — *corrected Nov 4* | Stellar Testnet Explorer (`CAUU2O...7RD3`) | Proves the contract works end to end; no tester-owned wallet had settled an escrow yet. |
 
@@ -68,7 +68,7 @@ Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X
 * **Week 1 Ship Post (Sep 22, 2026):** [`https://x.com/GigPayPH/status/2102193930150502781`](https://x.com/GigPayPH/status/2102193930150502781) — Soroban escrow deployment, 4/4 Rust unit tests & contract ID.
 * **Week 2 Ship Post (Oct 1, 2026):** [`https://x.com/GigPayPH/status/2105480741761282160`](https://x.com/GigPayPH/status/2105480741761282160) — Frontend UI wiring, live Freighter balance, Soroban simulation & escrow funding/release.
 * **Week 3 Ship Post (Oct 10, 2026):** [`https://x.com/GigPayPH/status/2108793569138110574`](https://x.com/GigPayPH/status/2108793569138110574) — Multi-wallet escrow execution, anti-self-dealing assertion & exponential backoff RPC resilience.
-* **Week 4 Ship Post (Oct 17, 2026):** [`https://x.com/GigPayPH/status/2111271953164300425`](https://x.com/GigPayPH/status/2111271953164300425) — Final verification package, security self-review & 22/22 passing regression tests. *(The post's "28 registered pilot testers" was wrong: 18 real sign-ups + 5 team test accounts, see the correction above.)*
+* **Week 4 Ship Post (Oct 17, 2026):** [`https://x.com/GigPayPH/status/2111271953164300425`](https://x.com/GigPayPH/status/2111271953164300425) — Final verification package, security self-review & 22/22 passing regression tests. *(The post's "28 registered pilot testers" was wrong: 16 real sign-ups + 7 team accounts, see the correction above.)*
 
 ---
 
@@ -82,7 +82,7 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 | **Total Page Views** | **281 Total Page Views** | Deep multi-page exploration (2.4 pages/visit overall) |
 | **Top Page: Landing (/)** | **80 Visitors** | High initial discovery |
 | **Top Page: Auth (/auth)** | **50 Visitors** | **62.5% Sign-Up Intent Rate** |
-| **Registered User Accounts** | **18 real sign-ups + 5 team test accounts** (corrected Nov 4) | Live Supabase project `gulshfticoirrpuohdxk` |
+| **Registered User Accounts** | **16 real sign-ups + 7 team accounts** (corrected Nov 4, recounted Nov 5) | Live Supabase project `gulshfticoirrpuohdxk` |
 | **Active Dual-Role Testers** | **Not measured** (corrected Nov 4) | No record supports the earlier "18+" figure |
 | **Mobile Share** | **42% Mobile (Android 31%, iOS 11%)** | Strong mobile penetration validating simulator wallet |
 | **Core Geographic Market** | **49% Philippines (57 visitors / 185 page views)** | Domestic target audience averaging 3.25 pages/visit |

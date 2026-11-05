@@ -149,13 +149,11 @@ export const AuthProvider = ({ children }) => {
     } catch (supabaseError) {
       // Resilient tester login: support tester accounts even if Supabase project is paused or offline
       const lowerEmail = (email || '').toLowerCase().trim();
-      const isTesterAccount = 
-        lowerEmail === 'client@gigpay.tech' || 
-        lowerEmail === 'client@gigpay.com' || 
-        lowerEmail === 'freelancer@gigpay.tech' || 
-        lowerEmail === 'freelancer@gigpay.com' || 
-        (lowerEmail.includes('client') && password === 'password123') ||
-        (lowerEmail.includes('freelancer') && password === 'password123') ||
+      // Only the two shared reviewer accounts may fall back to the offline demo. Any other failed
+      // sign-in (a tester's mistyped email or password) must show the error, not open a fake session
+      // whose activity is never saved or counted.
+      const isTesterAccount =
+        (lowerEmail === 'client@gigpay.tech' || lowerEmail === 'freelancer@gigpay.tech') &&
         password === 'password123';
 
       if (isTesterAccount) {

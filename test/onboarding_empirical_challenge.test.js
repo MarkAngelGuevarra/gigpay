@@ -64,6 +64,14 @@ test('TEST 5: No hardcoded tester list (names, ratings or quotes) ships in the a
   assert.deepStrictEqual(offenders, [], `Hardcoded tester records found in: ${offenders.join(', ')}`);
 });
 
+test('TEST 5b: Failed sign-in falls back to the offline demo only for the two reviewer accounts', () => {
+  const auth = read('src', 'context', 'AuthContext.jsx');
+  const block = auth.slice(auth.indexOf('const isTesterAccount'), auth.indexOf('if (isTesterAccount)'));
+  assert.ok(!/lowerEmail\.includes\(/.test(block), 'fallback must not match any email containing client/freelancer');
+  assert.ok(!/\|\|\s*password === 'password123';/.test(block), 'password alone must not open a demo session');
+  assert.ok(block.includes("lowerEmail === 'client@gigpay.tech'") && block.includes('&&'), 'fallback limited to exact reviewer emails');
+});
+
 test("TEST 6: ClientDashboard requires exact uppercase 'CONFIRM' to release escrow", () => {
   assert.ok(read('src', 'pages', 'ClientDashboard.jsx').includes("confirmText !== 'CONFIRM'"));
 });
