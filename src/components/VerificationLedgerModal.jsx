@@ -2,6 +2,24 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, ExternalLink, Download, X, Clock, CheckCircle2 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
+import onchainData from '../data/onchainEscrows.json';
+import { isTeamWallet, isScriptedTestWallet } from '../lib/ledgerIntegrity';
+
+const isOutside = (w) => !!w && !isTeamWallet(w) && !isScriptedTestWallet(w);
+const chainStats = (() => {
+  const rows = onchainData.escrows || [];
+  const outside = new Set();
+  let outsideFunded = 0, outsideReleased = 0;
+  for (const r of rows) {
+    // Same rule as EVIDENCE_TABLE.md: only escrows where both sides are outside wallets count.
+    if (isOutside(r.clientWallet) && isOutside(r.freelancerWallet)) {
+      outside.add(r.clientWallet); outside.add(r.freelancerWallet);
+      outsideFunded += 1;
+      if (r.released) outsideReleased += 1;
+    }
+  }
+  return { total: rows.length, outsideWallets: outside.size, outsideFunded, outsideReleased };
+})();
 
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
   const { ledgerRecords, exportVerificationCsv } = useTasks();
@@ -114,11 +132,11 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                 Public On-Chain Verification Ledger
               </h3>
               <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)', whiteSpace: 'nowrap' }}>
-                Protocol 22 Testnet
+                Stellar Testnet
               </span>
             </div>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              Immutable record of Soroban contract calls, caller wallets, escrow locks, and release proofs.
+              Every escrow on the GigPay contract, generated from Stellar Testnet, with each wallet labeled as outside user or team/test.
             </p>
           </div>
 
@@ -133,62 +151,41 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Pilot Traction Funnel Metric Strip (Registered Users -> Active Testers -> On-Chain Settlements) */}
+        {/* On-chain counts, generated from Stellar Testnet by scripts/index_escrows.mjs (src/data/onchainEscrows.json) */}
         <div style={{
           background: 'rgba(0, 242, 254, 0.04)',
           border: '1px solid rgba(0, 242, 254, 0.22)',
           borderRadius: '10px',
           padding: '1rem',
-          marginBottom: '1.25rem',
+          marginBottom: '0.5rem',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
           gap: '1rem'
         }}>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              👥 Registered Accounts
-            </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>
-              28 Accounts
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#60a5fa' }}>
-              Verified Supabase Auth Users
-            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Escrows on the contract</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.total}</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>All wallets, including team tests</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              ⚡ Active Portal Testers
-            </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>
-              18+ Active Testers
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#a78bfa' }}>
-              Dual Client & Freelancer Flow
-            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Outside wallets</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideWallets}</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>In escrows where both sides are outside</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              📜 Settled Milestones
-            </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#10b981', marginTop: '0.15rem' }}>
-              11 Milestones
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#34d399' }}>
-              22+ On-Chain Transactions
-            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Funded outside ↔ outside</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideFunded}</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Client and freelancer both outside</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              🎯 SOW Table 7 Target
-            </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#00f2fe', marginTop: '0.15rem' }}>
-              100% Satisfied
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#00f2fe' }}>
-              Protocol 22 Testnet Verified
-            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Released outside ↔ outside</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideReleased}</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Full fund → release workflows</div>
           </div>
         </div>
+        <p style={{ margin: '0 0 1.25rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          Counted from Stellar Testnet on {onchainData.generatedAt} by scripts/index_escrows.mjs. Wallets are counted, not verified people. Team and scripted test wallets are labeled in the table below.
+        </p>
 
         {/* Contract Metadata Banner */}
         <div style={{
@@ -211,9 +208,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
             <span style={{ color: 'white' }}>https://soroban-testnet.stellar.org</span>
           </div>
           <div>
-            <span style={{ color: 'var(--text-muted)' }}>Audit Standard:</span><br />
+            <span style={{ color: 'var(--text-muted)' }}>Data source:</span><br />
             <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-              <CheckCircle2 size={14} /> SOW Table 7 Milestone Invariant
+              scripts/index_escrows.mjs (read-only, chain + Horizon)
             </span>
           </div>
         </div>
@@ -287,7 +284,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
         {/* Modal Footer with Explicit Close Action */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', flexWrap: 'wrap', gap: '1rem' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Showing verified on-chain Soroban escrow events (SOW Table 7)
+            Every escrow on the contract, generated from Stellar Testnet
           </span>
           <button
             onClick={onClose}
