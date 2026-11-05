@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-04 22:45 UTC",
+  "generatedAt": "2026-11-05 10:42 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -481,6 +481,78 @@
       "releaseTxHash": "1ae0976c25c1e2e5e8b8a0548df114b6a5f1e9f818fe37d04935e345501059b9",
       "releasedAt": "2026-11-04T16:13:10Z",
       "walletKind": "Pays team wallet (test)"
+    },
+    {
+      "onChainTaskId": 41,
+      "amount": 0.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3",
+      "released": false,
+      "fundTxHash": "ba7c26534e64aa8d483f3e01d88962a13e53e5d9b64b946c6ea5297ac5fcf451",
+      "fundedAt": "2026-11-05T05:16:00Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Team test (team device practice wallet (client) → team default freelancer wallet)"
+    },
+    {
+      "onChainTaskId": 42,
+      "amount": 0.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI",
+      "released": true,
+      "fundTxHash": "ba1e49896ebdde711ec15c38bf642528816e6e27dc95f554aa07c4ea414d7b82",
+      "fundedAt": "2026-11-05T05:17:00Z",
+      "releaseTxHash": "6d88ecf360ab114283978a356c83954c28ccd6b1af397f4d5cd4ce6854ffb29c",
+      "releasedAt": "2026-11-05T05:21:25Z",
+      "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
+    },
+    {
+      "onChainTaskId": 43,
+      "amount": 0.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI",
+      "released": true,
+      "fundTxHash": "5ee8428f0a54b01fe6d269c07905daf1e01bde2a8d762153a69ee6fa664129f0",
+      "fundedAt": "2026-11-05T05:17:45Z",
+      "releaseTxHash": "b06461e6e228848a7bac385792d6b52032d606594b97181ae94ff633e13584a5",
+      "releasedAt": "2026-11-05T05:22:05Z",
+      "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
+    },
+    {
+      "onChainTaskId": 44,
+      "amount": 0.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI",
+      "released": false,
+      "fundTxHash": "7ebec94928cf2d87245569ba6c8af0300bfd055513bbb163f62a45d9829ad91b",
+      "fundedAt": "2026-11-05T05:23:10Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
+    },
+    {
+      "onChainTaskId": 45,
+      "amount": 1.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI",
+      "released": true,
+      "fundTxHash": "5572d2d2191afab5d70a2e58e9f227b20580d1b9f91e0acd6e7fdf69bc95c042",
+      "fundedAt": "2026-11-05T05:23:45Z",
+      "releaseTxHash": "525952b426a95664afb958b21c3fb6dc180032a7943733a2e7642b5829d15113",
+      "releasedAt": "2026-11-05T05:27:10Z",
+      "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
+    },
+    {
+      "onChainTaskId": 46,
+      "amount": 1.1,
+      "clientWallet": "GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE",
+      "freelancerWallet": "GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI",
+      "released": false,
+      "fundTxHash": "fa215387a2b0613a71e4f3ebd1b6960782139a5dbafc7c88f81422b24e8c3ad8",
+      "fundedAt": "2026-11-05T05:24:15Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
     }
   ]
 }
