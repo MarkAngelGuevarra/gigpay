@@ -26,9 +26,9 @@ The global freelance economy is booming, but the financial infrastructure suppor
 **GigPay** is a decentralized, Web3-native escrow platform designed to eliminate middlemen and empower the gig economy. 
 
 By leveraging the Stellar network and Soroban Smart Contracts, we provide:
-- **Instant Finality:** Payments settle in under 5 seconds cross-border.
-- **Zero Middleman Fees:** By operating as a decentralized protocol, we eliminate the 20% platform tax. Freelancers keep exactly what they earn.
-- **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. Freelancers work knowing the funds are cryptographically guaranteed. Once work is approved, funds are released instantly.
+- **Fast Settlement:** Stellar confirms funding and release in about 5 seconds.
+- **No Platform Commission:** GigPay takes no cut (traditional platforms take up to 20%). The only cost is the Stellar network fee, a fraction of a cent.
+- **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. Freelancers work knowing the funds are cryptographically guaranteed. Once work is approved, the client releases the funds to the freelancer.
 
 > **Testnet only.** Everything runs on Stellar Testnet with practice XLM. There is no bank, GCash or fiat withdrawal in the app; approved payments go to the freelancer's Testnet address.
 

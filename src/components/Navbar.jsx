@@ -376,7 +376,7 @@ const Navbar = () => {
             </div>
             
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.6' }}>
-              GigPay uses the Stellar Blockchain to process payments instantly with zero fees. To use this app, you need a secure digital wallet.
+              GigPay uses the Stellar blockchain to settle payments in about 5 seconds for a fraction of a cent. To use this app, you need a secure digital wallet.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>

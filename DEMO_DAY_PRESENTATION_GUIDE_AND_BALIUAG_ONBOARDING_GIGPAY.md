@@ -1,6 +1,6 @@
 # 🎤 DEMO DAY PRESENTATION GUIDE & BALIUAG UNIVERSITY (CITE) ONBOARDING PLAN — GIGPAY
 
-**Project:** GigPay — Zero-Fee Decentralized Milestone Escrow on Stellar Soroban (Protocol 22)  
+**Project:** GigPay — No-Commission Milestone Escrow on Stellar Soroban (Protocol 22)  
 **Presenter:** Mark Angel Guevarra (`@CaptainPriceyyyy` / `marcangelguevarra@gmail.com`)  
 **Soroban Testnet Contract:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3` (escrow counts and wallet types: see [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md). Most escrows so far are team or scripted tests; present them that way.)  
 **Batch 2 Demo Day Date:** **Thursday, November 19, 2026** (Slot #5 — 10 Minutes Total)  
