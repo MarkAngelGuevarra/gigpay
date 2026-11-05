@@ -4,8 +4,8 @@
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Version](https://img.shields.io/badge/version-0.3.0-blue)
-![Network](https://img.shields.io/badge/Stellar-Testnet%20Protocol%2022-teal)
-![Tests](https://img.shields.io/badge/npm%20test-39%2F39%20passing-brightgreen)
+![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
+![Tests](https://img.shields.io/badge/npm%20test-65%2F65%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
@@ -17,7 +17,7 @@
 ## 🛑 The Problem
 
 The global freelance economy is booming, but the financial infrastructure supporting it is broken. Today, cross-border freelance payments are plagued by:
-1. **Exorbitant Fees:** Traditional platforms (like Upwork or Fiverr) take a massive 20% cut of freelancer earnings, plus hidden withdrawal and foreign exchange fees.
+1. **Exorbitant Fees:** Traditional platforms (like Upwork or Fiverr) take a cut of up to 20% of freelancer earnings, plus hidden withdrawal and foreign exchange fees.
 2. **Slow Settlement:** International wire transfers and bank withdrawals can take anywhere from 3 to 7 business days to clear.
 3. **Lack of Trust:** Freelancers often fear doing work without upfront payment, while clients fear paying upfront without seeing the work.
 
@@ -28,9 +28,23 @@ The global freelance economy is booming, but the financial infrastructure suppor
 By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 - **Fast Settlement:** Stellar confirms funding and release in about 5 seconds.
 - **No Platform Commission:** GigPay takes no cut (traditional platforms take up to 20%). The only cost is the Stellar network fee, a fraction of a cent.
-- **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. Freelancers work knowing the funds are cryptographically guaranteed. Once work is approved, the client releases the funds to the freelancer.
+- **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. The contract can only pay the freelancer address named when the escrow was funded, and only when the client approves. (There is no refund or cancel: see Known limitations.) Once work is approved, the client releases the funds to the freelancer.
 
 > **Testnet only.** Everything runs on Stellar Testnet with practice XLM. There is no bank, GCash or fiat withdrawal in the app; approved payments go to the freelancer's Testnet address.
+
+## ✅ Verify in 2 minutes (for reviewers)
+1. **Contract:** [`CAUU2O5Z…7RD3` on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3). Live until about May 2027 (see [DEPLOYED_CONTRACT.md](DEPLOYED_CONTRACT.md)).
+2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 6, 2026: **46 escrows, 1 from outside wallets (#15, not yet released)**. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
+3. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
+4. **Tests:** `npm ci && npm test` runs 65 offline tests in 6 suites.
+5. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
+
+## ⚠️ Known limitations (pilot, Testnet only)
+- **No refund or cancel.** Once funded, an escrow can only be released to the named freelancer by the client. If the client never approves, the funds stay locked.
+- **Dispute freeze and self-dealing checks are app-level.** The contract has no dispute state; GigPay's app and signing layer refuse a release while a dispute is open.
+- **Contract capacity.** Escrows are stored in the contract's instance storage, which has room for roughly 160 more escrows in total. A v2 contract (per-escrow storage, refund/cancel) would need a new contract ID.
+- **Practice wallets live in the browser.** Each signed-in account gets its own Testnet practice wallet stored in that browser; releasing must be done from the browser that funded. Incognito mode or clearing browser data loses it.
+- **One server-side key:** the team's Testnet funding-pool key (used when Friendbot rate-limits) is stored encrypted in Supabase Vault.
 
 ---
 
@@ -54,8 +68,8 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 * **Accidental Release Guard:** AWS-style confirmation modal requiring users to type `"CONFIRM"` before escrow funds can be unlocked.
 
 ### 4. Comprehensive Testing Suite & Clean-Install Logs (Deliverable 4 — $1,000)
-* **Automated Tests:** `npm test` runs 39 tests offline (22 regression, 10 escrow-integrity, 7 ledger-integrity), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
-* **Clean-Install Validation:** Verified from a fresh clone on Windows 11 and Linux (Ubuntu 24.04); macOS still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+* **Automated Tests:** `npm test` runs 65 tests offline in 6 suites (22 regression, 10 escrow-integrity, 8 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 10 onboarding-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
+* **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC and in a Linux (Ubuntu 24.04) cloud container; a third separate computer (macOS) is still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 
 ---
 
@@ -67,8 +81,8 @@ npm test
 ```
 
 ### Test Suites
-`npm test` runs 39 tests with no network access: the 22-test regression suite, 10 escrow-integrity tests and 7 ledger-integrity tests. The suites below run individually with `node <file>`; `soroban_sim` and `live_headless_e2e` need Stellar Testnet access.
-* `soroban_sim.test.js`: Soroban Protocol 22 RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
+`npm test` runs 65 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (8), onboarding-at-scale (7), dispute-sync (8) and onboarding-safety (10) suites. The suites below run individually with `node <file>`; `soroban_sim` and `live_headless_e2e` need Stellar Testnet access.
+* `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
 * `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
 * `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15/15).

@@ -52,9 +52,9 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 3. Click **Connect Freighter** in the header. Verify Persona A's public key appears.
 4. In the "Create New Escrow Task" card:
    - **Task Title:** `Fullstack Soroban Escrow Integration`
-   - **Amount:** `1.5` USDC / XLM
+   - **Amount:** `1.5` XLM (native XLM only; GigPay does not use USDC)
    - **Freelancer Wallet:** Paste Persona B's public key (`G...`).
-5. Click **Create & Fund Escrow**:
+5. Click **Lock Funds in Escrow**:
    - Pre-flight check verifies Persona A holds $\ge 3.0$ XLM (1.5 task amount + 1.0 base reserve + 0.5 gas buffer).
    - Freighter pop-up displays the transaction request with description and Soroban contract invocation.
    - Click **Approve / Sign** in Freighter.
@@ -66,7 +66,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 ### Step 2: Negative Test — Anti-Self-Dealing Prevention
 1. Keep Persona A connected in Freighter.
 2. In the "Create New Escrow Task" card, paste **Persona A's own address** into the Freelancer Wallet field.
-3. Click **Create & Fund Escrow**.
+3. Click **Lock Funds in Escrow**.
 4. **Observed Behavior:**
    - The UI immediately halts execution *before* prompting Freighter or calling Horizon.
    - Warning toast appears:  
@@ -77,7 +77,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 
 ### Step 3: Negative Test — Graceful User Signature Cancellation
 1. Enter Persona B's valid public key.
-2. Click **Create & Fund Escrow**.
+2. Click **Lock Funds in Escrow**.
 3. When the Freighter signature pop-up opens, click **Reject / Decline**.
 4. **Observed Behavior:**
    - The application intercepts the decline gracefully.
@@ -88,12 +88,12 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 
 ### Step 4: Milestone Work Delivery & Client Approval
 1. In the Client Dashboard task list, locate the funded task.
-2. Click **Approve Work**.
+2. Click **Approve & Release**.
 3. Type `CONFIRM` in the security modal to prevent accidental fund release.
-4. Click **Release Escrow Payment**.
+4. Type **CONFIRM** and click **Release**.
 5. Freighter prompts Persona A to sign the `approve_task` contract call.
 6. Upon confirmation, Soroban smart contract releases the Stroop token balance directly to **Persona B (Freelancer)**.
-7. Toast notification confirms: *"Transaction Confirmed! Funds released to freelancer."*.
+7. Toast notification confirms: *"Escrow released on Testnet! Tx: …"*.
 
 ---
 
@@ -105,7 +105,7 @@ All transactions execute on Stellar Testnet and can be verified publicly:
 | :--- | :--- |
 | **Escrow Smart Contract** | [`CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3) |
 | **Native SAC Contract** | [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
-| **Verified Testnet Escrow Lifecycle #1** | [`09653068e8...`](https://stellar.expert/explorer/testnet/tx/09653068e8334415518b571c356adff079a405ea7e313d42c304d7e974e64f89) |
-| **Verified Testnet Escrow Lifecycle #2** | [`b4020a6bb8...`](https://stellar.expert/explorer/testnet/tx/b4020a6bb8bfeacb6db06eb6fa796b42b6a2ebae9a04a5fb823057e0344b1c7c) |
+| **Escrow #1 funding (team test, Sep 20, 2026)** | [`40df1a722e...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) |
+| **Escrow #1 release (team test)** | [`1770bfa555...`](https://stellar.expert/explorer/testnet/tx/1770bfa5558fa2bcbb95309a1ece394895f788fe1822cdf9a2dbd923f621e984) |
 | **Live Production dApp** | [https://gigpay.tech](https://gigpay.tech) |
 | **Pull Request #4** | [https://github.com/MarkAngelGuevarra/gigpay/pull/4](https://github.com/MarkAngelGuevarra/gigpay/pull/4) |

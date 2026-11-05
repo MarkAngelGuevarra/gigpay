@@ -6,7 +6,7 @@
 **Lead Developer:** Mark Angel Guevarra (`marcangelguevarra@gmail.com` / `@GigPayPH`)  
 **Active Testnet Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
 **Native XLM SAC Contract ID:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`  
-**Soroban Protocol Version:** Protocol 22  
+**Contract SDK:** soroban-sdk 22.0.8  
 **Review type:** Self-review by the builder (not a third-party audit; third-party audits are out of SOW scope)  
 
 ---
@@ -16,7 +16,7 @@
 This security audit and architectural verification report evaluates the cryptographic integrity, on-chain state safety, and frontend threat surface of **GigPay** — a decentralized milestone escrow platform designed to eliminate intermediary custodial risk and 20% commission cuts for Filipino freelancers.
 
 The audit focuses on four critical defense layers:
-1. **On-Chain Soroban Protocol 22 Smart Contract Invariants (`CAUU2O...7RD3`)**
+1. **On-Chain Soroban Smart Contract Invariants (`CAUU2O...7RD3`)**
 2. **Non-Custodial Cryptographic Key Safety & Multi-Wallet Isolation**
 3. **Frontend Application Security & Content Security Policy (CSP) Hardening**
 4. **Backend Database Authorization & Supabase Row-Level Security (RLS)**
@@ -29,12 +29,12 @@ The audit focuses on four critical defense layers:
 | :--- | :--- | :--- | :--- | :--- |
 | **THREAT-01** | **Unauthorized Escrow Release** | Malicious actor attempts to release escrowed funds without client consent. | On-chain `approve_task` requires cryptographic authorization from the client address who originally locked the escrow (`require_auth()`). Frontend validates client public key prior to transaction assembly. | **VERIFIED (PASSED)** |
 | **THREAT-02** | **Self-Dealing / Collusion** | Client sets the destination freelancer wallet to their own address to fake volume or exploit platform bonuses. | Enforced by `validateEscrowParties()` in `src/lib/stellar.js`. Strictly blocks transaction assembly if `clientAddress === freelancerAddress`. This check is in the app only; the deployed contract does not reject client == freelancer. | **MITIGATED IN APP** |
-| **THREAT-03** | **Private Key / Seed Extraction** | Malicious script or extension attempts to read seed phrases or private keys from local storage. | No server-side key custody: GigPay never logs or transmits private keys, and none exist on the server or in the database. Freighter users sign inside the Freighter extension. **Updated Nov 4, 2026:** the optional Testnet-only *practice wallet* (for testers without Freighter) stores its key in that tester's own browser storage, so a script running on the page could read it. Accepted for Testnet practice funds only; the practice wallet is disabled outside Testnet (`isEphemeralSignerAllowed`). | **ACCEPTED RISK (Testnet only)** |
+| **THREAT-03** | **Private Key / Seed Extraction** | Malicious script or extension attempts to read seed phrases or private keys from local storage. | No user keys are held server-side: Freighter users sign in their wallet, and Testnet practice wallets keep their key in that browser (Testnet only, accepted risk). One team Testnet funding-pool key is stored encrypted in Supabase Vault and used only by the `fund-practice-wallet` Edge Function (service role). | **ACCEPTED RISK (Testnet only)** |
 | **THREAT-04** | **Replay & State Collisions** | Duplicate task IDs causing `AlreadyInit` on-chain contract panics or cross-transaction replaying. | The contract assigns escrow IDs from a sequential `TaskCounter`, so IDs cannot collide; the app checks IDs stay within `u32` bounds (`[1, 4294967295]`, Test 9 in `soroban_sim.test.js`). | **VERIFIED (PASSED)** |
 | **THREAT-05** | **Cross-Site Scripting (XSS)** | Malicious third-party scripts injected via CDN or untrusted analytics. | Strict Content Security Policy (`CSP`) defined in `index.html`. Restricts `connect-src` strictly to `https://*.supabase.co`, `https://va.vercel-scripts.com`, and Stellar RPC/Horizon endpoints. | **VERIFIED (PASSED)** |
 | **THREAT-06** | **Account Starvation / Stuck Tx** | Client attempts to fund escrow without leaving enough XLM for base reserves (1.0 XLM) and transaction fees. | `checkBalanceSufficiency()` pre-flight check asserts `currentBalance >= amount + 1.5 XLM` before prompting wallet signature. | **VERIFIED (PASSED)** |
 | **THREAT-07** | **RPC Latency & False Failure** | Network latency on Testnet RPC causing timeout and user panic. | Resilient exponential backoff polling (`pollSorobanTransactionWithBackoff`) with `1500ms -> 2250ms -> 3375ms -> 5000ms` schedule. | **VERIFIED (PASSED)** |
-| **THREAT-08** | **Database Tampering** | Authenticated user attempts to modify tasks or profiles belonging to another user. | Supabase PostgreSQL Row Level Security (`RLS`) enforces `auth.uid() = id` on `public.profiles` and `client_id = auth.uid()` on `public.tasks`. | **VERIFIED (PASSED)** |
+| **THREAT-08** | **Database Tampering** | Authenticated user attempts to modify tasks or profiles belonging to another user. | Supabase PostgreSQL Row Level Security (`RLS`) enforces `auth.uid() = id` on `public.profiles` and `client_id = auth.uid()` on `public.tasks`.  A `BEFORE UPDATE` trigger (`enforce_task_update`) makes escrow fields write-once and limits who can change each status. Inserts are only role-checked, and the claim step does not verify the payout address server-side. | **PARTLY MITIGATED** |
 
 ---
 
@@ -49,13 +49,13 @@ User (Browser) <---> Freighter Wallet Extension (Client-Side Ed25519) <---> Stel
 ```
 - **Signing Mechanism:** `signTransaction(xdr, { network: 'TESTNET', networkPassphrase, accountToSign })`
 - **Session Tokens:** Web3 wallet state stores only the active public key string (`G...`).
-- **No Custodial Wallets:** No server-side private keys exist in the backend repository or deployment environment.
+- **No Custodial User Wallets:** No user private keys are stored server-side. The only server-side key is the team's Testnet funding-pool key in Supabase Vault (never in the repository).
 
 ### 3.2 Smart Contract Escrow State Machine
 The Soroban escrow contract enforces an immutable state progression:
 1. `Initialized` $\rightarrow$ Locked upon `fund_task(client, freelancer, token, amount)`
 2. `Approved` $\rightarrow$ Atomic release to freelancer upon `approve_task(task_id)`
-3. `Disputed` $\rightarrow$ Funds frozen pending mutual release or designated arbitrator resolution
+3. There is no `Disputed`, refund or arbitrator state in the contract. The dispute freeze is enforced by the app (`isDisputeActive` in `src/lib/taskLifecycle.js` and the signing layer), not on-chain.
 
 ---
 

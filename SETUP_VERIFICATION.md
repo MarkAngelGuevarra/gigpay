@@ -28,7 +28,7 @@ Real clean-install runs, with unedited output, are recorded in [CLEAN_INSTALL_LO
 | Environment | Status |
 |:---|:---|
 | Windows 11 (build 22621), Node 24 | ✅ Passed, 2026-11-04 |
-| Linux (Ubuntu 24.04.5 LTS), Node 22 | ✅ Passed, 2026-11-05 |
+| Linux (Ubuntu 24.04.5 LTS) in a fresh cloud container (not a separate physical computer), Node 22 | ✅ Passed, 2026-11-05 |
 | macOS | ⏳ Not yet run |
 
 > **Correction, Nov 4, 2026.** An earlier version of this file reported passing runs on three environments that cannot be matched to real runs. For example, it listed Node v18.20.4, which cannot run this project's Vite 8 build. Only real runs are listed now.

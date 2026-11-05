@@ -28,7 +28,7 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 - *"The freelancer copies their payout address and sends it to the client, who pastes it into the task."*
 - > Recording note: two windows of the same browser share one practice wallet, and the app blocks a freelancer from accepting a task that pays a different address, so always use two browsers or two devices.
 - *"Non-crypto testers can jump in immediately without installing browser extensions. I'll click 'Fill Sample Task' for 2 XLM and click 'Lock Funds in Escrow'."*
-- *"Watch the Freelancer window on the right: in well under a second, via our `gigpay_shared_tasks` cache and storage events, the new task appears without any page refresh!"*
+- *"Watch the Freelancer window on the right: via our `gigpay_shared_tasks` cache and storage events, the new task appears in the other window of this browser without a refresh. (On a different device it arrives through Supabase realtime; refresh if it hasn't appeared yet.)"*
 
 #### **1:30 – 2:15 | Freelancer Proof of Work Submission**
 - *"Now, the Freelancer accepts the task. The status transitions instantly to 'In Progress'."*
@@ -43,5 +43,5 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 #### **3:00 – 3:45 | Public Verification Ledger & Automated Test Suite**
 - *"Finally, let's check our verification evidence. I'll click 'Public Ledger' in the top bar. Reviewers can see every single on-chain invocation, contract ID `CAUU2O5Z...`, transaction hashes, and direct Stellar Expert links."*
 - *"With 1 click, I can click 'Export CSV' to download the full evidence ledger."*
-- *"In the terminal, `npm test` runs 39 automated tests offline (22 regression, 10 escrow-integrity, 7 ledger-integrity), and `cargo test` runs the 4 contract tests."*
+- *"In the terminal, `npm test` runs 65 automated tests offline in 6 suites, and `cargo test` runs the 4 contract tests."*
 - *"Thank you to the Stellar Development Foundation and Rise In for supporting GigPay!"*

@@ -1,7 +1,7 @@
 /**
  * GigPay Automated Regression Test Suite (22 Tests)
  * Designed to satisfy SDF Instawards Month 2 SOW Deliverable 4
- * Acceptance Criteria verified by Armielyn Obinguar (SDF / Rise In)
+ * Checks GigPay's own reading of its Sprint 2 SOW acceptance criteria (not a program sign-off)
  *
  * Command: npm test (or node test/gigpay_regression.test.js)
  */
@@ -10,7 +10,7 @@ import assert from 'node:assert';
 
 console.log("\n==================================================================");
 console.log("   GIGPAY INSTAWARDS SPRINT 2 — 22 AUTOMATED REGRESSION TESTS");
-console.log("   Standard: SDF / Rise In Deliverable 4 Verification Suite");
+console.log("   GigPay Sprint 2 SOW self-check (not an official program verification)");
 console.log("==================================================================\n");
 
 let passedCount = 0;
@@ -279,7 +279,7 @@ runTest(22, "Extensionless mobile/tablet sessions auto-rehydrate fallback Testne
 console.log("\n==================================================================");
 console.log(`   REGRESSION SUITE RESULTS: ${passedCount}/22 TESTS PASSED`);
 if (failedCount === 0) {
-  console.log("   STATUS: 100% GREEN — ALL ARMIELYN SOW CRITERIA SATISFIED! 🎉");
+  console.log("   STATUS: all GigPay SOW self-checks passed");
 } else {
   console.log(`   STATUS: ${failedCount} FAILURES DETECTED`);
 }

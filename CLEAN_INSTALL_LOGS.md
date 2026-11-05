@@ -27,7 +27,7 @@ npm test
 npm run build
 ```
 
-`npm test` makes a few read-only calls to Stellar Testnet (Horizon/RPC), so it needs internet access.
+`npm test` itself runs offline; `npm ci` needs internet access.
 
 ## Environment 1: Windows 11, 2026-11-04 (real output)
 

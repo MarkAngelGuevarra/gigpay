@@ -338,7 +338,7 @@ async function runTaskLifecycleTestSuite() {
     throw new Error(`Total earned calculation (${totalEarned}) is less than approved milestone (${testMilestoneAmount})`);
   }
   console.log(`Freelancer Completed Tasks Count: ${completedTasks.length}`);
-  console.log(`Freelancer Total Earned Balance: $${totalEarned} USDC / XLM`);
+  console.log(`Freelancer Total Earned Balance: ${totalEarned} XLM`);
   console.log('✅ Test 7 Passed: Freelancer earnings increment accurately upon milestone release.\n');
 
   // Test 8: Anti-Self-Dealing & Validation Safeguards

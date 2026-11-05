@@ -110,7 +110,8 @@ for (const t of tasks) {
 }
 
 const outside = tasks.filter((t) => t.kind === 'Outside wallet');
-const sum = (xs) => xs.reduce((s, t) => s + t.amount, 0);
+// Rounded to 7 decimals (stroops): plain float sums printed "2587.2999999999997 XLM".
+const sum = (xs) => Number(xs.reduce((s, t) => s + t.amount, 0).toFixed(7));
 const generated = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 
 const lines = [];

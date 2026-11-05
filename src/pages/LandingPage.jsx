@@ -30,7 +30,7 @@ const features = [
     bgIcon: <ShieldCheck size={100} />,
     title: "Smart Escrow",
     shortDesc: "Funds are locked safely in a Soroban smart contract until the work is verified and approved.",
-    longDesc: "Trust is the biggest barrier in freelance work. Our Soroban smart contracts ensure clients must fund the escrow before you start working. Once the funds are locked on-chain, you have a cryptographic guarantee that you will be paid upon approval.",
+    longDesc: "Trust is the biggest barrier in freelance work. Our Soroban smart contracts ensure clients must fund the escrow before you start working. Once the funds are locked on-chain, the contract can only pay your address, and only when the client approves (there is no refund or cancel in this pilot).",
     shadowColor: "rgba(192,132,252,0.3)",
     accentColor: "#c084fc"
   }

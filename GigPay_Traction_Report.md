@@ -4,7 +4,7 @@
 **Official Repository:** [`https://github.com/MarkAngelGuevarra/gigpay`](https://github.com/MarkAngelGuevarra/gigpay)  
 **Live Production URL:** [`https://gigpay.tech`](https://gigpay.tech) (Mirror: [`https://gigpay-gules.vercel.app`](https://gigpay-gules.vercel.app))  
 **Active Testnet Contract ID:** [`CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)  
-**Soroban Protocol Version:** Protocol 22  
+**Contract SDK:** soroban-sdk 22.0.8  
 **Reporting Date:** Sunday, October 18, 2026  
 
 > **Correction added November 4, 2026.** Several figures in this report were overstated when it was written. Checked against the chain and the Supabase database as of Oct 18, 2026, the accurate figures are:
@@ -19,7 +19,7 @@
 
 ## 1. Executive Summary
 
-GigPay is a decentralized milestone escrow web application built on **Stellar Soroban (Protocol 22)** to eliminate 20% platform commission cuts and 7–14 day payout holds for Filipino freelancers. 
+GigPay is a decentralized milestone escrow web application built on **Stellar Soroban** to remove platform commissions of up to 20% and multi-day payout holds for Filipino freelancers. 
 
 During the Month 1 Instawards Sprint, GigPay transitioned from initial architecture to a live Testnet dApp deployed at `https://gigpay.tech`. The platform enforces non-custodial milestone locking and atomic releases in ~5 seconds with near-zero network fees, backed by client-side Freighter signing and a resilient built-in Soroban Testnet Simulator.
 
@@ -42,13 +42,13 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 
 ### 3.1 Pilot Intake Channels & Workflow
 * **Intake Form:** [`https://forms.gle/oLGjJRcxg5LZ5bC96`](https://forms.gle/oLGjJRcxg5LZ5bC96)
-* **Low-Friction Sign-Up Portal:** `https://gigpay.tech/auth?mode=signup` allows testers to register and test escrow release on mobile or desktop in **under 90 seconds** without requiring browser wallet extension installation.
+* **Low-Friction Sign-Up Portal:** `https://gigpay.tech/auth?mode=signup` allows testers to register and test escrow release on mobile or desktop without installing a browser wallet extension (time to complete not yet measured).
 * **Verified Pilot Testers (Evidence Vault):**
   * Tester names and contact details are kept in the intake form, not in this public report.
 * **Live User Onboarding Recordings (Loom):**
   * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 5 community members and the founder on camera, demonstrating milestone creation, escrow lock, and mobile tester mode.
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
-* **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the public Google Drive evidence vault at [GigPay Month 2 User Evidence Vault](https://drive.google.com/drive/folders/1ePGnn2aVU8KE2qq0h-zjB3pwHAqXBH-M?usp=sharing).
+* **Evidence Repository:** Tester profiles and survey responses contain personal data, so they are kept privately (in the intake form) and are not published. Public evidence is the on-chain table in [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 
 ### 3.2 Pilot User Traction Funnel & Conversion Health Analysis
 
@@ -56,7 +56,7 @@ To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks
 
 | Funnel Stage | Metric | Verification Source | Evaluation Significance |
 | :--- | :--- | :--- | :--- |
-| **Stage 1: Top of Funnel Discovery** | **117+ Unique Visitors** | `@vercel/analytics` Production Telemetry | Organic reach across 15+ countries, 49% PH domestic focus. |
+| **Stage 1: Top of Funnel Discovery** | Not measured | Web analytics were removed on Oct 30, 2026 (commit 1696410) | Earlier visitor figures are withdrawn: no committed evidence supports them. |
 | **Stage 2: User Registration (Acquisition)** | **16 real sign-ups** (23 accounts incl. 7 team accounts) — *corrected Nov 4, recounted Nov 5* | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Real onboarding interest from the community sessions. |
 | **Stage 3: Active Portal Flow Testers** | **Not measured** — *corrected Nov 4* | — | The earlier "18+ active testers" figure had no supporting record. |
 | **Stage 4: Verified On-Chain Settlements** | **10 releases, all from team test wallets** — *corrected Nov 4* | Stellar Testnet Explorer (`CAUU2O...7RD3`) | Proves the contract works end to end; no tester-owned wallet had settled an escrow yet. |
@@ -74,18 +74,14 @@ Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X
 
 ## 4. Production Web Analytics Telemetry (`@vercel/analytics`)
 
-GigPay's production deployment (`https://gigpay.tech`) has integrated real-time analytics tracking authentic user traffic across 15+ countries:
+_Withdrawn (Nov 6, 2026):_ the visitor figures below came from `@vercel/analytics`, which was removed on Oct 30, 2026, and no export was kept, so they cannot be verified and are not claimed:
 
-| Metric | Value | Strategic Significance |
+| Metric | Value | Source |
 | :--- | :--- | :--- |
-| **Unique Visitors** | **117 Unique Visitors** | Authentic organic reach across 15+ countries |
-| **Total Page Views** | **281 Total Page Views** | Deep multi-page exploration (2.4 pages/visit overall) |
-| **Top Page: Landing (/)** | **80 Visitors** | High initial discovery |
-| **Top Page: Auth (/auth)** | **50 Visitors** | **62.5% Sign-Up Intent Rate** |
 | **Registered User Accounts** | **16 real sign-ups + 7 team accounts** (corrected Nov 4, recounted Nov 5) | Live Supabase project `gulshfticoirrpuohdxk` |
 | **Active Dual-Role Testers** | **Not measured** (corrected Nov 4) | No record supports the earlier "18+" figure |
-| **Mobile Share** | **42% Mobile (Android 31%, iOS 11%)** | Strong mobile penetration validating simulator wallet |
-| **Core Geographic Market** | **49% Philippines (57 visitors / 185 page views)** | Domestic target audience averaging 3.25 pages/visit |
+
+Visitor, page-view, mobile-share and country figures previously shown here are withdrawn (see note above).
 
 ---
 
@@ -93,7 +89,7 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 
 Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Deliverable 3:
 * **Threat Mitigation Matrix:** Formally evaluates and resolves 8 threat categories (`THREAT-01` through `THREAT-08`), including unauthorized escrow release, self-dealing collusion, private key extraction, replay attacks, XSS, and RPC timeouts.
-* **Zero Server-Side Key Custody:** No private keys exist in repository code, server memory, or database storage. Freighter users sign in their wallet. *Note added Nov 4:* the Testnet-only practice wallet keeps its key in the tester's own browser storage; it is disabled on Mainnet.
+* **No Server-Side User Keys:** No user private keys exist in repository code or server storage; the only server-side key is the team's Testnet funding-pool key, encrypted in Supabase Vault. Freighter users sign in their wallet. *Note added Nov 4:* the Testnet-only practice wallet keeps its key in the tester's own browser storage; it is disabled on Mainnet.
 * **Automated Integration Testing:** 9 out of 9 passing Node test assertions in [`src/test/soroban_sim.test.js`](src/test/soroban_sim.test.js), verifying `fund_task` simulation, `approve_task` release, exponential backoff, and `u32` task ID boundary clamping (`[1, 4294967295]`).
 
 ---
