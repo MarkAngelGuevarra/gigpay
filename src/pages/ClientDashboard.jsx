@@ -154,6 +154,13 @@ const ClientDashboard = () => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskAmount) return;
 
+    // A Stellar address typed into the title is almost always meant for the payout field (seen in testing).
+    if (/^G[A-Z2-7]{55}$/.test(newTaskTitle.trim())) {
+      if (!freelancerWallet.trim()) setFreelancerWallet(newTaskTitle.trim());
+      addToast("That looks like a payout address, not a title. It's now in Freelancer's Payout Address; give the task a short title like \"Logo design\".", "warning");
+      return;
+    }
+
     const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
     if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
       addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");

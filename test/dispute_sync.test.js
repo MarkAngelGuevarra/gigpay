@@ -57,6 +57,21 @@ await test('Completed is never demoted, and Available never overrides an accepte
   assert.strictEqual(mergeTaskRecords({ ...base, status: 'In Progress' }, { ...base, status: 'Available' }).status, 'In Progress');
 });
 
+await test('Submitted proof reaches the other device: Under Review beats a stale In Progress copy', () => {
+  const review = { ...base, status: 'Under Review', proof_attached: true, proof_url: 'https://docs.google.com/x' };
+  for (const merged of [mergeTaskRecords({ ...base }, review), mergeTaskRecords(review, { ...base })]) {
+    assert.strictEqual(merged.status, 'Under Review');
+    assert.strictEqual(merged.proof_url, 'https://docs.google.com/x');
+  }
+});
+
+await test('A dispute raised while work is under review still freezes it', () => {
+  const review = { ...base, status: 'Under Review', proof_attached: true };
+  const disputed = { ...review, status: 'Disputed', disputed_at: T1 };
+  assert.strictEqual(mergeTaskRecords(review, disputed).status, 'Disputed');
+  assert.strictEqual(mergeTaskRecords(disputed, review).status, 'Disputed');
+});
+
 await test('Release is refused for a task with an open dispute even if its status is stale', async () => {
   const stale = { ...base, status: 'In Progress', disputed_at: T1 };
   assert.strictEqual(isDisputeActive(stale), true);

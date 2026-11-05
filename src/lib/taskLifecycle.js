@@ -9,7 +9,9 @@
  * source of truth for that pair: a task is Disputed while its latest dispute is newer than its latest
  * resolution.
  */
-export const STATUS_RANK = { Completed: 3, Paid: 3, 'In Progress': 2, 'Under Review': 2, Disputed: 2, Available: 1 };
+// Under Review (proof submitted) ranks above In Progress: a task only moves In Progress -> Under Review,
+// and with equal ranks a stale copy hid submitted proof from the client while Release stayed enabled.
+export const STATUS_RANK = { Completed: 3, Paid: 3, 'Under Review': 2.5, 'In Progress': 2, Disputed: 2, Available: 1 };
 
 const time = (v) => {
   const t = v ? Date.parse(v) : NaN;
