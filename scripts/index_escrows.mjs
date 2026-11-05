@@ -27,7 +27,9 @@ const TEAM = {
   GCBXZSKNCLTKTVRHBRZ2XCTFDVNHSBF3G6CIPLBRCK2XBXIGPQY5RBRN: "founder's wallet",
   // Practice wallets on a team device (escrows #42-#46, Nov 5, 2026): team testing, not users.
   GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE: 'team device practice wallet (client)',
-  GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI: 'team device practice wallet (freelancer)'
+  GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI: 'team device practice wallet (freelancer)',
+  // Testnet funding pool (fund-practice-wallet Edge Function). It only creates practice wallets.
+  GAG74N2WUFBRSUP5JXQGGNZYO7VH73C72CZ3JTNEJDPICLWM7MNODYPZ: 'team Testnet funding pool'
 };
 const SCRIPTED = new Set([
   'GCACSSN7J2Q2ZKHHLQ2H33T6KDFNJAWTPOBWXH6PI4KDQ3ZAA77XV5VF', 'GBU2Y6WMLM37IPDJND7LBRZC4LAQYM6HS5LL5RSYCBM4OBUVQUSDMK3Q',

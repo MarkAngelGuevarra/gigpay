@@ -17,7 +17,7 @@ All rows below are generated from the chain, and every row says which kind of wa
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
-_Generated 2026-11-05 10:42 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
+_Generated 2026-11-05 11:03 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
 
 | SOW metric | On-chain count |
 |:---|:---:|
@@ -34,7 +34,7 @@ _Generated 2026-11-05 10:42 UTC from the same on-chain data. Only escrows where 
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-05 10:42 UTC from Stellar Testnet. 46 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 32 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-05 11:03 UTC from Stellar Testnet. 46 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 32 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|

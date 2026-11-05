@@ -5,6 +5,7 @@ import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, formatStellarError } from '../lib/stellar';
+import { takeInvitePayout } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -50,6 +51,15 @@ const ClientDashboard = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskAmount, setNewTaskAmount] = useState('');
   const [freelancerWallet, setFreelancerWallet] = useState('');
+  // Freelancer invite link (/client?pay=G...): pre-fill the payout address so nobody retypes 56 characters.
+  useEffect(() => {
+    const invited = takeInvitePayout();
+    if (invited) {
+      setFreelancerWallet(invited);
+      addToast("Payout address filled in from your freelancer's invite link. Check it matches what they sent you.", 'success');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);

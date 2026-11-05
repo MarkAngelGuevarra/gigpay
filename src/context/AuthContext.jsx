@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback } from '../lib/stellar';
+
+// Friendbot rate-limits by IP, so a room of testers on one Wi-Fi can't all be funded by it. GigPay's
+// Testnet pool (Edge Function `fund-practice-wallet`) tops up a signed-in tester's practice wallet once.
+setPracticeWalletFundingFallback(async (address) => {
+  const { data, error } = await supabase.functions.invoke('fund-practice-wallet', { body: { address } });
+  if (error) throw error;
+  return data;
+});
 
 const AuthContext = createContext();
 

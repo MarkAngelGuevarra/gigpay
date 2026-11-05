@@ -11,11 +11,11 @@ You need **two people on two different phones or computers**: one acts as the **
 ### Freelancer (do this first)
 1. Open **https://www.gigpay.tech**, tap **🚀 Sign Up (New Tester)**, and register with your own email. Confirm the email link, then sign in.
 2. Open the **Freelancer Portal**. A practice wallet is created for you automatically (you'll see a yellow **Practice** badge).
-3. On **Your payout address**, tap **Copy** and send the address (starts with `G…`) to your client partner.
+3. On **Your payout address**, tap **Share invite link** and send it to your client partner (Messenger, Teams, anything). The link fills your address in for them, so nobody retypes 56 characters. (**Copy** still copies the bare address if you need it.)
 
 ### Client
-1. Sign up with **your own email** the same way, then open the **Client Portal**. Your practice wallet is created and topped up with Testnet XLM automatically (this can take up to 30 seconds).
-2. Create a task: title, a small amount (e.g. 2 XLM), and **paste your freelancer's payout address**.
+1. Open your freelancer's **invite link**, then sign up with **your own email** and open the **Client Portal**. Your practice wallet is created and topped up with Testnet XLM automatically (this can take up to 30 seconds).
+2. Create a task: title and a small amount (e.g. 2 XLM). The **freelancer's payout address is already filled in** from the invite link; check it matches what they sent. (No link? Paste their address.)
    - Left blank, the payment goes to GigPay's test wallet and **does not count** as a real pilot job.
 3. Tap **Lock Funds in Escrow** and wait about 10 seconds.
 
@@ -60,4 +60,6 @@ Then fill in the 2-minute tester form: **https://forms.gle/oLGjJRcxg5LZ5bC96** �
 - **Team members never test with practice wallets.** A practice wallet is a new random address, and the indexer would count it as an outside user. Test with the team QA client wallet, or add any address you used to `TEAM` in `scripts/index_escrows.mjs` and `TEAM_WALLETS` in `src/lib/ledgerIntegrity.js` before the next run.
 - **Never create wallets or escrows by script** for traction, and never ask friends to "just click through" without really testing.
 - `npm test` runs offline. Tests write to the Testnet contract only with `GIGPAY_TESTNET_WRITES=1`, and those escrows pay the team wallet.
+- **Friendbot fallback pool.** Friendbot rate-limits by IP, so a classroom on one Wi-Fi gets refused after the first few wallets. When that happens the app asks the Supabase Edge Function `fund-practice-wallet`, which creates the practice wallet with 25 Testnet XLM from the team pool `GAG74N2W…` (one top-up per signed-in account; the pool's key lives in Supabase Vault, never in this repo). Pool funding does not affect counting: the evidence counts who the client and freelancer of an escrow are, not who funded their wallet. The pool is on the team list and never takes part in escrows. Top it up before an event with Friendbot from a different network if it drops below ~1,000 XLM.
+- **Before a live session:** on the venue Wi-Fi, open `horizon-testnet.stellar.org`, `soroban-testnet.stellar.org`, `friendbot.stellar.org`, the Supabase project URL and `gigpay.tech`; bring a mobile hotspot in case any are blocked; run one full escrow with the team QA wallet.
 - Report wallets as wallets. One person can create several practice wallets, so pair the on-chain count with sign-up and form records before calling it "users".

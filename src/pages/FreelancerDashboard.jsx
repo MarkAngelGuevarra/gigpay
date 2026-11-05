@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, isDemoWallet, isSimulatorWallet } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout } from '../lib/ledgerIntegrity';
+import { buildInviteLink } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -143,7 +144,7 @@ const FreelancerDashboard = () => {
             )}
           </div>
           <p style={{ color: 'var(--text-muted)', margin: '0 0 0.6rem', fontSize: '0.88rem' }}>
-            Send this to your client before they lock the payment. GigPay pays the escrow to this address when they approve your work.
+            Send this to your client before they lock the payment. GigPay pays the escrow to this address when they approve your work. Easiest: share your invite link, which fills the address in for them.
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <code style={{ flex: '1 1 260px', minWidth: 0, overflowWrap: 'anywhere', background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.8rem' }}>
@@ -163,6 +164,31 @@ const FreelancerDashboard = () => {
               }}
             >
               <Copy size={14} /> Copy
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+              onClick={async () => {
+                // One link instead of a 56-character address: the client's task form is pre-filled with it.
+                const link = buildInviteLink(publicKey);
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: 'Pay me on GigPay', text: 'Create our GigPay task here. My payout address is already filled in:', url: link });
+                    return;
+                  }
+                } catch (err) {
+                  if (err?.name === 'AbortError') return;
+                }
+                try {
+                  await navigator.clipboard.writeText(link);
+                  addToast('Invite link copied. Send it to your client: it fills in your payout address for them.', 'success');
+                } catch {
+                  addToast(`Couldn't copy automatically. Send your client this link: ${link}`, 'warning');
+                }
+              }}
+            >
+              <Share2 size={14} /> Share invite link
             </button>
           </div>
         </div>

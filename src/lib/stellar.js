@@ -64,30 +64,55 @@ export const isEphemeralSignerAllowed = (network = NETWORK) =>
 // Friendbot routinely takes 10-25s to answer; an 8s cap left new simulator wallets unfunded.
 const FRIENDBOT_TIMEOUT_MS = 30000;
 
+// Returns true when Friendbot accepted the request. It rate-limits by IP, so a room of testers on one
+// Wi-Fi gets refusals (or timeouts) after the first few wallets.
 const requestFriendbotFunding = async (publicKey) => {
   try {
-    await withTimeout(
+    const res = await withTimeout(
       fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`),
       FRIENDBOT_TIMEOUT_MS
     );
+    return !!res?.ok;
   } catch (err) {
     console.warn("[Friendbot] Ephemeral funding notice:", err.message);
+    return false;
   }
 };
 
-/**
- * Makes sure a simulator wallet exists on Testnet before it signs. Covers a fresh wallet whose
- * Friendbot request is still settling and a stored wallet whose first funding attempt failed.
- * Returns false if the account still is not visible on Horizon after the retries.
- */
-export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, delayMs = 2000 } = {}) => {
-  if ((await getAccountBalance(publicKey)).active) return true;
-  await requestFriendbotFunding(publicKey);
+// Backup funder for practice wallets when Friendbot is rate-limited: the app registers GigPay's
+// Testnet pool (Supabase Edge Function `fund-practice-wallet`, one top-up per signed-in account).
+// Kept as a hook so this module stays free of app/network wiring and the offline tests are unaffected.
+let practiceWalletFundingFallback = null;
+export const setPracticeWalletFundingFallback = (fn) => {
+  practiceWalletFundingFallback = typeof fn === 'function' ? fn : null;
+};
+
+const waitForAccount = async (publicKey, attempts, delayMs) => {
   for (let i = 0; i < attempts; i++) {
     if ((await getAccountBalance(publicKey)).active) return true;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   return false;
+};
+
+/**
+ * Makes sure a simulator wallet exists on Testnet before it signs. Covers a fresh wallet whose
+ * Friendbot request is still settling and a stored wallet whose first funding attempt failed;
+ * if Friendbot can't fund it, falls back to the GigPay Testnet pool.
+ * Returns false if the account still is not visible on Horizon after the retries.
+ */
+export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, delayMs = 2000 } = {}) => {
+  if ((await getAccountBalance(publicKey)).active) return true;
+  const friendbotAccepted = await requestFriendbotFunding(publicKey);
+  // Friendbot refused: go to the pool right away. Friendbot accepted: give Horizon a moment first.
+  if (friendbotAccepted && (await waitForAccount(publicKey, attempts, delayMs))) return true;
+  if (!practiceWalletFundingFallback) return friendbotAccepted ? false : waitForAccount(publicKey, attempts, delayMs);
+  try {
+    await practiceWalletFundingFallback(publicKey);
+  } catch (err) {
+    console.warn("[GigPay pool] Practice wallet fallback notice:", err?.message || err);
+  }
+  return waitForAccount(publicKey, attempts, delayMs);
 };
 
 // Practice-wallet keys for extensionless / mobile testers (Testnet only; see isEphemeralSignerAllowed).
