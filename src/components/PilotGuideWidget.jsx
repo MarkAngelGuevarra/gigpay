@@ -92,7 +92,7 @@ const CLIENT_STEPS = [
     title: 'Connect Testnet Wallet',
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
-    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—our instant Testnet wallet is already funded with 10,000 XLM for you!',
+    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—we create a practice Testnet wallet in this browser and fund it with free test XLM (this can take up to 30 seconds).',
     description: 'Connect your Freighter Wallet or use the built-in instant Stellar Testnet wallet to sign Soroban smart contract operations.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
@@ -150,7 +150,7 @@ const FREELANCER_STEPS = [
     title: 'Discover Available Tasks',
     badge: 'Step 2 of 5 • Browse Escrows',
     icon: Briefcase,
-    teacherVoice: 'Browse the "Available Funded Tasks" feed. Every milestone is already funded by clients and safely locked in the smart contract before you begin work.',
+    teacherVoice: 'Browse the "Available Funded Tasks" feed. A task marked funded has its payment locked in the smart contract before you begin work.',
     description: 'Review task milestones, XLM reward amounts, and client details. Funds are guaranteed by the escrow contract.',
     actionLabel: 'Scroll to Available Tasks',
     actionType: 'scroll_available',
@@ -386,7 +386,7 @@ export default function PilotGuideWidget() {
           }
           if (typeof connectTesterWallet === 'function') {
             await connectTesterWallet();
-            addToast('Stellar Testnet wallet connected with 10,000 XLM!', 'success');
+            addToast('Practice Testnet wallet connected. Test XLM may take up to 30 seconds to arrive.', 'success');
           } else if (typeof connectWallet === 'function') {
             await connectWallet();
             addToast('Freighter wallet connected!', 'success');

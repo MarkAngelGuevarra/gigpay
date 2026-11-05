@@ -307,7 +307,7 @@ const ClientDashboard = () => {
                       fontWeight: 600
                     }}
                   >
-                    <CheckCircle2 size={14} /> ✅ Pilot Verified ✨
+                    <CheckCircle2 size={14} /> Feedback sent, thank you
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

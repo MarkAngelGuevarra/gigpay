@@ -8,8 +8,8 @@ const features = [
     id: 1,
     icon: <Zap size={36} color="#00f2fe" style={{ marginBottom: '1.5rem' }} />,
     bgIcon: <Zap size={100} />,
-    title: "Lightning Fast",
-    shortDesc: "Powered by Stellar network, payments settle in under 5 seconds cross-border, directly to your wallet.",
+    title: "Fast Settlement",
+    shortDesc: "Powered by Stellar network, payments settle in about 5 seconds, directly to your wallet.",
     longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles international payments in 3-5 seconds. This pilot runs on Stellar Testnet with practice XLM; there are no banking hours, FX fees or SWIFT delays to wait for.",
     shadowColor: "rgba(59,130,246,0.3)",
     accentColor: "#00f2fe"
@@ -76,7 +76,7 @@ const LandingPage = () => {
         >
           <img src="/logo.png" alt="GigPay" style={{ width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0 }} />
           <span style={{ fontSize: 'clamp(0.72rem, 3.2vw, 0.85rem)', fontWeight: 600, color: '#00f2fe', letterSpacing: '0.3px', textAlign: 'center', wordBreak: 'break-word' }}>
-            Powered by Stellar Soroban · SCF Instaward 2026
+            Built on Stellar Soroban · Stellar Philippines Instawards 2026 · Testnet pilot
           </span>
         </motion.div>
 
@@ -86,9 +86,9 @@ const LandingPage = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
           style={{ fontSize: 'clamp(2.1rem, 7.5vw, 4.5rem)', marginBottom: '1.5rem', lineHeight: 1.15, letterSpacing: '-1px', wordBreak: 'break-word' }}
         >
-          Instant Payouts.<br />
+          Paid on Approval.<br />
           <span style={{ background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Zero Middlemen.
+            Locked Before Work Starts.
           </span>
         </motion.h1>
         

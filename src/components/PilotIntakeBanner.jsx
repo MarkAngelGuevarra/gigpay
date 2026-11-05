@@ -117,7 +117,9 @@ export default function PilotIntakeBanner() {
             alignItems: 'center',
             gap: '0.5rem',
             flexWrap: 'wrap',
-            flexShrink: 0
+            flex: '0 1 auto',
+            minWidth: 0,
+            maxWidth: '100%'
           }}
         >
           {/* Primary CTA: Open Form */}

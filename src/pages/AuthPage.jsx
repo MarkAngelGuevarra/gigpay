@@ -154,7 +154,7 @@ const AuthPage = () => {
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
           {isLogin
             ? 'New to GigPay? Click "🚀 Sign Up (New Tester)" above to register your email.'
-            : 'Register with your email to log your verified Week 4 pilot session.'}
+            : 'Register with your email to join the GigPay Testnet pilot. Practice money only.'}
         </p>
         
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

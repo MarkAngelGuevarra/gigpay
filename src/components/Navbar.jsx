@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { getAccountBalance, isSimulatorWallet } from '../lib/stellar';
+import { getAccountBalance, isSimulatorWallet, ensureEphemeralAccountFunded } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -30,12 +30,28 @@ const Navbar = () => {
     let isMounted = true;
     if (publicKey) {
       setIsLoadingBalance(true);
+      const showBalance = (res) => {
+        if (!isMounted) return;
+        // Horizon unreachable: say so instead of showing a placeholder number.
+        if (res.isDemo && isSimulatorWallet(publicKey)) setBalance('unavailable');
+        else setBalance(res.balance);
+        setIsLoadingBalance(false);
+      };
       getAccountBalance(publicKey)
-        .then((res) => {
-          if (isMounted) {
-            setBalance(res.balance);
-            setIsLoadingBalance(false);
+        .then(async (res) => {
+          // A new practice wallet is still waiting on Friendbot: show that, retry, then refresh.
+          if (!res.active && isSimulatorWallet(publicKey)) {
+            if (isMounted) setBalance('Funding… (up to 30s)');
+            const funded = await ensureEphemeralAccountFunded(publicKey);
+            const after = await getAccountBalance(publicKey);
+            if (!funded && !after.active) {
+              if (isMounted) { setBalance('Not funded yet, refresh in a minute'); setIsLoadingBalance(false); }
+              return;
+            }
+            showBalance(after);
+            return;
           }
+          showBalance(res);
         })
         .catch(() => {
           if (isMounted) setIsLoadingBalance(false);
@@ -111,7 +127,7 @@ const Navbar = () => {
               boxShadow: '0 0 10px rgba(0, 245, 160, 0.15)'
             }}
           >
-            ✅ Pilot Verified ✨
+            ✓ Feedback sent
           </button>
         ) : isPilotFormOpened ? (
           <button
@@ -297,7 +313,7 @@ const Navbar = () => {
                       color: '#ffffff',
                       fontWeight: '700'
                     }}>
-                      {isLoadingBalance ? '...' : `${balance} XLM`}
+                      {isLoadingBalance && !String(balance).startsWith('Funding') ? '...' : /^[\d,.]+$/.test(String(balance)) ? `${balance} XLM` : balance}
                     </span>
                   )}
                 </div>
