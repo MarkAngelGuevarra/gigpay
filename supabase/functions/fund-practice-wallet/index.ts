@@ -58,26 +58,35 @@ Deno.serve(async (req) => {
     if (secretError || !secret) throw new Error("pool not configured");
     const pool = Keypair.fromSecret(secret as string);
 
-    const poolRes = await fetch(`${HORIZON}/accounts/${pool.publicKey()}`);
-    if (poolRes.status !== 200) throw new Error("pool account missing");
-    const poolAccount = await poolRes.json();
+    // A classroom calls this at the same moment: each call reads the pool's sequence number, so all but one
+    // collide with tx_bad_seq. Re-read the sequence and retry with a random pause instead of failing.
+    let submit: Response | null = null;
+    let result: any = null;
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      const poolRes = await fetch(`${HORIZON}/accounts/${pool.publicKey()}`);
+      if (poolRes.status !== 200) throw new Error("pool account missing");
+      const poolAccount = await poolRes.json();
 
-    const tx = new TransactionBuilder(new Account(pool.publicKey(), poolAccount.sequence), {
-      fee: "1000",
-      networkPassphrase: Networks.TESTNET,
-    })
-      .addOperation(Operation.createAccount({ destination: address, startingBalance: POOL_AMOUNT }))
-      .setTimeout(60)
-      .build();
-    tx.sign(pool);
+      const tx = new TransactionBuilder(new Account(pool.publicKey(), poolAccount.sequence), {
+        fee: "1000",
+        networkPassphrase: Networks.TESTNET,
+      })
+        .addOperation(Operation.createAccount({ destination: address, startingBalance: POOL_AMOUNT }))
+        .setTimeout(60)
+        .build();
+      tx.sign(pool);
 
-    const submit = await fetch(`${HORIZON}/transactions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ tx: tx.toXDR() }),
-    });
-    const result = await submit.json();
-    if (!submit.ok) {
+      submit = await fetch(`${HORIZON}/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ tx: tx.toXDR() }),
+      });
+      result = await submit.json();
+      const badSeq = !submit.ok && result?.extras?.result_codes?.transaction === "tx_bad_seq";
+      if (!badSeq) break;
+      await new Promise((r) => setTimeout(r, 300 + Math.random() * 1200 * attempt));
+    }
+    if (!submit || !submit.ok) {
       // Someone (e.g. a late Friendbot reply) created the account meanwhile: that's fine.
       if (await accountExists(address)) { await release(); return reply(200, { status: "already_active" }); }
       throw new Error(result?.extras?.result_codes ? JSON.stringify(result.extras.result_codes) : "submit failed");

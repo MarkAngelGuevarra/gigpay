@@ -89,7 +89,8 @@ test('TEST 8: Role switch really syncs profiles.role (RLS checks it for task cre
 });
 
 test('TEST 9: A task the database rejects warns the tester instead of failing silently', () => {
-  assert.ok(read('src', 'context', 'TaskContext.jsx').includes("saved on this device only"));
+  const ctx = read('src', 'context', 'TaskContext.jsx');
+  assert.ok(ctx.includes("couldn't share this task with your freelancer") && ctx.includes("Please don't lock funds again"), "warn the tester and never suggest funding twice");
 });
 
 test('TEST 10: Client metrics count only tasks funded on-chain, and no fake "Admin" view is the default', () => {

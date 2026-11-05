@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet } from '../lib/stellar';
 
 // Friendbot rate-limits by IP, so a room of testers on one Wi-Fi can't all be funded by it. GigPay's
 // Testnet pool (Edge Function `fund-practice-wallet`) tops up a signed-in tester's practice wallet once.
@@ -49,6 +49,22 @@ export const AuthProvider = ({ children }) => {
       }
     }
   };
+
+  // Each signed-in account gets its own practice wallet (see setPracticeWalletOwner in stellar.js), so a
+  // shared lab PC never hands one student's wallet to the next. A Freighter wallet is left untouched.
+  useEffect(() => {
+    const realUserId = user && !user.is_simulation_mode && !String(user.id || '').startsWith('demo-') ? user.id : null;
+    const usingPracticeWallet = !publicKey || isDemoWallet(publicKey) || isSimulatorWallet(publicKey);
+    setPracticeWalletOwner(realUserId);
+    if (realUserId && usingPracticeWallet) {
+      const own = provisionSimulatorWallet();
+      if (own && own !== publicKey) {
+        setRawPublicKey(own);
+        try { localStorage.setItem('gigpay_wallet_public_key', own); } catch { /* storage unavailable */ }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -191,9 +207,13 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('gigpay_demo_user');
       localStorage.removeItem('gigpay_wallet_public_key');
+      // The next person on this device must not inherit this account's task cache. (The account's own
+      // practice wallet stays stored under its user id, so signing back in restores it.)
+      localStorage.removeItem('gigpay_shared_tasks');
     } catch (e) {
       console.warn("Storage cleanup notice:", e);
     }
+    setPracticeWalletOwner(null);
     try {
       await supabase.auth.signOut();
     } catch (e) {
@@ -268,8 +288,12 @@ export const AuthProvider = ({ children }) => {
     const isClient = targetRole === 'client';
     const isSimulation = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || user?.id?.startsWith?.('demo-'));
 
+    // Signed-out visitors used to be turned into a shared offline demo user ("Alex Rivera"), whose tasks
+    // no partner can see and which can never count. They now have to sign up with their own email.
+    if (!user) return null;
+
     let updatedUser;
-    if (isSimulation || !user) {
+    if (isSimulation) {
       updatedUser = {
         id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
         email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
@@ -358,6 +382,23 @@ export const AuthProvider = ({ children }) => {
 
   const isSimulationMode = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode);
 
+  // RLS lets only role='client' profiles create tasks and role='freelancer' profiles accept them. Await
+  // the role in the database before any money moves, so an escrow is never locked on-chain and then
+  // rejected by the database (a stranded escrow) because the role still said otherwise.
+  const ensureDbRole = async (role) => {
+    if (!user?.id || String(user.id).startsWith('demo-') || isSimulationMode) return true;
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', user.id);
+    if (error) {
+      console.warn("[AuthContext] Role sync before action failed:", error);
+      return false;
+    }
+    if (user.user_metadata?.role !== role) {
+      setUser((prev) => (prev ? { ...prev, user_metadata: { ...(prev.user_metadata || {}), role } } : prev));
+      supabase.auth.updateUser({ data: { role } }).catch(() => {});
+    }
+    return true;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -371,6 +412,7 @@ export const AuthProvider = ({ children }) => {
       connectTesterWallet,
       connectEphemeralWallet,
       switchRole,
+      ensureDbRole,
       loginSimulationMode,
       isSimulationMode,
       activeRole: user?.user_metadata?.role || 'client'

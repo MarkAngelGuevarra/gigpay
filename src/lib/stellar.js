@@ -117,29 +117,75 @@ export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, de
 };
 
 // Practice-wallet keys for extensionless / mobile testers (Testnet only; see isEphemeralSignerAllowed).
+// Practice wallets belong to the signed-in account, not just the browser. Unscoped keys meant the next
+// student on a shared lab PC inherited the previous student's wallet (and its escrows), merging two people
+// into one wallet in the evidence. Once someone signs in, keys live under `<key>:<userId>`; the browser's
+// unscoped wallet (created before sign-in) is handed to the first account that signs in here, so nobody
+// loses a wallet that already funded an escrow.
+const EPHEMERAL_PUB = 'gigpay_ephemeral_pubkey';
+const EPHEMERAL_SEC = 'gigpay_ephemeral_seckey';
+let practiceWalletOwner = null;
+const scoped = (base) => (practiceWalletOwner ? `${base}:${practiceWalletOwner}` : base);
+
+export const setPracticeWalletOwner = (userId) => {
+  practiceWalletOwner = userId || null;
+  if (!practiceWalletOwner || typeof localStorage === 'undefined') return;
+  try {
+    const looseSec = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(EPHEMERAL_SEC)) || localStorage.getItem(EPHEMERAL_SEC);
+    const loosePub = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(EPHEMERAL_PUB)) || localStorage.getItem(EPHEMERAL_PUB);
+    if (looseSec && loosePub && !localStorage.getItem(scoped(EPHEMERAL_SEC))) {
+      localStorage.setItem(scoped(EPHEMERAL_PUB), loosePub);
+      localStorage.setItem(scoped(EPHEMERAL_SEC), looseSec);
+    }
+    // The browser-level copy must not leak to the next account that signs in on this device.
+    localStorage.removeItem(EPHEMERAL_PUB);
+    localStorage.removeItem(EPHEMERAL_SEC);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(EPHEMERAL_PUB);
+      sessionStorage.removeItem(EPHEMERAL_SEC);
+    }
+  } catch (e) {
+    console.warn("Practice wallet storage notice:", e);
+  }
+};
+
 const storeEphemeralKeys = (publicKey, secretKey) => {
   try {
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
-      sessionStorage.setItem('gigpay_ephemeral_seckey', secretKey);
+    if (!practiceWalletOwner && typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(EPHEMERAL_PUB, publicKey);
+      sessionStorage.setItem(EPHEMERAL_SEC, secretKey);
     }
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('gigpay_ephemeral_pubkey', publicKey);
-      localStorage.setItem('gigpay_ephemeral_seckey', secretKey);
+      localStorage.setItem(scoped(EPHEMERAL_PUB), publicKey);
+      localStorage.setItem(scoped(EPHEMERAL_SEC), secretKey);
     }
   } catch (e) {
     console.warn("Session storage notice:", e);
   }
 };
 
-const readStoredEphemeralPublicKey = () => {
+// One reader for every signing path (an earlier sessionStorage-only read made accepting a task hang for
+// 30s on Freighter after the tab was reopened).
+const readStoredEphemeralKeys = () => {
   try {
-    return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_pubkey')) ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_pubkey')) || null;
+    if (practiceWalletOwner) {
+      return {
+        pub: (typeof localStorage !== 'undefined' && localStorage.getItem(scoped(EPHEMERAL_PUB))) || null,
+        sec: (typeof localStorage !== 'undefined' && localStorage.getItem(scoped(EPHEMERAL_SEC))) || null
+      };
+    }
+    return {
+      pub: (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(EPHEMERAL_PUB)) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem(EPHEMERAL_PUB)) || null,
+      sec: (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(EPHEMERAL_SEC)) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem(EPHEMERAL_SEC)) || null
+    };
   } catch {
-    return null;
+    return { pub: null, sec: null };
   }
 };
+
+const readStoredEphemeralPublicKey = () => readStoredEphemeralKeys().pub;
 
 /** True when this key is the practice wallet generated in this browser (used for the "Practice wallet" badge). */
 export const isSimulatorWallet = (key) => !!key && key === readStoredEphemeralPublicKey();
@@ -193,10 +239,7 @@ export const createEphemeralTestnetWallet = async () => {
 export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
   if (!isEphemeralSignerAllowed()) return null;
   try {
-    const storedSec = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_seckey')) ||
-                      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_seckey'));
-    const storedPub = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gigpay_ephemeral_pubkey')) ||
-                      (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_ephemeral_pubkey'));
+    const { sec: storedSec, pub: storedPub } = readStoredEphemeralKeys();
 
     if (storedSec && storedPub && (requestedAddress === storedPub || isDemoWallet(requestedAddress))) {
       return {
@@ -388,8 +431,7 @@ export const requestWalletSignature = async (publicKey, description) => {
       .build();
 
     // If using an ephemeral student testnet wallet, sign directly with the stored keypair
-    const storedSecKey = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gigpay_ephemeral_seckey') : null;
-    const storedPubKey = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gigpay_ephemeral_pubkey') : null;
+    const { sec: storedSecKey, pub: storedPubKey } = readStoredEphemeralKeys();
     if (storedSecKey && storedPubKey && publicKey === storedPubKey) {
       try {
         const kp = StellarSdk.Keypair.fromSecret(storedSecKey);
@@ -533,7 +575,8 @@ export const formatStellarError = (error) => {
     return "Your practice wallet is still being set up with free Testnet funds. Wait a few seconds, then try again. No money was moved.";
   }
   if (msg.includes("HostError") || msg.includes("UnreachableCodeReached")) {
-    return "This escrow was not funded by your connected wallet on-chain. Create a new task with 'Lock Funds in Escrow' to test live payment release.";
+    // Never tell people to lock funds again: the cause may be the contract's capacity, not their task.
+    return "The escrow contract rejected this transaction, so nothing was sent and no money moved. Please don't lock funds again; tell the GigPay team which task this was.";
   }
   if (msg.includes("insufficient_balance") || msg.includes("Insufficient balance") || msg.includes("balance")) {
     return msg.includes("Account holds") ? msg : "Insufficient Testnet XLM balance to fund this escrow.";
@@ -683,6 +726,52 @@ export const pollSorobanTransactionWithBackoff = async (
   };
 };
 
+export const NETWORK_BUSY_MESSAGE =
+  "The Stellar network is busy right now, so nothing was sent and no money moved. Wait a few seconds and try again.";
+export const RELEASE_PENDING_MESSAGE =
+  "The release is still confirming on Stellar. Nothing is marked as paid yet. Wait a minute, refresh, then press Release again: if it already went through, GigPay will tell you.";
+
+/**
+ * Sends a signed Soroban transaction and waits for the ledger to confirm it.
+ *  - TRY_AGAIN_LATER / ERROR: the network did not accept it, so nothing was sent -> throw.
+ *  - send timed out: it may still have been accepted, so keep polling by the hash computed locally.
+ *  - accepted but not confirmed within the poll window -> { status: 'PENDING' }, never success.
+ */
+export const sendAndConfirm = async (signedTx, { server = sorobanServer, poll = pollSorobanTransactionWithBackoff } = {}) => {
+  const localHash = signedTx.hash().toString('hex');
+  let sendResult = null;
+  try {
+    sendResult = await withTimeout(server.sendTransaction(signedTx), 10000);
+  } catch (sendErr) {
+    if (!String(sendErr?.message || '').includes('TIMEOUT')) throw sendErr;
+    console.warn('[sendAndConfirm] send timed out; checking whether the network accepted it:', localHash);
+  }
+  if (sendResult?.status === 'TRY_AGAIN_LATER') throw new Error(NETWORK_BUSY_MESSAGE);
+  if (sendResult?.status === 'ERROR') {
+    throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+  }
+  const txHash = sendResult?.hash || localHash;
+  const pollResult = await poll(txHash);
+  if (pollResult.status !== 'SUCCESS') {
+    return { status: 'PENDING', hash: txHash, explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}` };
+  }
+  return pollResult;
+};
+
+/**
+ * Looks up a fund_task transaction that was still pending when the client's page gave up waiting.
+ * Returns { status: 'SUCCESS', onChainTaskId } | { status: 'FAILED' } | { status: 'NOT_FOUND' }.
+ */
+export const getFundTaskOutcome = async (txHash, { server = sorobanServer } = {}) => {
+  const tx = await server.getTransaction(txHash);
+  if (tx.status === 'SUCCESS') {
+    let onChainTaskId = null;
+    try { onChainTaskId = tx.returnValue ? Number(StellarSdk.scValToNative(tx.returnValue)) : null; } catch { /* no return value */ }
+    return { status: 'SUCCESS', onChainTaskId };
+  }
+  return { status: tx.status === 'FAILED' ? 'FAILED' : 'NOT_FOUND' };
+};
+
 /**
  * Executes the complete fund_task flow:
  * 1. Simulates & prepares the Soroban invocation transaction.
@@ -770,25 +859,26 @@ export const submitFundTask = async ({
       signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
     }
 
-    // 5. Submit transaction to Soroban RPC
-    const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
-
-    if (sendResult.status === 'ERROR') {
-      throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+    // 5-6. Submit and wait for confirmation. Not confirmed yet is reported as pending, never as success.
+    const outcome = await sendAndConfirm(signedTx);
+    if (outcome.status === 'PENDING') {
+      return {
+        success: false,
+        pending: true,
+        hash: outcome.hash,
+        onChainTaskId: null,
+        clientAddress: effectiveClientAddress,
+        explorerUrl: outcome.explorerUrl,
+        isDemo: false
+      };
     }
-
-    const txHash = sendResult.hash;
-
-    // 6. Resilient polling with exponential backoff
-    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
-    const onChainTaskId = pollResult.returnValue || null;
 
     return {
       success: true,
-      hash: txHash,
-      onChainTaskId,
+      hash: outcome.hash,
+      onChainTaskId: outcome.returnValue || null,
       clientAddress: effectiveClientAddress,
-      explorerUrl: pollResult.explorerUrl,
+      explorerUrl: outcome.explorerUrl,
       isDemo: false
     };
   } catch (error) {
@@ -963,22 +1053,18 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
       signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
     }
 
-    // 3. Submit transaction to Soroban RPC
-    const sendResult = await withTimeout(sorobanServer.sendTransaction(signedTx), 10000);
-
-    if (sendResult.status === 'ERROR') {
-      throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+    // 3-4. Submit and wait for confirmation. A release that is not confirmed yet must not mark the task
+    // as paid: throw, so the task stays unreleased; pressing Release again later either confirms it or
+    // reports "already released" if this one landed in the meantime.
+    const outcome = await sendAndConfirm(signedTx);
+    if (outcome.status === 'PENDING') {
+      throw new Error(RELEASE_PENDING_MESSAGE);
     }
-
-    const txHash = sendResult.hash;
-
-    // 4. Resilient polling with exponential backoff
-    const pollResult = await pollSorobanTransactionWithBackoff(txHash);
 
     return {
       success: true,
-      hash: txHash,
-      explorerUrl: pollResult.explorerUrl,
+      hash: outcome.hash,
+      explorerUrl: outcome.explorerUrl,
       isDemo: false
     };
   } catch (error) {

@@ -194,6 +194,16 @@ p {
     min-width: 36px;
     min-height: 36px;
   }
+  /* iOS zooms the page into any field under 16px; inline styles set ~13px, hence !important. */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  /* On phones, put "Create Task Escrow" above the task list instead of ~2,600px down the page. */
+  .create-task-panel {
+    order: -1;
+  }
   h1 {
     font-size: clamp(1.75rem, 5vw, 2.5rem);
     line-height: 1.2;

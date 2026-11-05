@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useMemo } from '
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, submitApproveTask, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress, DEFAULT_FREELANCER_TESTNET_ADDRESS } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress, DEFAULT_FREELANCER_TESTNET_ADDRESS } from '../lib/stellar';
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
@@ -104,7 +104,7 @@ const INITIAL_VERIFICATION_LEDGER = onchainEscrows.escrows.map((e) => ({
 }));
 
 export const TaskProvider = ({ children }) => {
-  const { user, publicKey } = useAuth();
+  const { user, publicKey, ensureDbRole } = useAuth();
   const { addToast } = useToast();
 
   // 1. Zero-Flash Hydration: initialize immediately from local cache so UI renders in 0ms
@@ -181,6 +181,37 @@ export const TaskProvider = ({ children }) => {
     });
   };
 
+  // Puts one task back exactly as it was, bypassing the merge. The merge never lowers a status (so a stale
+  // copy can't undo progress), which also meant a failed release or claim could never be rolled back:
+  // the task stayed "Completed" on screen, counted as released, and Release could not be retried.
+  const restoreTask = (snapshot) => {
+    if (!snapshot?.id) return;
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === snapshot.id ? snapshot : t));
+      setLocalTasks(next);
+      if (broadcastChannel) {
+        try {
+          broadcastChannel.postMessage({ type: 'RESTORE_TASK', task: snapshot });
+        } catch (e) {
+          console.warn("BroadcastChannel postMessage error:", e);
+        }
+      }
+      return next;
+    });
+  };
+
+  // supabase-js returns errors instead of throwing; every write must check them, or the user is told an
+  // action worked when the database (RLS / guard trigger) rejected it.
+  const writeTask = async (id, fields) => {
+    if (!isUuid(id)) return null;
+    try {
+      const { error } = await supabase.from('tasks').update(fields).eq('id', id);
+      return error || null;
+    } catch (dbErr) {
+      return dbErr;
+    }
+  };
+
   const addLedgerRecord = (record) => {
     setStoredLedgerRecords((prev) => {
       const updated = [record, ...prev.filter(r => r.id !== record.id && r.txHash !== record.txHash)];
@@ -215,6 +246,9 @@ export const TaskProvider = ({ children }) => {
         if (event.data?.type === 'SYNC_TASKS' && Array.isArray(event.data.tasks)) {
           setTasks((prev) => mergeTaskLists(prev, event.data.tasks));
         }
+        if (event.data?.type === 'RESTORE_TASK' && event.data.task?.id) {
+          setTasks((prev) => prev.map((t) => (t.id === event.data.task.id ? event.data.task : t)));
+        }
       };
     }
 
@@ -225,6 +259,47 @@ export const TaskProvider = ({ children }) => {
       }
     };
   }, [broadcastChannel]);
+
+  // 2b. Resolve escrows whose funding was sent but not confirmed while the client waited ("Confirming").
+  // The chain is the source of truth: SUCCESS fills in the escrow ID and opens the task; FAILED, or a
+  // transaction still unknown after 5 minutes (Soroban transactions expire long before that), marks it Failed.
+  const confirmingKey = tasks
+    .filter((t) => t.status === 'Confirming' && t.client_id === user?.id && /^[0-9a-f]{64}$/.test(t.tx_hash || ''))
+    .map((t) => t.id)
+    .join(',');
+  useEffect(() => {
+    if (!confirmingKey) return undefined;
+    let cancelled = false;
+    const check = async () => {
+      for (const t of tasks.filter((x) => confirmingKey.split(',').includes(x.id))) {
+        try {
+          const outcome = await getFundTaskOutcome(t.tx_hash);
+          if (cancelled) return;
+          const ageMs = Date.now() - Date.parse(t.created_at || 0);
+          let fields = null;
+          if (outcome.status === 'SUCCESS' && outcome.onChainTaskId) {
+            fields = { status: 'Available', on_chain_task_id: outcome.onChainTaskId, is_simulated: false };
+          } else if (outcome.status === 'FAILED' || (outcome.status === 'NOT_FOUND' && ageMs > 5 * 60 * 1000)) {
+            fields = { status: 'Failed' };
+          }
+          if (!fields) continue;
+          const { is_simulated: _local, ...dbFields } = fields;
+          await writeTask(t.id, dbFields);
+          restoreTask({ ...t, ...fields, explorer_url: fields.status === 'Available' ? `https://stellar.expert/explorer/testnet/tx/${t.tx_hash}` : t.explorer_url });
+          addToast(fields.status === 'Available'
+            ? `"${t.title}" is confirmed on Stellar and open for your freelancer.`
+            : `"${t.title}" didn't go through on Stellar, so no money was locked. You can create it again.`,
+          fields.status === 'Available' ? 'success' : 'warning');
+        } catch (err) {
+          console.warn('[GigPay] Confirming-task check notice:', err?.message || err);
+        }
+      }
+    };
+    check();
+    const timer = setInterval(check, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmingKey]);
 
   // 3. Database Fetch & Supabase Realtime Pipeline
   useEffect(() => {
@@ -279,6 +354,13 @@ export const TaskProvider = ({ children }) => {
       throw new Error("The freelancer wallet address isn't valid. It should start with G and be 56 characters long.");
     }
     const recipientWallet = requestedFreelancer || DEFAULT_FREELANCER_TESTNET_ADDRESS;
+
+    // Confirm the Client role in the database BEFORE locking money: otherwise RLS rejects the task row after
+    // the escrow is already funded on-chain, stranding it where the freelancer can never see it.
+    if (typeof ensureDbRole === 'function' && !(await ensureDbRole('client'))) {
+      throw new Error("GigPay couldn't confirm your Client role, so no money was locked. Sign out, sign back in, then try again.");
+    }
+
     try {
       const fundResult = await submitFundTask({
         clientAddress: activeKey,
@@ -287,7 +369,10 @@ export const TaskProvider = ({ children }) => {
       });
 
       const txHash = fundResult?.hash || ('sim-tx-' + Date.now());
-      const isEvidence = !fundResult?.isDemo && !isNonEvidenceHash(txHash);
+      // Sent but not confirmed yet: keep the task as "Confirming" (with its hash) and resolve it from the
+      // chain later, instead of recording an escrow that may not exist or inviting a second funding.
+      const isPending = !!fundResult?.pending;
+      const isEvidence = !isPending && !fundResult?.isDemo && !isNonEvidenceHash(txHash);
       const explorerUrl = isEvidence ? (fundResult?.explorerUrl || `https://stellar.expert/explorer/testnet/tx/${txHash}`) : null;
       const resolvedClientWallet = fundResult?.clientAddress || (typeof activeKey === 'string' ? activeKey : 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P');
 
@@ -296,7 +381,7 @@ export const TaskProvider = ({ children }) => {
         id: generatedId,
         title: task.title,
         amount: String(task.amount),
-        status: 'Available',
+        status: isPending ? 'Confirming' : 'Available',
         client_id: user?.id || 'demo-client-uuid-001',
         client_wallet: resolvedClientWallet,
         freelancer_wallet: recipientWallet,
@@ -334,7 +419,7 @@ export const TaskProvider = ({ children }) => {
             .insert([{
               title: task.title,
               amount: task.amount,
-              status: 'Available',
+              status: newTask.status,
               id: isUuid(generatedId) ? generatedId : undefined,
               client_id: user.id,
               tx_hash: txHash,
@@ -343,21 +428,23 @@ export const TaskProvider = ({ children }) => {
               // Escrow identity, so a release from any device targets this task's own escrow.
               // Placeholder/demo values are sent as null (the DB rejects non-G-address wallets).
               on_chain_task_id: newTask.on_chain_task_id,
-              client_wallet: isEvidence && isRealStellarAddress(resolvedClientWallet) ? resolvedClientWallet : null,
-              freelancer_wallet: isEvidence && isRealStellarAddress(recipientWallet) ? recipientWallet : null
+              client_wallet: (isEvidence || isPending) && isRealStellarAddress(resolvedClientWallet) ? resolvedClientWallet : null,
+              freelancer_wallet: (isEvidence || isPending) && isRealStellarAddress(recipientWallet) ? recipientWallet : null
             }]);
           // supabase-js reports errors in the result instead of throwing; surface them for debugging.
           if (insertError) {
             console.warn("Supabase insert notice (using local synced state):", insertError);
-            // Without the shared record the freelancer's device never sees this task, so say so.
-            addToast("This task was saved on this device only, so your freelancer can't see it yet. Sign out, sign in again as a client, and recreate it.", "warning");
+            // The escrow may already be locked on-chain, so never suggest funding it again.
+            addToast(`Your payment is locked on Stellar, but GigPay couldn't share this task with your freelancer. Please don't lock funds again: send the GigPay team this transaction: ${txHash.slice(0, 12)}…`, "warning");
           }
         } catch (dbErr) {
           console.warn("Supabase insert notice (using local synced state):", dbErr);
         }
       }
 
-      if (fundResult?.explorerUrl && !fundResult?.isDemo) {
+      if (isPending) {
+        addToast("The network is slow, so your escrow is still confirming. Please don't lock funds again; GigPay will update this task by itself.", "warning");
+      } else if (fundResult?.explorerUrl && !fundResult?.isDemo) {
         addToast(`Escrow funded on Testnet! Tx: ${txHash.slice(0, 10)}...`, "success");
       }
     } catch (err) {
@@ -383,12 +470,11 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...proofData } : t));
 
-    if (isUuid(id)) {
-      try {
-        await supabase.from('tasks').update(proofData).eq('id', id);
-      } catch (dbErr) {
-        console.warn("Supabase proof-of-work update notice:", dbErr);
-      }
+    const proofError = await writeTask(id, proofData);
+    if (proofError) {
+      console.warn("Supabase proof-of-work update notice:", proofError);
+      restoreTask(task);
+      throw new Error("GigPay couldn't save your proof of work, so your client can't see it yet. Check you're signed in as the freelancer on this task, then try again.");
     }
 
     addToast("Proof of work submitted! The client can now review your deliverables.", "success");
@@ -408,12 +494,11 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...disputeData } : t));
 
-    if (isUuid(id)) {
-      try {
-        await supabase.from('tasks').update(disputeData).eq('id', id);
-      } catch (dbErr) {
-        console.warn("Supabase dispute notice:", dbErr);
-      }
+    const disputeError = await writeTask(id, disputeData);
+    if (disputeError) {
+      console.warn("Supabase dispute notice:", disputeError);
+      restoreTask(task);
+      throw new Error("GigPay couldn't save the dispute, so nothing was frozen. Only the client who funded this task can dispute it; try again.");
     }
 
     addToast("Task has been marked as Disputed. Escrow release is frozen.", "warning");
@@ -431,12 +516,11 @@ export const TaskProvider = ({ children }) => {
 
     updateTasksAndCache((prev) => prev.map(t => t.id === id ? { ...t, ...resolvedData } : t));
 
-    if (isUuid(id)) {
-      try {
-        await supabase.from('tasks').update(resolvedData).eq('id', id);
-      } catch (dbErr) {
-        console.warn("Supabase dispute resolve notice:", dbErr);
-      }
+    const resolveError = await writeTask(id, resolvedData);
+    if (resolveError) {
+      console.warn("Supabase dispute resolve notice:", resolveError);
+      restoreTask(task);
+      throw new Error("GigPay couldn't save the resolution, so the task is still frozen. Try again in a moment.");
     }
 
     addToast("Dispute resolved! Escrow workflow resumed to In Progress.", "success");
@@ -451,10 +535,15 @@ export const TaskProvider = ({ children }) => {
       throw new Error("Cannot release funds while task is in Disputed status. Dispute must be resolved first.");
     }
 
+    // Accepting needs the Freelancer role in the database (RLS); confirm it before claiming the task.
+    if (assignFreelancer && typeof ensureDbRole === 'function' && !(await ensureDbRole('freelancer'))) {
+      throw new Error("GigPay couldn't confirm your Freelancer role. Sign out, sign back in, then accept again.");
+    }
+
     const activeKey = publicKey || 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
-    const previousTasks = [...tasks];
-    const updatedFields = { 
-      status: newStatus 
+    const snapshot = { ...taskToUpdate };
+    const updatedFields = {
+      status: newStatus
     };
 
     if (assignFreelancer && user) {
@@ -498,18 +587,31 @@ export const TaskProvider = ({ children }) => {
         await requestWalletSignature(activeKey, `Action: Task ${String(id).slice(0, 8)}`);
       }
     } catch (signErr) {
-      updateTasksAndCache(previousTasks);
+      // The contract says this escrow was already paid (an earlier, slow release went through):
+      // record it as Completed, without inventing a release hash.
+      if (newStatus === 'Completed' && /already released/i.test(signErr?.message || '')) {
+        const done = { status: 'Completed', completed_at: new Date().toISOString() };
+        restoreTask({ ...snapshot, ...done });
+        await writeTask(snapshot.id, done);
+        addToast("This payment had already been released on Stellar. The task is now marked Completed.", "info");
+        return { success: true, alreadyReleased: true };
+      }
+      restoreTask(snapshot);
       throw signErr;
     }
 
-    if (isUuid(id)) {
-      try {
-        await supabase
-          .from('tasks')
-          .update(updatedFields)
-          .eq('id', id);
-      } catch (dbErr) {
-        console.warn("Supabase update notice (using permanent local state):", dbErr);
+    const saveError = await writeTask(snapshot.id, updatedFields);
+    if (saveError) {
+      console.warn("Supabase update notice:", saveError);
+      if (newStatus === 'Completed') {
+        // The money already moved on-chain, so keep Completed (the chain is the truth); only the shared
+        // record is behind. A later fetch can't demote it.
+        addToast("Payment released on Stellar, but GigPay couldn't update the shared record yet. Refresh in a minute; please don't release again.", "warning");
+      } else {
+        restoreTask(snapshot);
+        throw new Error(assignFreelancer
+          ? "Someone else may have accepted this task first, or it pays a different freelancer. Refresh to see the latest tasks."
+          : "GigPay couldn't save this change. Refresh and try again.");
       }
     }
 

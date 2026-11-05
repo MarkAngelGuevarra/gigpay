@@ -94,7 +94,7 @@ runTest(5, "Freelancer Tour defines all 5 required pilot steps", () => {
   assert.ok(widgetSrc.includes("title: 'Get Paid & Check It On-Chain'"), "Step 5 must point testers to the on-chain payout");
   
   // In-card actions
-  assert.ok(widgetSrc.includes("1-Click Switch to Freelancer"), "Must include 1-click persona switch button");
+  assert.ok(widgetSrc.includes("Open Freelancer Portal") && !widgetSrc.includes("single device"), "Guide must send testers to their own portal, never promise one-device dual-role testing");
   assert.ok(widgetSrc.includes("⚡ Auto-Fill Sample Deliverables"), "Must include 1-click proof auto-fill button");
   assert.ok(widgetSrc.includes("Check My Balance on Stellar Expert") && !widgetSrc.includes("Withdraw to Bank"), "Step 5 must link to Stellar Expert, not a fake bank flow");
 });

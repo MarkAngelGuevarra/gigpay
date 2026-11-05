@@ -6,18 +6,19 @@ GigPay runs on **Stellar Testnet**. Testnet XLM is practice money with no cash v
 
 ## Part 1 — For testers (share this section)
 
-You need **two people on two different phones or computers**: one acts as the **client**, the other as the **freelancer**. One person cannot test both roles in the same browser.
+You need **two people on two different phones or computers**: one acts as the **client**, the other as the **freelancer**. One person, one device, one account, one role. Use your phone's normal browser (Chrome or Safari), not incognito/private mode, and don't use the "Grant reviewer" demo accounts.
 
 ### Freelancer (do this first)
-1. Open **https://www.gigpay.tech**, tap **🚀 Sign Up (New Tester)**, and register with your own email. Confirm the email link, then sign in.
-2. Open the **Freelancer Portal**. A practice wallet is created for you automatically (you'll see a yellow **Practice** badge).
+1. Open **https://www.gigpay.tech** in Chrome or Safari, tap **🚀 Sign Up (New Tester)**, register with your own email, and under **I am a…** tap **Freelancer (Working)**. (No confirmation email is needed.)
+2. Open the **Freelancer Portal**. A practice wallet is created for you automatically (yellow **Practice** badge). Wait until the balance at the top shows a number above 0 (up to 30 seconds; refresh once if needed).
 3. On **Your payout address**, tap **Share invite link** and send it to your client partner (Messenger, Teams, anything). The link fills your address in for them, so nobody retypes 56 characters. (**Copy** still copies the bare address if you need it.)
 
 ### Client
-1. Open your freelancer's **invite link**, then sign up with **your own email** and open the **Client Portal**. Your practice wallet is created and topped up with Testnet XLM automatically (this can take up to 30 seconds).
+1. If the invite link opened inside Messenger or Teams, tap **⋮ → Open in Chrome/Safari** first. Then sign up with **your own email**, keep **Client (Hiring)** selected, and open the **Client Portal**. Your practice wallet is created and topped up with Testnet XLM automatically (this can take up to 30 seconds).
 2. Create a task: title and a small amount (e.g. 2 XLM). The **freelancer's payout address is already filled in** from the invite link; check it matches what they sent. (No link? Paste their address.)
    - Left blank, the payment goes to GigPay's test wallet and **does not count** as a real pilot job.
-3. Tap **Lock Funds in Escrow** and wait about 10 seconds.
+3. Tap **Lock Funds in Escrow** and wait about 10 seconds. If GigPay says the escrow is **Confirming**, don't lock funds again: it updates by itself.
+   - One or two escrows per pair is plenty: the contract has room for a limited number of escrows in total.
 
 ### Freelancer
 4. Refresh the Freelancer Portal. The task shows **"Pays your payout address"**. Tap **Accept Work**.

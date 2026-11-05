@@ -115,10 +115,10 @@ const CLIENT_STEPS = [
     badge: 'Step 3 of 4 • Review & Quality',
     icon: FileCheck,
     teacherVoice: 'Once the freelancer submits proof, review deliverables! You can test both the release flow and dispute freeze mechanism.',
-    description: 'Inspect attached GitHub PRs, live demo URLs, or Google Docs. If specs are not met, the dispute button freezes escrow payout on-chain.',
-    actionLabel: '1-Click Switch to Freelancer',
-    actionType: 'switch_to_freelancer',
-    tip: 'Disputed tasks permanently block release until resolved by both parties.'
+    description: 'Inspect attached GitHub PRs, live demo URLs, or Google Docs. If specs are not met, Freeze & Dispute blocks the release in GigPay until you resolve it.',
+    actionLabel: 'Show Tasks to Review',
+    actionType: 'scroll_escrows',
+    tip: 'A disputed task cannot be released until the client resolves the dispute. (The freeze is enforced by GigPay; the contract itself has no dispute state.)'
   },
   {
     step: 4,
@@ -139,11 +139,11 @@ const FREELANCER_STEPS = [
     title: 'Switch to Freelancer Role',
     badge: 'Step 1 of 5 • Dual Persona',
     icon: UserCheck,
-    teacherVoice: 'Switch your view to the Freelancer Portal. GigPay supports testing both sides of the marketplace from a single device!',
-    description: 'Toggle between Client and Freelancer roles instantly using the top switch button or direct link.',
-    actionLabel: '1-Click Switch to Freelancer',
+    teacherVoice: 'Signed up as a Freelancer on your own phone? Open the Freelancer Portal. Your client partner uses their own phone and account.',
+    description: 'One person, one device, one role: your practice wallet is your payout address, so it must stay yours.',
+    actionLabel: 'Open Freelancer Portal',
     actionType: 'switch_to_freelancer_role',
-    tip: 'Both Client and Freelancer flows can be tested on mobile in 1 browser session.'
+    tip: 'Pick "Freelancer (Working)" when you sign up. Testing both roles on one device makes the client pay their own wallet.'
   },
   {
     step: 2,
@@ -377,6 +377,14 @@ export default function PilotGuideWidget() {
   // Execute Action and smoothly fade/minimize the instruction card with 0 interruption
   const handleExecuteAction = async (actionType) => {
     setState(prev => ({ ...prev, isMinimized: true }));
+
+    // Every guided action needs the tester's own account. Signed-out taps used to create a shared offline
+    // demo user whose tasks no partner can see and which can never count as pilot activity.
+    if (!user) {
+      navigate('/auth');
+      addToast('Sign up with your own email first (tap "Sign Up (New Tester)"), then continue the guide.', 'info');
+      return;
+    }
 
     switch (actionType) {
       case 'connect_wallet': {

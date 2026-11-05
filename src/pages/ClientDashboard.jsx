@@ -40,7 +40,7 @@ const ClientDashboard = () => {
   // Metrics count only tasks whose funding transaction is real on Stellar Testnet. Summing every database
   // row showed 6,770 XLM "escrowed" when about 3 XLM of those tasks was actually locked on-chain
   // (19 demo/July tasks were never funded), which would misstate the evidence to anyone viewing the page.
-  const fundedTasks = clientTasks.filter(t => !t.is_simulated && (
+  const fundedTasks = clientTasks.filter(t => !t.is_simulated && t.status !== 'Confirming' && t.status !== 'Failed' && (
     t.on_chain_task_id != null || (/^[0-9a-f]{64}$/.test(t.tx_hash || '') && !isSimulatedTxHash(t.tx_hash) && !isNonEvidenceHash(t.tx_hash))
   ));
   const totalEscrowed = fundedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
@@ -104,7 +104,7 @@ const ClientDashboard = () => {
     try {
       await resolveDispute(id);
     } catch (error) {
-      addToast("Failed to resolve dispute.", "error");
+      addToast("Failed to resolve dispute: " + (error?.message || error), "error");
     }
   };
 
@@ -520,7 +520,7 @@ const ClientDashboard = () => {
         </div>
 
         {/* Create Task Form */}
-        <div className="glass-panel" style={{ flex: '1 1 300px', height: 'fit-content' }}>
+        <div className="glass-panel create-task-panel" style={{ flex: '1 1 300px', height: 'fit-content' }}>
           <h3 style={{ marginBottom: '1.5rem' }}>Create Task Escrow</h3>
           <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} onSubmit={handleCreateTask}>
             <div>
@@ -687,7 +687,10 @@ const ClientDashboard = () => {
             <input 
               type="text" 
               value={confirmText} 
-              onChange={(e) => setConfirmText(e.target.value)} 
+              // Phone keyboards type "Confirm"; the check needs exact CONFIRM, so capitalise as they type.
+              onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect="off" 
               placeholder="CONFIRM" 
               disabled={isTransacting} 
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: confirmText === 'CONFIRM' ? '1px solid #10b981' : '1px solid var(--border)', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', letterSpacing: '1px', fontWeight: 'bold' }} 

@@ -62,7 +62,9 @@ const Navbar = () => {
     return () => {
       isMounted = false;
     };
-  }, [publicKey]);
+  // Re-run after sign-in too: the GigPay pool only funds signed-in testers, so a wallet created before
+  // sign-in (when Friendbot refused and the pool said 401) gets funded as soon as the tester signs in.
+  }, [publicKey, user?.id]);
 
   const handleSignOut = async () => {
     await signOut();
