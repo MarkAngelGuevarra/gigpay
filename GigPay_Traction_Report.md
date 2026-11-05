@@ -21,7 +21,7 @@
 
 GigPay is a decentralized milestone escrow web application built on **Stellar Soroban (Protocol 22)** to eliminate 20% platform commission cuts and 7–14 day payout holds for Filipino freelancers. 
 
-During the Month 1 Instawards Sprint, GigPay transitioned from initial architecture to a live, production-grade dApp deployed at `https://gigpay.tech`. The platform enforces non-custodial milestone locking and atomic releases in ~5 seconds with near-zero network fees, backed by client-side Freighter signing and a resilient built-in Soroban Testnet Simulator.
+During the Month 1 Instawards Sprint, GigPay transitioned from initial architecture to a live Testnet dApp deployed at `https://gigpay.tech`. The platform enforces non-custodial milestone locking and atomic releases in ~5 seconds with near-zero network fees, backed by client-side Freighter signing and a resilient built-in Soroban Testnet Simulator.
 
 ---
 

@@ -8,7 +8,7 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 ### **Video Checklist (What Armielyn Will Check Off):**
 - [ ] Task Creation & Escrow Funding
 - [ ] Dual-Wallet (Client & Freelancer) Interaction
-- [ ] Real-Time Cross-Window Synchronization (0ms Load & Storage Events)
+- [ ] Real-Time Cross-Window Synchronization (BroadcastChannel & storage events)
 - [ ] Freelancer Proof-of-Work Submission (GitHub PR, Docs, Loom link)
 - [ ] Client Dispute Freeze Demonstration (Release Locked)
 - [ ] Release Confirmation Modal (Typing "CONFIRM")
@@ -20,13 +20,15 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 ### **⏱️ Minute-by-Minute Script:**
 
 #### **0:00 – 0:45 | Introduction & Architecture**
-- *"Hi everyone, I'm Mark Angel Guevarra, lead developer of GigPay for the Stellar Philippines Instawards Sprint 2. GigPay is a decentralized Web3 escrow platform that eliminates the 20% platform fee for freelancers with instant 5-second cross-border payments on Stellar Soroban Protocol 22."*
+- *"Hi everyone, I'm Mark Angel Guevarra, lead developer of GigPay for the Stellar Philippines Instawards Sprint 2. GigPay is a decentralized Web3 escrow platform that eliminates the 20% platform fee for freelancers with payments that settle in about 5 seconds on Stellar Soroban."*
 - *"Today, I'm demonstrating our Month 2 deliverables responding directly to Armielyn Obinguar's acceptance criteria: real-time state synchronization, zero-barrier onboarding, dispute mitigation freeze, milestone proof of work, and automated test verification."*
 
 #### **0:45 – 1:30 | 1-Click Simulator & Escrow Funding**
-- *"Notice that I have two browser windows open side-by-side: on the left is our Client Portal, and on the right is our Freelancer Portal."*
+- *"I have two different browsers open side by side (for example Chrome and Edge, or a laptop and a phone): the Client on the left, the Freelancer on the right. Each browser has its own practice wallet."*
+- *"The freelancer copies their payout address and sends it to the client, who pastes it into the task."*
+- > Recording note: two windows of the same browser share one practice wallet, and the app blocks a freelancer from accepting a task that pays a different address, so always use two browsers or two devices.
 - *"Non-crypto testers can jump in immediately without installing browser extensions. I'll click 'Fill Sample Task' for 2 XLM and click 'Lock Funds in Escrow'."*
-- *"Watch the Freelancer window on the right: in under 50 milliseconds, via our resilient `gigpay_shared_tasks` cache and storage events, the new task appears without any page refresh!"*
+- *"Watch the Freelancer window on the right: in well under a second, via our `gigpay_shared_tasks` cache and storage events, the new task appears without any page refresh!"*
 
 #### **1:30 – 2:15 | Freelancer Proof of Work Submission**
 - *"Now, the Freelancer accepts the task. The status transitions instantly to 'In Progress'."*
@@ -41,5 +43,5 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 #### **3:00 – 3:45 | Public Verification Ledger & Automated Test Suite**
 - *"Finally, let's check our verification evidence. I'll click 'Public Ledger' in the top bar. Reviewers can see every single on-chain invocation, contract ID `CAUU2O5Z...`, transaction hashes, and direct Stellar Expert links."*
 - *"With 1 click, I can click 'Export CSV' to download the full evidence ledger."*
-- *"In the terminal, `npm test` runs 38 automated tests: the 22-test regression suite plus the escrow- and ledger-integrity checks."*
+- *"In the terminal, `npm test` runs 39 automated tests offline (22 regression, 10 escrow-integrity, 7 ledger-integrity), and `cargo test` runs the 4 contract tests."*
 - *"Thank you to the Stellar Development Foundation and Rise In for supporting GigPay!"*

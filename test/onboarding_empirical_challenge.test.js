@@ -56,10 +56,12 @@ test('TEST 4: Ledger CSV export contains wallets only, no names or emails', () =
   assert.ok(m[1].includes('Counts As Outside User'), 'CSV must label which rows count as outside users');
 });
 
-test('TEST 5: Telemetry CSV export contains no Email or Department column', () => {
-  const tele = read('src', 'lib', 'telemetry.js');
-  const block = tele.slice(tele.indexOf('const headers = ['), tele.indexOf('];', tele.indexOf('const headers = [')));
-  assert.ok(!/'Email'|'Department'/.test(block), 'telemetry CSV must not export emails or departments');
+test('TEST 5: No hardcoded tester list (names, ratings or quotes) ships in the app', () => {
+  assert.ok(!fs.existsSync(path.join(root, 'src', 'lib', 'telemetry.js')), 'telemetry.js held named testers tied to team wallets and was removed');
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+  const offenders = walk(path.join(root, 'src')).filter((f) => /\.(jsx?|tsx?)$/.test(f) && /SPRINT_1_BASELINE_USERS|"rating":\s*\d/.test(fs.readFileSync(f, 'utf-8')));
+  assert.deepStrictEqual(offenders, [], `Hardcoded tester records found in: ${offenders.join(', ')}`);
 });
 
 test("TEST 6: ClientDashboard requires exact uppercase 'CONFIRM' to release escrow", () => {

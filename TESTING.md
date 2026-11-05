@@ -2,7 +2,7 @@
 
 **SOW Alignment:** Deliverable 2 Hardening ($2,000 USD Allocation)  
 **Acceptance Metric (SOW Table 7):** $\ge 2$ unique Freighter wallets executed on Testnet  
-**Target Environment:** Stellar Testnet (Protocol 22)  
+**Target Environment:** Stellar Testnet (contract built with soroban-sdk 22)  
 **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
 **Native XLM SAC ID:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`  
 **Live Production URL:** [https://gigpay.tech](https://gigpay.tech)
@@ -14,8 +14,9 @@
 The test suite validates RPC health, contract schema, transaction footprint simulation, multi-wallet syntax, anti-self-dealing guards, and exponential backoff retry algorithms without requiring manual clicks.
 
 ### Running the Test Suite
+These 9 checks call Stellar Testnet, so they are not part of the offline `npm test` run:
 ```bash
-npm test
+node src/test/soroban_sim.test.js
 ```
 
 ### Verified Assertions (9/9 Passing):

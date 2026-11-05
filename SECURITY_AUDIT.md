@@ -111,8 +111,8 @@ Clamped u32 Task ID: 1070320958 (within [1, 4294967295])
 - [x] **Production URL:** `https://gigpay.tech` (Vercel CDN)
 - [x] **SSL / TLS Encryption:** Strict HSTS & TLS 1.3 enforced by Vercel Edge Network
 - [x] **CSP connect-src** (as in `index.html`): `'self'`, `va.vercel-scripts.com`, `*.stellar.org` (Soroban RPC, Horizon, Friendbot) and `*.supabase.co`, including their `wss://` endpoints.
-- [x] **Antivirus Bypassing Proxy:** Verified `isLocalhost` conditional routing in `src/lib/supabase.js`
-- [x] **Continuous Verification:** Daily semantic commits tracked on [Pull Request #5](https://github.com/MarkAngelGuevarra/gigpay/pull/5)
+- [x] **Supabase fallback route:** if a network blocks `*.supabase.co` (some school and office firewalls do), `src/lib/supabase.js` retries through the same-origin `/api/supabase` rewrite in `vercel.json`.
+- [x] **Task update guard:** a database trigger (`supabase/migrations/20261105023600_guard_task_updates_and_harden_auth_functions.sql`) makes escrow fields write-once and limits what a freelancer can change; only the task's client can release or dispute.
 
 ---
 
