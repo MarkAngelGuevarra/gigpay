@@ -5,8 +5,7 @@
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Network](https://img.shields.io/badge/Stellar-Testnet%20Protocol%2022-teal)
-![Tests](https://img.shields.io/badge/tests-76%2F76%20passing-brightgreen)
-![SOW Deliverables](https://img.shields.io/badge/Sprint%202%20SOW-Verified-green)
+![Tests](https://img.shields.io/badge/npm%20test-39%2F39%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
@@ -31,33 +30,32 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 - **Zero Middleman Fees:** By operating as a decentralized protocol, we eliminate the 20% platform tax. Freelancers keep exactly what they earn.
 - **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. Freelancers work knowing the funds are cryptographically guaranteed. Once work is approved, funds are released instantly.
 
-> **Note on Simulated Features:** All bank off-ramps and fiat withdrawals in the demo dashboard are simulated test features for UI demonstration purposes. Real settlement operates strictly on Stellar Testnet (Protocol 22).
+> **Testnet only.** Everything runs on Stellar Testnet with practice XLM. There is no bank, GCash or fiat withdrawal in the app; approved payments go to the freelancer's Testnet address.
 
 ---
 
 ## 🚀 Sprint 2 (Month 2 SOW) Deliverables Architecture
 
-GigPay's Month 2 engagement fulfills all 4 deliverables specified in our approved Statement of Work:
+What GigPay has built against the 4 deliverables in the Month 2 Statement of Work, and what is still open:
 
 ### 1. Real-Time Multi-User Task Lifecycle & Escrow State Sync (Deliverable 1 — $1,500)
 * **Sub-500ms State Reflection:** Tasks funded by clients render immediately on freelancers' screens without manual page reloads or database polling.
 * **Resilient Shared Cache:** Implements optimistic in-memory dispatch combined with `gigpay_shared_tasks` localStorage caching and cross-window storage event listeners.
-* **RLS Fallback Bridge:** Seamlessly tolerates network partitions or Supabase RLS error 42501 with 100% data integrity.
+* **Save-failure handling:** If Supabase rejects a write (for example RLS error 42501), the task stays visible locally and the user sees a warning that it was not saved.
 
 ### 2. Zero-Barrier Onboarding & Public Verification Ledger (Deliverable 2 — $1,250)
-* **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate authentic ephemeral Ed25519 keypairs pre-funded with 10,000 XLM via Friendbot.
+* **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate authentic ephemeral Ed25519 keypairs funded with Testnet XLM by Friendbot. One practice wallet per browser, so a client and a freelancer need two devices.
 * **Public Verification Ledger:** Every escrow on the contract, generated from the chain (`node scripts/index_escrows.mjs`), with each row labeled outside user vs team/test wallet, plus one-click CSV export.
-* **Anti-Bot Filtering:** Strictly purges generic placeholders (`Demo Client`, `Freelancer`) to present verifiable student developer identities.
 
 ### 3. Dispute Mitigation Freeze & Proof-of-Work Verification (Deliverable 3 — $1,250)
 * **Proof-of-Work Deliverable Submission:** Freelancers attach GitHub PR, Loom, or Google Drive links along with verification notes, moving tasks to `Under Review`.
 * **Client Deliverable Review:** Clients inspect deliverables directly from the dashboard before releasing funds.
-* **Structured Dispute Freeze:** Clients can halt releases and log structured dispute metadata (`dispute_reason`, `disputed_at`).
+* **Structured Dispute Freeze:** Clients can halt releases and log structured dispute metadata (`dispute_reason`, `disputed_at`). The freeze is enforced by the app; the deployed contract has no dispute or refund state.
 * **Accidental Release Guard:** AWS-style confirmation modal requiring users to type `"CONFIRM"` before escrow funds can be unlocked.
 
 ### 4. Comprehensive Testing Suite & Clean-Install Logs (Deliverable 4 — $1,000)
-* **Automated Tests:** 6 test suites with **76 total passing assertions** (`npm test`), plus 4/4 native Rust contract tests (`cargo test`).
-* **Clean-Install Validation:** Verified from a fresh clone on Windows 11; Linux and macOS runs still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+* **Automated Tests:** `npm test` runs 39 tests offline (22 regression, 10 escrow-integrity, 7 ledger-integrity), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
+* **Clean-Install Validation:** Verified from a fresh clone on Windows 11 and Linux (Ubuntu 24.04); macOS still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 
 ---
 
@@ -69,7 +67,7 @@ npm test
 ```
 
 ### Test Suites
-`npm test` runs 38 tests: the 22-test regression suite, 10 escrow-integrity tests and 6 ledger-integrity tests. The suites below run individually with `node <file>`; some call Stellar Testnet.
+`npm test` runs 39 tests with no network access: the 22-test regression suite, 10 escrow-integrity tests and 7 ledger-integrity tests. The suites below run individually with `node <file>`; `soroban_sim` and `live_headless_e2e` need Stellar Testnet access.
 * `soroban_sim.test.js`: Soroban Protocol 22 RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
 * `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).

@@ -13,5 +13,5 @@ This document provides definitive on-chain verification of the **GigPay Soroban 
 
 ## 📁 Code Repository Mapping
 1. **Rust Smart Contract:** located at `contracts/gigpay_escrow/src/lib.rs` (Protocol 22, 4/4 passing unit tests)
-2. **Compiled WASM Binary:** located at `contracts/gigpay_escrow/target/wasm32v1-none/release/gigpay_escrow.wasm`
+2. **Compiled WASM Binary:** not tracked in git. Build it with `stellar contract build` (or `cargo build --target wasm32v1-none --release`) in `contracts/gigpay_escrow`; output goes to `target/wasm32v1-none/release/gigpay_escrow.wasm`.
 3. **Frontend Connection:** Configured in `src/lib/stellar.js` and `src/context/TaskContext.jsx`, referencing `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`.

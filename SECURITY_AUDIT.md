@@ -7,7 +7,7 @@
 **Active Testnet Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
 **Native XLM SAC Contract ID:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`  
 **Soroban Protocol Version:** Protocol 22  
-**Audit Status:** PASSED (Zero High/Critical Vulnerabilities Detected)  
+**Review type:** Self-review by the builder (not a third-party audit; third-party audits are out of SOW scope)  
 
 ---
 
@@ -28,9 +28,9 @@ The audit focuses on four critical defense layers:
 | Threat ID | Threat Category | Attack Vector / Risk | GigPay Mitigation & Defense Mechanism | Verification Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **THREAT-01** | **Unauthorized Escrow Release** | Malicious actor attempts to release escrowed funds without client consent. | On-chain `approve_task` requires cryptographic authorization from the client address who originally locked the escrow (`require_auth()`). Frontend validates client public key prior to transaction assembly. | **VERIFIED (PASSED)** |
-| **THREAT-02** | **Self-Dealing / Collusion** | Client sets the destination freelancer wallet to their own address to fake volume or exploit platform bonuses. | Enforced by `validateEscrowParties()` in `src/lib/stellar.js`. Strictly blocks transaction assembly if `clientAddress === freelancerAddress`. | **VERIFIED (PASSED)** |
+| **THREAT-02** | **Self-Dealing / Collusion** | Client sets the destination freelancer wallet to their own address to fake volume or exploit platform bonuses. | Enforced by `validateEscrowParties()` in `src/lib/stellar.js`. Strictly blocks transaction assembly if `clientAddress === freelancerAddress`. This check is in the app only; the deployed contract does not reject client == freelancer. | **MITIGATED IN APP** |
 | **THREAT-03** | **Private Key / Seed Extraction** | Malicious script or extension attempts to read seed phrases or private keys from local storage. | No server-side key custody: GigPay never logs or transmits private keys, and none exist on the server or in the database. Freighter users sign inside the Freighter extension. **Updated Nov 4, 2026:** the optional Testnet-only *practice wallet* (for testers without Freighter) stores its key in that tester's own browser storage, so a script running on the page could read it. Accepted for Testnet practice funds only; the practice wallet is disabled outside Testnet (`isEphemeralSignerAllowed`). | **ACCEPTED RISK (Testnet only)** |
-| **THREAT-04** | **Replay & State Collisions** | Duplicate task IDs causing `AlreadyInit` on-chain contract panics or cross-transaction replaying. | Dynamic `u32` identifier randomization and numeric boundary clamping (`[1, 4294967295]`) verified in automated test suite (Test 9 in `soroban_sim.test.js`). | **VERIFIED (PASSED)** |
+| **THREAT-04** | **Replay & State Collisions** | Duplicate task IDs causing `AlreadyInit` on-chain contract panics or cross-transaction replaying. | The contract assigns escrow IDs from a sequential `TaskCounter`, so IDs cannot collide; the app checks IDs stay within `u32` bounds (`[1, 4294967295]`, Test 9 in `soroban_sim.test.js`). | **VERIFIED (PASSED)** |
 | **THREAT-05** | **Cross-Site Scripting (XSS)** | Malicious third-party scripts injected via CDN or untrusted analytics. | Strict Content Security Policy (`CSP`) defined in `index.html`. Restricts `connect-src` strictly to `https://*.supabase.co`, `https://va.vercel-scripts.com`, and Stellar RPC/Horizon endpoints. | **VERIFIED (PASSED)** |
 | **THREAT-06** | **Account Starvation / Stuck Tx** | Client attempts to fund escrow without leaving enough XLM for base reserves (1.0 XLM) and transaction fees. | `checkBalanceSufficiency()` pre-flight check asserts `currentBalance >= amount + 1.5 XLM` before prompting wallet signature. | **VERIFIED (PASSED)** |
 | **THREAT-07** | **RPC Latency & False Failure** | Network latency on Testnet RPC causing timeout and user panic. | Resilient exponential backoff polling (`pollSorobanTransactionWithBackoff`) with `1500ms -> 2250ms -> 3375ms -> 5000ms` schedule. | **VERIFIED (PASSED)** |
@@ -110,7 +110,7 @@ Clamped u32 Task ID: 1070320958 (within [1, 4294967295])
 
 - [x] **Production URL:** `https://gigpay.tech` (Vercel CDN)
 - [x] **SSL / TLS Encryption:** Strict HSTS & TLS 1.3 enforced by Vercel Edge Network
-- [x] **CSP connect-src:** `connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com https://soroban-testnet.stellar.org https://horizon-testnet.stellar.org;`
+- [x] **CSP connect-src** (as in `index.html`): `'self'`, `va.vercel-scripts.com`, `*.stellar.org` (Soroban RPC, Horizon, Friendbot) and `*.supabase.co`, including their `wss://` endpoints.
 - [x] **Antivirus Bypassing Proxy:** Verified `isLocalhost` conditional routing in `src/lib/supabase.js`
 - [x] **Continuous Verification:** Daily semantic commits tracked on [Pull Request #5](https://github.com/MarkAngelGuevarra/gigpay/pull/5)
 
@@ -119,4 +119,4 @@ Clamped u32 Task ID: 1070320958 (within [1, 4294967295])
 ## 6. Audit Conclusion & Compliance Certification
 
 Based on static analysis, transaction simulation, and automated test execution:
-**GigPay satisfies 100% of the security, non-custodial, and cryptographic criteria mandated by the Stellar Philippines Instawards Sprint (SOW Deliverable 3).** The platform is verified safe for active pilot testers and ready for Month 2 follow-on grant evaluation.
+This self-review found no way to release an escrow without the funding client's signature. Known limits: the dispute freeze and the client ≠ freelancer check are enforced by the app, not the contract, and the Testnet practice wallet keeps its key in browser storage. Suitable for Testnet pilot testing only; not a substitute for a third-party audit before Mainnet.

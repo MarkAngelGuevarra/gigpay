@@ -46,7 +46,7 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 * **Verified Pilot Testers (Evidence Vault):**
   * Tester names and contact details are kept in the intake form, not in this public report.
 * **Live User Onboarding Recordings (Loom):**
-  * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 6 community members on camera (Clarence Ingal, Christian Daniel Gerlan, Ashley Loraine Mendoza, Ella Deladia, Prince Dale Limosnero, and Mark Angel Guevarra) demonstrating milestone creation, escrow lock, and mobile tester mode.
+  * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 5 community members and the founder on camera, demonstrating milestone creation, escrow lock, and mobile tester mode.
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
 * **Evidence Repository:** Complete pilot tester profiles, screenshots, and UX survey responses are archived in the public Google Drive evidence vault at [GigPay Month 2 User Evidence Vault](https://drive.google.com/drive/folders/1ePGnn2aVU8KE2qq0h-zjB3pwHAqXBH-M?usp=sharing).
 
@@ -68,7 +68,7 @@ Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X
 * **Week 1 Ship Post (Sep 22, 2026):** [`https://x.com/GigPayPH/status/2102193930150502781`](https://x.com/GigPayPH/status/2102193930150502781) — Soroban escrow deployment, 4/4 Rust unit tests & contract ID.
 * **Week 2 Ship Post (Oct 1, 2026):** [`https://x.com/GigPayPH/status/2105480741761282160`](https://x.com/GigPayPH/status/2105480741761282160) — Frontend UI wiring, live Freighter balance, Soroban simulation & escrow funding/release.
 * **Week 3 Ship Post (Oct 10, 2026):** [`https://x.com/GigPayPH/status/2108793569138110574`](https://x.com/GigPayPH/status/2108793569138110574) — Multi-wallet escrow execution, anti-self-dealing assertion & exponential backoff RPC resilience.
-* **Week 4 Ship Post (Oct 17, 2026):** [`https://x.com/GigPayPH/status/2111271953164300425`](https://x.com/GigPayPH/status/2111271953164300425) — Final verification package, security audit, 22/22 passing regression tests & 28 registered pilot testers.
+* **Week 4 Ship Post (Oct 17, 2026):** [`https://x.com/GigPayPH/status/2111271953164300425`](https://x.com/GigPayPH/status/2111271953164300425) — Final verification package, security self-review & 22/22 passing regression tests. *(The post's "28 registered pilot testers" was wrong: 18 real sign-ups + 5 team test accounts, see the correction above.)*
 
 ---
 
@@ -94,7 +94,7 @@ GigPay's production deployment (`https://gigpay.tech`) has integrated real-time 
 Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Deliverable 3:
 * **Threat Mitigation Matrix:** Formally evaluates and resolves 8 threat categories (`THREAT-01` through `THREAT-08`), including unauthorized escrow release, self-dealing collusion, private key extraction, replay attacks, XSS, and RPC timeouts.
 * **Zero Server-Side Key Custody:** No private keys exist in repository code, server memory, or database storage. Freighter users sign in their wallet. *Note added Nov 4:* the Testnet-only practice wallet keeps its key in the tester's own browser storage; it is disabled on Mainnet.
-* **Automated Integration Testing:** 9 out of 9 passing Vitest assertions in [`src/test/soroban_sim.test.js`](src/test/soroban_sim.test.js), verifying `fund_task` simulation, `approve_task` release, exponential backoff, and `u32` task ID boundary clamping (`[1, 4294967295]`).
+* **Automated Integration Testing:** 9 out of 9 passing Node test assertions in [`src/test/soroban_sim.test.js`](src/test/soroban_sim.test.js), verifying `fund_task` simulation, `approve_task` release, exponential backoff, and `u32` task ID boundary clamping (`[1, 4294967295]`).
 
 ---
 
@@ -106,4 +106,5 @@ Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Delivera
 | **Week 2** | **Deliverable 2 (Part 1):** Frontend UI Integration, Freighter Connection, Task State Synchronization | $1,000 USD | ✅ **COMPLETED (PR #3)** |
 | **Week 3** | **Deliverable 2 (Part 2):** Multi-Wallet Hardening, Anti-Self-Dealing Assertion, RPC Backoff Resilience | $1,000 USD | ✅ **COMPLETED (PR #4)** |
 | **Week 4** | **Deliverable 3:** Verification Package, Security Audit, Traction Telemetry, Capstone Loom Walkthrough | $500 USD | ✅ **COMPLETED (PR #5 Merged)** |
+| **All weeks** | Infrastructure & buffer (hosting, RPCs, testing) | $1,000 USD | — |
 | **TOTAL** | **Full Month 1 Instawards Scope** | **$5,000 USD** | **100% On Track** |

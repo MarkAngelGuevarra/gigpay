@@ -6,7 +6,7 @@
       "amount": "150",
       "status": "In Progress",
       "freelancer": "GBQX...3F1A",
-      "client": "Stellar Foundation"
+      "client": "Sample Client A"
     },
     {
       "id": "2",
@@ -14,7 +14,7 @@
       "amount": "300",
       "status": "Completed",
       "freelancer": "GCAE...9B22",
-      "client": "DeFi Protocol X"
+      "client": "Sample Client B"
     },
     {
       "id": "3",
@@ -22,7 +22,7 @@
       "amount": "200",
       "status": "Available",
       "freelancer": null,
-      "client": "Stellar Foundation"
+      "client": "Sample Client A"
     },
     {
       "id": "4",
@@ -30,7 +30,7 @@
       "amount": "500",
       "status": "Available",
       "freelancer": null,
-      "client": "DeFi Protocol X"
+      "client": "Sample Client B"
     }
   ]
 }

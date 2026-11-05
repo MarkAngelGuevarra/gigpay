@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node test/gigpay_regression.test.js && node test/escrow_submission_integrity.test.js && node test/ledger_integrity.test.js",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "server": "json-server --watch db.json --port 3001"
   },

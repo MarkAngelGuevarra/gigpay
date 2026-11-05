@@ -6,7 +6,7 @@ How to install, test and build GigPay from a clean checkout, and where the real 
 
 - Node.js 20.19 or newer (Vite 8 does not run on older Node versions)
 - npm 10 or newer, and git
-- Internet access: `npm test` makes read-only calls to Stellar Testnet
+- Internet access for `npm ci`. `npm test` itself runs offline; `node scripts/index_escrows.mjs` and the `src/test/soroban_sim.test.js` suite need Stellar Testnet access.
 
 ## Steps
 
@@ -28,7 +28,7 @@ Real clean-install runs, with unedited output, are recorded in [CLEAN_INSTALL_LO
 | Environment | Status |
 |:---|:---|
 | Windows 11 (build 22621), Node 24 | ✅ Passed, 2026-11-04 |
-| Linux | ⏳ Not yet run |
+| Linux (Ubuntu 24.04.5 LTS), Node 22 | ✅ Passed, 2026-11-05 |
 | macOS | ⏳ Not yet run |
 
 > **Correction, Nov 4, 2026.** An earlier version of this file reported passing runs on three environments that cannot be matched to real runs. For example, it listed Node v18.20.4, which cannot run this project's Vite 8 build. Only real runs are listed now.

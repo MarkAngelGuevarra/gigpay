@@ -7,7 +7,7 @@ The SOW requires the project to run from a clean installation on three separate 
 | # | Environment | Status |
 |:---:|:---|:---|
 | 1 | Windows 11 (build 10.0.22621), Node v24.15.0, npm 11.12.1 | ✅ **Passed**, 2026-11-04 (log below) |
-| 2 | Linux (Ubuntu or a clean `node:22` Docker container) | ⏳ **Not yet run** |
+| 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
 | 3 | macOS | ⏳ **Not yet run** (needs a Mac) |
 
 > **Correction, Nov 4, 2026.** An earlier version of this file (and of `SETUP_VERIFICATION.md`) showed passing runs on macOS Sonoma and Ubuntu 24.04. Those logs cannot be matched to any real run:
@@ -53,3 +53,29 @@ exit 0
 ## Recording a new environment
 
 Run the reproduce steps above on the new machine. Then paste the **unedited** terminal output into a new section with the date, OS version, `node -v`, `npm -v` and the commit hash (`git rev-parse --short HEAD`). A screenshot or short screen recording of the run is good supporting evidence.
+
+## Run 2: Linux (Ubuntu 24.04.5 LTS), 2026-11-05 00:11 UTC
+
+Fresh clone into an empty directory on a new Ubuntu container, then `npm ci`, `npm test` and `npm run build`. Output trimmed to the summary lines; nothing else was changed.
+
+```text
+$ uname -sr; grep PRETTY_NAME /etc/os-release
+Linux 6.18.44-fc-v236
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+$ node -v && npm -v
+v22.23.4
+10.9.9
+$ git clone https://github.com/MarkAngelGuevarra/gigpay.git
+HEAD 676ea3c 2026-11-05 06:51:20 +0800
+$ npm ci
+
+added 125 packages in 6s
+$ npm test
+   REGRESSION SUITE RESULTS: 22/22 TESTS PASSED
+  Escrow integrity: 10/10 passed
+  Ledger integrity: 7/7 passed
+$ npm run build
+
+transforming...✓ 2431 modules transformed.
+✓ built in 893ms
+```

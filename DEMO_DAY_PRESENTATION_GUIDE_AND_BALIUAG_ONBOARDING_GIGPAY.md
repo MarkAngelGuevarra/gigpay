@@ -13,9 +13,9 @@
 
 | Date | Event / Milestone | Action Required | Status |
 | :--- | :--- | :--- | :--- |
-| **Nov 4, 2026 (7:52 AM)** | **Sprint 2 Proposal Submitted to SDF** | Armielyn Obinguar confirmed Sprint 2 Proposal ($1,000 Milestone 1 / $5,000 Sprint 2 SOW) is officially submitted to the Stellar team (Light Green row in `Instawards - 2nd Sprint (3).xlsx`). | ✅ **SUBMITTED** |
+| **Nov 4, 2026** | **Sprint 2 SOW submitted** | Sprint 2 SOW ($5,000) submitted through the chapter. Approval status: confirm with Armielyn. | ✅ **SUBMITTED** |
 | **Nov 4, 2026 (7:54 AM)** | **`@PHI_Stellar` X Promotion Assets** | Send GigPay logo, event pubmats, and event details (Baliuag University CITE Web3 Sandbox Cohort + BCC Nov 12–13 booth/session) to Armielyn on Telegram. | 🔥 **SEND TODAY** |
-| **Nov 4 – Nov 10, 2026** | **Baliuag University CITE Onboarding Cohort** | Coordinate with Dean Clarissa P. Vicente, MSIT to onboard 20–30+ BSIT/BSCS 3rd & 4th year students on `gigpay-stellar.vercel.app` using the new in-memory ephemeral Testnet signer. | 🚀 **ACTIVE** |
+| **Nov 4 – Nov 10, 2026** | **Baliuag University CITE Onboarding Cohort** | Coordinate with Dean Clarissa P. Vicente, MSIT to run a paired lab (two devices per pair: freelancer shares payout address, client funds and releases) with BSIT/BSCS students on `gigpay.tech` using the practice wallet. | 🚀 **ACTIVE** |
 | **Nov 12 – Nov 13, 2026** | **Blockchain Campus Conference (BCC)** | University of Makati (UMak) — Live student wallet onboarding & escrow showcase. | 📅 **UPCOMING** |
 | **Nov 19, 2026** | **Batch 2 Demo Day (SDF / Rise In)** | Present 10-minute Pitch + Live Running Product Demo (Slot #5, first presenter on Nov 19 ahead of BlkFndr, Sweldo, Omnipay, Noir). | 🎯 **DEMO DAY** |
 
