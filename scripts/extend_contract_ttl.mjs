@@ -32,8 +32,14 @@ const fb = await fetch(`https://friendbot.stellar.org?addr=${payer.publicKey()}`
 if (!fb.ok) throw new Error(`Friendbot refused the fee payer (${fb.status}); try again from another network.`);
 const account = await rpc.getAccount(payer.publicKey());
 
-// Ask for a very long extension; the network caps it at its maximum entry TTL.
-const extendTo = 3_110_400;
+// Extend to just under the network's maximum entry TTL. Asking for the maximum itself (or more) is
+// rejected on-chain as extendFootprintTtlMalformed, and simulation does not catch it.
+const archivalKey = S.xdr.LedgerKey.configSetting(new S.xdr.LedgerKeyConfigSetting({
+  configSettingId: S.xdr.ConfigSettingId.configSettingStateArchival()
+}));
+const maxEntryTtl = (await rpc.getLedgerEntries(archivalKey)).entries[0].val.configSetting().stateArchivalSettings().maxEntryTtl();
+const extendTo = maxEntryTtl - 1;
+console.log(`Network maximum: ${maxEntryTtl} ledgers (~${((maxEntryTtl * SECONDS_PER_LEDGER) / 86400).toFixed(0)} days). Extending to ${extendTo}.`);
 const tx = new S.TransactionBuilder(account, { fee: '1000000', networkPassphrase: S.Networks.TESTNET })
   .setSorobanData(new S.SorobanDataBuilder().setReadOnly([instanceKey, codeKey]).build())
   .addOperation(S.Operation.extendFootprintTtl({ extendTo }))
