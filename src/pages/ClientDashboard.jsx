@@ -4,7 +4,8 @@ import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, E
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature, formatStellarError } from '../lib/stellar';
+import { requestWalletSignature, formatStellarError, isSimulatedTxHash } from '../lib/stellar';
+import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { takeInvitePayout } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
@@ -28,21 +29,25 @@ const ClientDashboard = () => {
     }
   }, [publicKey, connectTesterWallet]);
 
-  // Resilient client task matching: matches current user UUID, demo client UUID, or global client escrows
-  // Admin/Tester Escrow Mode: allows project admin to view and release all community escrows directly
-  const [viewAllEscrows, setViewAllEscrows] = useState(true);
+  // Each client sees their own escrows by default. "All testers' escrows" is a read-only overview:
+  // only the client who funded an escrow can release it (database guard + contract auth).
+  const [viewAllEscrows, setViewAllEscrows] = useState(false);
 
-  // Resilient client task matching: matches all community escrows in admin/tester view, or user UUID
   const clientTasks = viewAllEscrows
     ? tasks
     : tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
 
-  // Aggregate Metrics Calculations (R2 & R3 Requirement with safe zero-division guards)
-  const totalEscrowed = clientTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-  const activeEscrows = clientTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length;
-  const totalReleased = clientTasks.filter(t => t.status === 'Completed').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-  const completedTasks = clientTasks.filter(t => t.status === 'Completed');
-  const totalTasksCount = clientTasks.length;
+  // Metrics count only tasks whose funding transaction is real on Stellar Testnet. Summing every database
+  // row showed 6,770 XLM "escrowed" when about 3 XLM of those tasks was actually locked on-chain
+  // (19 demo/July tasks were never funded), which would misstate the evidence to anyone viewing the page.
+  const fundedTasks = clientTasks.filter(t => !t.is_simulated && (
+    t.on_chain_task_id != null || (/^[0-9a-f]{64}$/.test(t.tx_hash || '') && !isSimulatedTxHash(t.tx_hash) && !isNonEvidenceHash(t.tx_hash))
+  ));
+  const totalEscrowed = fundedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length;
+  const totalReleased = fundedTasks.filter(t => t.status === 'Completed').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const completedTasks = fundedTasks.filter(t => t.status === 'Completed');
+  const totalTasksCount = fundedTasks.length;
   const completionPercentage = totalTasksCount > 0 
     ? Math.round((completedTasks.length / totalTasksCount) * 100) 
     : 0;
@@ -211,9 +216,9 @@ const ClientDashboard = () => {
                 padding: '0.2rem 0.6rem',
                 fontWeight: 600
               }}
-              title="Toggle between viewing all community escrows or only your own"
+              title="Switch between your own escrows and a read-only view of every tester's escrows"
             >
-              {viewAllEscrows ? '👁️ Viewing All Community Escrows (Admin)' : '👤 Viewing Only My Escrows'}
+              {viewAllEscrows ? "👁️ All testers' escrows (view only)" : '👤 My escrows'}
             </button>
             <span style={{ display: 'none' }}>
             </span>
@@ -248,7 +253,7 @@ const ClientDashboard = () => {
       {/* Aggregate Balance & Escrow Metrics Cards (R2 & R3 Pilot Requirement) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid var(--accent)' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Escrowed</h4>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Escrowed <span style={{ fontWeight: 'normal' }}>(locked on-chain)</span></h4>
           <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
             {totalEscrowed.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
           </div>
@@ -260,7 +265,7 @@ const ClientDashboard = () => {
           </div>
         </div>
         <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #10b981' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Released</h4>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Released <span style={{ fontWeight: 'normal' }}>(on-chain)</span></h4>
           <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
             {totalReleased.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
           </div>
@@ -377,6 +382,10 @@ const ClientDashboard = () => {
           {!isLoading && clientTasks.map(task => {
             const isDisputed = task.status === 'Disputed';
             const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
+            // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
+            const isMine = task.client_id === user?.id || task.client_id === 'demo-client-uuid-001' || !task.client_id;
+            // Link a transaction only when it really exists on Stellar Testnet (demo tasks have none).
+            const hasRealFundTx = !task.is_simulated && !isSimulatedTxHash(task.tx_hash) && !isNonEvidenceHash(task.tx_hash);
 
             return (
               <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderLeft: isDisputed ? '4px solid #ef4444' : '4px solid var(--accent)' }}>
@@ -397,7 +406,11 @@ const ClientDashboard = () => {
                     </div>
                     
                     {/* Action Buttons: 100% Active for In Progress and Available tasks */}
-                    {(task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
+                    {!isMine && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>View only: another tester's escrow</span>
+                    )}
+
+                    {isMine && (task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {(task.status === 'In Progress' || task.status === 'Under Review') && (
                           <button 
@@ -428,7 +441,7 @@ const ClientDashboard = () => {
                     )}
 
                     {/* Disputed State Freeze Notice & Resolution Button */}
-                    {isDisputed && (
+                    {isMine && isDisputed && (
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <button
                           type="button"
@@ -441,9 +454,9 @@ const ClientDashboard = () => {
                       </div>
                     )}
 
-                    {task.tx_hash && (
-                      <a 
-                        href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`} 
+                    {hasRealFundTx && (
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`}
                         target="_blank" 
                         rel="noopener noreferrer" 
                         style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}

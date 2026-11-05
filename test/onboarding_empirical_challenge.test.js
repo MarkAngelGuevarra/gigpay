@@ -92,6 +92,13 @@ test('TEST 9: A task the database rejects warns the tester instead of failing si
   assert.ok(read('src', 'context', 'TaskContext.jsx').includes("saved on this device only"));
 });
 
+test('TEST 10: Client metrics count only tasks funded on-chain, and no fake "Admin" view is the default', () => {
+  const dash = read('src', 'pages', 'ClientDashboard.jsx');
+  assert.ok(dash.includes('const totalEscrowed = fundedTasks.reduce('), 'Total Escrowed must sum on-chain-funded tasks only');
+  assert.ok(dash.includes('!t.is_simulated'), 'demo-funded tasks must be excluded from the metrics');
+  assert.ok(dash.includes('useState(false)') && !dash.includes('(Admin)'), 'clients see their own escrows by default; no admin label');
+});
+
 console.log('==================================================================');
 console.log(`TOTAL EXECUTED: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);
 console.log('==================================================================');

@@ -75,9 +75,9 @@ runTest(4, "AuthContext.jsx persists publicKey on connectWallet and removes on d
 // -------------------------------------------------------------
 runTest(5, "ClientDashboard.jsx computes totalEscrowed, activeEscrows, and totalReleased", () => {
   const content = readSource('src/pages/ClientDashboard.jsx');
-  assert.ok(content.includes('const totalEscrowed = clientTasks.reduce('), "Must compute totalEscrowed via reduce");
-  assert.ok(content.includes("const activeEscrows = clientTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length"), "Must compute activeEscrows strictly for active states");
-  assert.ok(content.includes("const totalReleased = clientTasks.filter(t => t.status === 'Completed').reduce("), "Must compute totalReleased");
+  assert.ok(content.includes('const totalEscrowed = fundedTasks.reduce(') && content.includes('const fundedTasks = clientTasks.filter('), "Must compute totalEscrowed via reduce");
+  assert.ok(content.includes("const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length"), "Must compute activeEscrows strictly for active states");
+  assert.ok(content.includes("const totalReleased = fundedTasks.filter(t => t.status === 'Completed').reduce("), "Must compute totalReleased");
 });
 
 runTest(6, "ClientDashboard.jsx renders activeEscrows in aggregate summary cards", () => {
