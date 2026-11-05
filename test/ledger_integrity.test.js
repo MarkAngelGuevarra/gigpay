@@ -88,6 +88,21 @@ test('Freelancers cannot accept a task whose escrow pays someone else', () => {
   assert.strictEqual(describePayout({}, OUTSIDE_CLIENT).canAccept, true);
 });
 
+test('Total Earned counts only escrows released on-chain to this payout address', () => {
+  const { onChainEarnings } = ledgerMod;
+  const paid = { status: 'Completed', amount: '1.1', freelancer_wallet: OUTSIDE_FREELANCER, release_tx_hash: REAL_HASH };
+  const tasks = [
+    paid,
+    { ...paid, amount: '458', release_tx_hash: DEMO_RELEASE_TX_HASH },          // demo release: never paid
+    { ...paid, amount: '50', release_tx_hash: null },                           // marked Completed, no release tx
+    { ...paid, amount: '7', freelancer_wallet: OUTSIDE_CLIENT },                // paid someone else's address
+    { ...paid, amount: '9', is_simulated: true },                               // demo-funded task
+    { ...paid, amount: '3', status: 'Under Review' }                            // not released yet
+  ];
+  assert.deepStrictEqual(onChainEarnings(tasks, OUTSIDE_FREELANCER), { total: 1.1, count: 1 });
+  assert.deepStrictEqual(onChainEarnings(tasks, null), { total: 0, count: 0 });
+});
+
 test('Same transaction from two sources is listed once; placeholder rows are dropped', () => {
   const rows = dedupeLedgerByTxHash([
     { id: 'completed-task-a', txHash: REAL_HASH },

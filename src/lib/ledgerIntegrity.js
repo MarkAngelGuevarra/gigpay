@@ -114,3 +114,15 @@ export const describePayout = (task, myAddress) => {
   if (isTeamWallet(to)) return { canAccept: true, color: '#fbbf24', text: "Pays GigPay's test wallet (practice task, not paid to you)." };
   return { canAccept: false, color: '#f87171', text: `Reserved: pays another freelancer (${to.slice(0, 6)}…${to.slice(-4)}).` };
 };
+
+// What a freelancer has really been paid: escrows released on-chain (a real release transaction) to this
+// payout address. Database rows alone are not enough: old demo tasks marked Completed were never paid, and
+// counting them showed 464 XLM "earned" on an account the contract had paid nothing.
+export const onChainEarnings = (tasks, payoutAddress) => {
+  const paid = (tasks || []).filter((t) =>
+    t && t.status === 'Completed' && !t.is_simulated &&
+    payoutAddress && t.freelancer_wallet === payoutAddress &&
+    /^[0-9a-f]{64}$/.test(t.release_tx_hash || '') && !isNonEvidenceHash(t.release_tx_hash)
+  );
+  return { total: paid.reduce((sum, t) => sum + (Number(t.amount) || 0), 0), count: paid.length };
+};

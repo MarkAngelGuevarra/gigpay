@@ -5,7 +5,7 @@ import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, isDemoWallet, isSimulatorWallet } from '../lib/stellar';
-import { isNonEvidenceHash, describePayout } from '../lib/ledgerIntegrity';
+import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
 import { buildInviteLink } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
@@ -24,9 +24,10 @@ const FreelancerDashboard = () => {
 
   const availableTasks = tasks.filter(t => t.status === 'Available');
   const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
-  const completedTasks = tasks.filter(t => t.status === 'Completed' && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   
-  const totalEarned = completedTasks.reduce((sum, task) => sum + (Number(task.amount) || 0), 0);
+  // Only escrows the contract actually released to this payout address (see onChainEarnings).
+  const earnings = onChainEarnings(tasks, publicKey);
+  const totalEarned = Number(earnings.total.toFixed(7));
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
@@ -197,8 +198,13 @@ const FreelancerDashboard = () => {
       {/* Earnings Overview Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '3rem' }}>
         <div className="glass-panel" style={{ flex: '1 1 250px', borderLeft: '4px solid var(--accent)' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total Earned</h4>
+          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total Earned <span style={{ fontWeight: 'normal', fontSize: '0.85rem' }}>(paid on-chain)</span></h4>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{totalEarned} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span></div>
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            {earnings.count > 0
+              ? `From ${earnings.count} escrow${earnings.count === 1 ? '' : 's'} released to your payout address.`
+              : 'Escrows released to your payout address appear here.'}
+          </p>
         </div>
         <div className="glass-panel" style={{ flex: '1 1 250px' }}>
           <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Escrows</h4>
