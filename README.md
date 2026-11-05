@@ -39,7 +39,7 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 What GigPay has built against the 4 deliverables in the Month 2 Statement of Work, and what is still open:
 
 ### 1. Real-Time Multi-User Task Lifecycle & Escrow State Sync (Deliverable 1 — $1,500)
-* **Sub-500ms State Reflection:** Tasks funded by clients render immediately on freelancers' screens without manual page reloads or database polling.
+* **Live State Reflection:** Tasks funded by clients appear on freelancers' screens without a manual page reload (Supabase updates plus cross-tab storage events). Timing has not been formally benchmarked.
 * **Resilient Shared Cache:** Implements optimistic in-memory dispatch combined with `gigpay_shared_tasks` localStorage caching and cross-window storage event listeners.
 * **Save-failure handling:** If Supabase rejects a write (for example RLS error 42501), the task stays visible locally and the user sees a warning that it was not saved.
 

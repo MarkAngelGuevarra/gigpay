@@ -1,6 +1,6 @@
 # 🚀 GigPay Deployed Soroban Smart Contract
 
-This document provides definitive on-chain verification of the **GigPay Soroban Smart Contract** deployed on the official Stellar Testnet for the SCF Instawards Sprint.
+This document provides definitive on-chain verification of the **GigPay Soroban Smart Contract** deployed on the official Stellar Testnet for the Stellar Philippines Instawards sprint.
 
 ## 📍 Live Deployment Verification (Protocol 22)
 - **Contract Address (ID):** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
