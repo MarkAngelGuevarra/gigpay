@@ -7,15 +7,17 @@ The SOW requires the project to run from a clean installation on three separate 
 | # | Environment | Status |
 |:---:|:---|:---|
 | 1 | Windows 11 (build 10.0.22621), Node v24.15.0, npm 11.12.1 | ✅ **Passed**, 2026-11-04 (log below) |
-| 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
-| 3 | macOS | ⏳ **Not yet run** (needs a Mac) |
+| 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, not a separate physical computer; kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
+| 3 | A third separate computer (for example a Mac) | ⏳ **Pending** (see "How to add environment 3") |
+
+Two real runs so far. `npm test` today runs 66 offline tests in 6 suites; each log below shows the counts that existed at the commit it ran, so they are lower than today's.
 
 > **Correction, Nov 4, 2026.** An earlier version of this file (and of `SETUP_VERIFICATION.md`) showed passing runs on macOS Sonoma and Ubuntu 24.04. Those logs cannot be matched to any real run:
 > - The two files disagreed on the macOS version (14.4.1 vs 14.5) and on how Ubuntu was run (a cloud node vs Docker and GitHub Actions). The repo has no GitHub Actions workflow.
 > - They reported 248 installed packages; a real clean install of this lockfile installs 125.
 > - A fresh clone was in fact **failing** on Windows, because committed Rust build files had paths too long for Windows. That was fixed in commit `e0c7ec3`.
 >
-> The earlier logs have been removed. Environments 2 and 3 will be added here only after they are actually run.
+> The earlier logs have been removed. Environment 2 was run and added on Nov 5, 2026; environment 3 will be added only after it is actually run.
 
 ## How to reproduce (any environment)
 
@@ -50,11 +52,7 @@ exit 0
 exit 0
 ```
 
-## Recording a new environment
-
-Run the reproduce steps above on the new machine. Then paste the **unedited** terminal output into a new section with the date, OS version, `node -v`, `npm -v` and the commit hash (`git rev-parse --short HEAD`). A screenshot or short screen recording of the run is good supporting evidence.
-
-## Run 2: Linux (Ubuntu 24.04.5 LTS), 2026-11-05 00:11 UTC
+## Environment 2: Linux (Ubuntu 24.04.5 LTS cloud container), 2026-11-05 00:11 UTC (real output)
 
 Fresh clone into an empty directory on a new Ubuntu container, then `npm ci`, `npm test` and `npm run build`. Output trimmed to the summary lines; nothing else was changed.
 
@@ -79,3 +77,23 @@ $ npm run build
 transforming...✓ 2431 modules transformed.
 ✓ built in 893ms
 ```
+
+## How to add environment 3
+
+Use a computer that is not one of the two above (a different physical machine is best). Node.js 20.19 or newer is required.
+
+1. In an empty folder, run these and keep the terminal output:
+   ```bash
+   date -u                     # Windows PowerShell: Get-Date -AsUTC
+   # OS version: macOS `sw_vers`; Linux `grep PRETTY_NAME /etc/os-release`; Windows `cmd /c ver`
+   node -v; npm -v; git --version
+   git clone https://github.com/MarkAngelGuevarra/gigpay.git
+   cd gigpay
+   git rev-parse --short HEAD
+   npm ci
+   npm test
+   npm run build
+   ```
+2. Add a section "Environment 3: <OS>, <date> (real output)" below, and paste **unedited**: the date, the OS version line, the Node/npm/git versions, the commit hash, the `added N packages` line from `npm ci`, every suite summary line from `npm test` (for example `Escrow integrity: 10/10 passed`) and its exit code, and the `✓ built in` line. You may trim other lines, but say that you trimmed.
+3. If any step fails, paste the failure and mark the row "Failed". If you then fix something and run again, keep both runs in the log.
+4. Update the status table above and the Results table in [SETUP_VERIFICATION.md](SETUP_VERIFICATION.md), and the clean-install line in [README.md](README.md). A screenshot or short screen recording of the run is good supporting evidence.
