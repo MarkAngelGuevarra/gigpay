@@ -189,7 +189,7 @@ export const AuthProvider = ({ children }) => {
           email: lowerEmail,
           user_metadata: {
             role: role,
-            display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)'
+            display_name: isClient ? 'Demo client' : 'Demo freelancer'
           }
         };
         const demoKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
@@ -291,7 +291,7 @@ export const AuthProvider = ({ children }) => {
     const isClient = targetRole === 'client';
     const isSimulation = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || user?.id?.startsWith?.('demo-'));
 
-    // Signed-out visitors used to be turned into a shared offline demo user ("Alex Rivera"), whose tasks
+    // Signed-out visitors used to be turned into a shared offline demo user, whose tasks
     // no partner can see and which can never count. They now have to sign up with their own email.
     if (!user) return null;
 
@@ -303,7 +303,7 @@ export const AuthProvider = ({ children }) => {
         is_simulation_mode: true,
         user_metadata: {
           role: targetRole,
-          display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
+          display_name: isClient ? 'Demo client' : 'Demo freelancer',
           is_simulation_mode: true
         }
       };
@@ -368,7 +368,7 @@ export const AuthProvider = ({ children }) => {
       is_simulation_mode: true,
       user_metadata: {
         role: initialRole,
-        display_name: isClient ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)',
+        display_name: isClient ? 'Demo client' : 'Demo freelancer',
         is_simulation_mode: true
       }
     };

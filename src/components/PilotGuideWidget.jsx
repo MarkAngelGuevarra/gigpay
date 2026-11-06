@@ -104,7 +104,7 @@ const CLIENT_STEPS = [
     badge: 'Step 2 of 4 • Fund Escrow',
     icon: Lock,
     teacherVoice: 'Create an escrow task! Tap below to 1-click auto-fill sample milestone data (2 XLM) and highlight "Lock Funds in Escrow".',
-    description: 'Deposit native XLM into the Soroban escrow contract (Protocol 22). Funds are locked safely until you review deliverables.',
+    description: 'Deposit native XLM into the Soroban escrow contract on Stellar Testnet. Funds are locked safely until you review deliverables.',
     actionLabel: '⚡ Fill Sample Task (2 XLM)',
     actionType: 'fill_sample_task',
     tip: 'Smart contract CAUU2O...7RD3 holds the funds. Self-dealing protection blocks matching client and freelancer addresses.'
@@ -197,6 +197,9 @@ export default function PilotGuideWidget() {
   const { publicKey, connectTesterWallet, connectWallet, switchRole, user } = useAuth();
   const { addToast } = useToast();
   const { tasks } = useTasks();
+  // The offline demo account sends nothing to Stellar: its progress toasts must say they are a simulation.
+  const isSimUser = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || String(user?.id || '').startsWith('demo-'));
+  const sim = (real, simulated) => (isSimUser ? simulated : real);
 
   const [state, setState] = useState(() => {
     try {
@@ -283,13 +286,13 @@ export default function PilotGuideWidget() {
     // Client Step 1 -> Step 2 upon wallet connection
     if (isClient && state.clientStep === 1 && publicKey && !prevWalletRef.current) {
       setState(prev => ({ ...prev, clientStep: 2 }));
-      addToast('🎉 Testnet Wallet Connected! Next: Lock Milestone Escrow.', 'success');
+      addToast(sim('🎉 Testnet Wallet Connected! Next: Lock Milestone Escrow.', 'Simulation: demo wallet connected (nothing on-chain). Next: Lock Milestone Escrow.'), sim('success', 'info'));
     }
 
     // Client Step 2 -> Step 3 when client creates/funds task escrow
     if (isClient && state.clientStep === 2 && currentTasks.length > prevTasksCountRef.current) {
       setState(prev => ({ ...prev, clientStep: 3 }));
-      addToast('🎉 Task funded in Soroban escrow! Step 3: Switch to Freelancer to accept.', 'success');
+      addToast(sim('Task saved. Step 3: Switch to Freelancer to accept (the task card shows whether funding is confirmed).', 'Simulation: practice task saved, nothing locked on-chain. Step 3: Switch to Freelancer to accept.'), 'info');
     }
 
     // Freelancer Step 3 -> Step 4 when task is accepted
@@ -300,7 +303,7 @@ export default function PilotGuideWidget() {
       );
       if (newlyAccepted) {
         setState(prev => ({ ...prev, freelancerStep: 4 }));
-        addToast('🎉 Contract agreement locked! Step 4: Submit Proof of Work.', 'success');
+        addToast(sim('🎉 Task accepted! Step 4: Submit Proof of Work.', 'Simulation: task accepted in this browser. Step 4: Submit Proof of Work.'), sim('success', 'info'));
       }
     }
 
@@ -312,7 +315,7 @@ export default function PilotGuideWidget() {
       );
       if (newlySubmitted) {
         setState(prev => ({ ...prev, freelancerStep: 5 }));
-        addToast('🎉 Deliverables submitted! Step 5: Get Paid & Check It On-Chain.', 'success');
+        addToast(sim('🎉 Deliverables submitted! Step 5: Get Paid & Check It On-Chain.', 'Simulation: deliverables saved in this browser. Step 5: Get Paid.'), sim('success', 'info'));
       }
     }
 
@@ -323,7 +326,7 @@ export default function PilotGuideWidget() {
         prevTasks.find(pt => pt.id === t.id)?.status !== 'Completed'
       );
       if (newlyCompleted) {
-        addToast('🎉 Payout released on Stellar Testnet! Escrow lifecycle complete.', 'success');
+        addToast(sim('Task marked Completed. Its card links the release transaction once Stellar Testnet confirms it.', 'Simulation: task completed in this browser. No payment was sent on Stellar Testnet.'), 'info');
       }
     }
 

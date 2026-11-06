@@ -159,8 +159,13 @@ const ClientDashboard = () => {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
       setTaskToApprove(null);
       setConfirmText('');
-      const txSnippet = result?.hash ? ` (Tx: ${result.hash.slice(0, 8)}...)` : '';
-      addToast(`Transaction Confirmed! Escrow released to freelancer on Testnet${txSnippet}.`, "success");
+      // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an
+      // already-released escrow; here we only add what it does not say.
+      if (isDemoAccount || result?.isDemo) {
+        addToast("Simulation only: task marked Completed in this browser. No payment was sent on Stellar Testnet.", "info");
+      } else if (!result?.alreadyReleased && !result?.explorerUrl) {
+        addToast("Release submitted. The task card shows its status on Stellar Testnet.", "info");
+      }
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined");
@@ -319,7 +324,7 @@ const ClientDashboard = () => {
               </div>
               <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>No Active Escrows Yet — Ready to Test!</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                Welcome to the GigPay Client Portal on <strong>Stellar Soroban Protocol 22</strong>. Follow these 3 quick steps to complete your pilot evaluation:
+                Welcome to the GigPay Client Portal on <strong>Stellar Testnet</strong> (practice money). Follow these 3 quick steps to complete your pilot evaluation:
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.86rem', color: 'var(--text-main)' }}>
                 <div><strong>1️⃣ Connect Wallet (Optional on Mobile):</strong> Click <em>Connect Wallet</em> in the top bar (or pre-fill a sample task below).</div>
@@ -649,7 +654,7 @@ const ClientDashboard = () => {
               <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>💡 No platform commission</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Typical platform fee (up to 20%):</span>
+                  <span>Example: a 20% platform fee would be:</span>
                   <span style={{ color: '#ff4444' }}>{(Number(newTaskAmount) * 0.2).toFixed(2)} XLM</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>

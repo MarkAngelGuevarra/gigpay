@@ -105,7 +105,7 @@ export default function PilotIntakeBanner() {
               </span>
             ) : (
               <span>
-                <strong>Official Pilot Feedback:</strong> Help us improve GigPay: the tester form takes about a minute.
+                <strong>Tester feedback:</strong> Help us improve GigPay: the tester form takes about a minute.
               </span>
             )}
           </div>

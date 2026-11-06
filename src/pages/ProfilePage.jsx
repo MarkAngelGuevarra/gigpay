@@ -31,10 +31,10 @@ const ProfilePage = () => {
     const isSim = !!(user.is_simulation_mode || user.user_metadata?.is_simulation_mode || !isUuid(user.id));
     if (isSim) {
       setProfile({
-        display_name: user.user_metadata?.display_name || (user.email?.includes?.('client') ? 'Acme Corp (Tester Client)' : 'Alex Rivera (Tester Freelancer)'),
-        bio: 'Dual-Role Pilot Tester exploring Stellar Soroban smart contract escrows on GigPay.',
-        company_name: user.email?.includes?.('client') ? 'Acme Corp' : '',
-        portfolio_url: user.email?.includes?.('freelancer') ? 'https://github.com/gigpay-pilot' : '',
+        display_name: user.user_metadata?.display_name || (user.email?.includes?.('client') ? 'Demo client' : 'Demo freelancer'),
+        bio: 'Demo account (simulation only, nothing on-chain).',
+        company_name: '',
+        portfolio_url: '',
         role: user.user_metadata?.role || 'client'
       });
       setLoading(false);
@@ -78,7 +78,7 @@ const ProfilePage = () => {
     e.preventDefault();
     const isSim = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || !isUuid(user?.id));
     if (isSim) {
-      addToast('Profile saved in simulation mode!', 'success');
+      addToast('Simulation only: this demo profile is not saved anywhere.', 'info');
       return;
     }
 
@@ -173,7 +173,7 @@ const ProfilePage = () => {
                 name="company_name"
                 value={profile.company_name}
                 onChange={handleChange}
-                placeholder="Acme Corp"
+                placeholder="Company or school (optional)"
                 style={{
                   width: '100%', padding: '0.75rem 1rem', borderRadius: '0.5rem',
                   background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',

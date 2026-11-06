@@ -49,7 +49,10 @@ const FreelancerDashboard = () => {
         await requestWalletSignature(publicKey, `Accept Escrow Contract for ${amount || ''} XLM`);
       }
       await updateTaskStatus(id, 'In Progress', true);
-      addToast("Task accepted! Funds remain locked in Soroban escrow until completion.", "success");
+      const isSimUser = !!(user?.is_simulation_mode || String(user?.id || '').startsWith('demo-'));
+      addToast(isSimUser
+        ? "Simulation only: task accepted in this browser. Nothing is locked on Stellar Testnet."
+        : "Task accepted. The payment stays locked in the escrow until the client releases it.", isSimUser ? "info" : "success");
     } catch (err) {
       addToast("Failed to accept task: " + (err?.message || err), "error");
     } finally {

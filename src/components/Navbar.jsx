@@ -453,7 +453,7 @@ const Navbar = () => {
                 onClick={() => {
                   connectTesterWallet();
                   setShowOnboardingModal(false);
-                  addToast("Connected in Mobile / Simulator Testnet Mode!", "success");
+                  addToast('Practice Testnet wallet created in this browser. Test XLM can take up to 30 seconds to arrive.', 'success');
                 }}
                 className="btn btn-outline"
                 style={{ flex: '1 1 100%', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', marginTop: '0.5rem', fontSize: '0.85rem' }}
