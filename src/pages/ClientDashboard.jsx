@@ -181,6 +181,13 @@ const ClientDashboard = () => {
       return;
     }
 
+    // Real escrows need the freelancer's own payout address; only the offline demo account (nothing
+    // on-chain) may leave it blank and use a demo payout.
+    if (!isDemoAccount && !freelancerWallet.trim()) {
+      addToast("Enter your freelancer's payout address (starts with G, 56 characters). Ask them for it or for their invite link.", "warning");
+      return;
+    }
+
     const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
     if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
       addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
@@ -199,7 +206,10 @@ const ClientDashboard = () => {
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
-      addToast("Task Escrow created and funded on Stellar Testnet!", "success");
+      // addTask itself reports a confirmed or still-confirming escrow, so this message never claims "funded".
+      addToast(isDemoAccount
+        ? "Simulation only: practice task saved in this browser. Nothing was sent to Stellar Testnet."
+        : "Funding sent. It is being confirmed on Stellar Testnet (about 5 seconds); the task card shows its status.", "info");
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
@@ -496,7 +506,7 @@ const ClientDashboard = () => {
                       <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
                     </div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                      Escrow settlement is paused per SOW Deliverable 3 until mutually resolved or updated by the freelancer.
+                      Release is paused until the client who raised the dispute resolves it. The freelancer can see the dispute but cannot change the task while it is disputed.
                     </div>
                   </div>
                 )}
@@ -603,12 +613,15 @@ const ClientDashboard = () => {
                 placeholder="G... (your freelancer copies this from their dashboard)"
                 value={freelancerWallet}
                 onChange={(e) => setFreelancerWallet(e.target.value)}
+                required={!isDemoAccount}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white', fontSize: '0.85rem' }}
               />
               <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: freelancerWallet.trim() ? 'var(--text-muted)' : '#fbbf24' }}>
                 {freelancerWallet.trim()
                   ? "The locked payment can only be released to this address. Check every character matches what your freelancer sent you:"
-                  : "Left blank, the payment goes to GigPay's own test wallet: it won't pay a real freelancer and won't count as a pilot job."}
+                  : isDemoAccount
+                    ? "Demo account: left blank, the practice task uses a demo payout address. Nothing is sent on-chain."
+                    : "Required: your freelancer's payout address (starts with G, 56 characters). They copy it from their dashboard or send you an invite link."}
               </p>
               {freelancerWallet.trim() && (
                 <code data-testid="fund-payout-address" style={{ display: 'block', marginTop: '0.3rem', padding: '0.45rem 0.55rem', borderRadius: '0.4rem', background: 'rgba(0,0,0,0.3)', color: 'white', wordBreak: 'break-all', fontSize: '0.78rem' }}>
