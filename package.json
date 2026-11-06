@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node test/gigpay_regression.test.js && node test/escrow_submission_integrity.test.js && node test/ledger_integrity.test.js && node test/onboarding_at_scale.test.js && node test/dispute_sync.test.js && node test/onboarding_safety.test.js",
+    "test:latency": "node test/sync_latency.test.js",
     "preview": "vite preview",
     "server": "json-server --watch db.json --port 3001"
   },
