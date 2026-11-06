@@ -9,6 +9,7 @@ import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledge
 import { buildInviteLink } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
+import { getDisputeMetadata } from '../lib/disputeMetadata';
 
 const FreelancerDashboard = () => {
   const { user, publicKey, switchRole } = useAuth();
@@ -325,6 +326,7 @@ const FreelancerDashboard = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {acceptedTasks.map(task => {
               const isDisputed = task.status === 'Disputed';
+              const dispute = getDisputeMetadata(task);
               const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
               const isExpanded = expandedPoWTask === task.id;
 
@@ -361,7 +363,16 @@ const FreelancerDashboard = () => {
                   {/* Dispute Banner if flagged */}
                   {isDisputed && (
                     <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.75rem', fontSize: '0.85rem', color: '#fca5a5' }}>
-                      <strong>⚠️ Escrow Frozen:</strong> The client flagged this task as Disputed ({task.dispute_reason || 'Review requested'}). Standard release is paused until resolved.
+                      <strong>⚠️ Escrow Frozen:</strong> The client flagged this task as Disputed ({task.dispute_reason || 'reason not recorded'}). Standard release is paused until resolved.
+                      <div data-testid="dispute-metadata" style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: '0.3rem' }}>
+                        <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
+                      </div>
+                    </div>
+                  )}
+                  {!isDisputed && dispute.resolvedAt && (
+                    <div data-testid="dispute-history" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.6rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by {dispute.raisedBy}
+                      {task.dispute_reason ? ` ("${task.dispute_reason}")` : ''}; resolved {dispute.resolvedAt}.
                     </div>
                   )}
 

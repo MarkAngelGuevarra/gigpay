@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, formatStellarError, isSimulatedTxHash } from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { takeInvitePayout } from '../lib/invite';
+import { getDisputeMetadata } from '../lib/disputeMetadata';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -395,6 +396,7 @@ const ClientDashboard = () => {
 
           {!isLoading && clientTasks.map(task => {
             const isDisputed = task.status === 'Disputed';
+            const dispute = getDisputeMetadata(task, user?.id);
             const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
             // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
             const isMine = isOwnTask(task);
@@ -488,11 +490,20 @@ const ClientDashboard = () => {
                       <AlertTriangle size={15} color="#ef4444" /> ⛔ Release Action Frozen (Disputed State)
                     </div>
                     <div style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>
-                      <strong>Dispute Metadata:</strong> {task.dispute_reason || 'Client logged revision request.'}
+                      <strong>Dispute reason:</strong> {task.dispute_reason || 'Not recorded'}
+                    </div>
+                    <div data-testid="dispute-metadata" style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                      <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
                     </div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                       Escrow settlement is paused per SOW Deliverable 3 until mutually resolved or updated by the freelancer.
                     </div>
+                  </div>
+                )}
+                {!isDisputed && dispute.resolvedAt && (
+                  <div data-testid="dispute-history" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.6rem 0.85rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by {dispute.raisedBy}
+                    {task.dispute_reason ? ` ("${task.dispute_reason}")` : ''}; resolved {dispute.resolvedAt}.
                   </div>
                 )}
 
