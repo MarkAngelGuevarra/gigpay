@@ -1,0 +1,35 @@
+{
+  "network": "testnet",
+  "network_passphrase": "Test SDF Network ; September 2015",
+  "soroban_rpc": "https://soroban-testnet.stellar.org",
+  "contract_id": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
+  "contract_name": "gigpay-escrow",
+  "contract_source": "contracts/gigpay_escrow/src/lib.rs",
+  "source_commit": "ebb2a7a7bd193616ce34c3cef37202cfa1e7ea4f",
+  "source_commit_note": "Latest commit that changed contracts/gigpay_escrow/src/lib.rs (2026-09-20). The repo does not record which commit the deployed WASM was built from; rebuild at this commit and compare with wasm_hash to check.",
+  "soroban_sdk": {
+    "cargo_toml": "22.0.8",
+    "cargo_lock": "22.0.11"
+  },
+  "wasm_hash": "ea681b9739ada34e82b3d60158fb5fa75418e315488ee74074ce57b1180afdea",
+  "deployer": "GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E",
+  "admin": null,
+  "admin_note": "The contract has no admin role (functions: fund_task, approve_task, get_task).",
+  "deploy_tx": "d90e6e47231356cc87c03c3207d166345b0b86705afbd8682be365e7a179cc39",
+  "deployed_at": null,
+  "deployed_at_note": "Not recorded in the repo; see the deploy transaction on Stellar Expert.",
+  "ttl_extension": {
+    "tx": "b408effa5a8a02e99a810a95f6b2311039ba740343e8fa96cb9b8dfc8d71bc7f",
+    "date": "2026-11-05",
+    "live_until_approx": "2027-05-04",
+    "how_to_check": "node scripts/extend_contract_ttl.mjs"
+  },
+  "native_xlm_sac": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  "explorer": "https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
+  "sources": [
+    "DEPLOYED_CONTRACT.md",
+    "TESTING.md",
+    "contracts/gigpay_escrow/Cargo.toml",
+    "contracts/gigpay_escrow/Cargo.lock"
+  ]
+}
