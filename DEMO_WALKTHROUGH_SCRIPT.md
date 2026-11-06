@@ -43,7 +43,7 @@ Script for recording the walkthrough on today's app at https://gigpay.tech (Stel
 
 #### 2:00 – 3:00 | Dispute freeze and release
 - Client: click **Freeze & Dispute**, edit the reason, click **Confirm Dispute Freeze**. *"The task is now Disputed and the release button is gone. This freeze is enforced by the GigPay app; the escrow contract itself has no dispute or refund state."* Show **Release Action Frozen (Disputed State)** with the reason, and **Dispute Frozen** on the freelancer side.
-- Click **Resolve Dispute**. The task returns to **In Progress**.
+- Click **Resolve Dispute**. Because proof was already submitted, the task returns to **Under Review** (without proof it would return to **In Progress**).
 - Click **Approve & Release**. *"To avoid accidental payouts, the client must type CONFIRM."* Type `CONFIRM` and click **Release Escrow Payout**. This sends the contract's `approve_task` transaction on Testnet.
 - Freelancer: tap **Check my balance on Stellar Expert** to show the payment on-chain.
 
@@ -51,7 +51,7 @@ Script for recording the walkthrough on today's app at https://gigpay.tech (Stel
 - Click **📜 Public Ledger** in the top bar. *"This lists every escrow on contract CAUU2O…7RD3, generated from Stellar Testnet, with transaction links to Stellar Expert. Each wallet is labeled outside user or team/test, and the counts are wallets, not verified people. Disputes show in the Dispute column."*
 - Click **Export CSV** to download the same data.
 - Open one transaction link on Stellar Expert.
-- Terminal: run `npm test` and read the totals from the screen (on Nov 6, 2026: 66 tests in 6 suites, all offline). Optionally run `cargo test` in `contracts/gigpay_escrow` (4 contract tests).
+- Terminal: run `npm test` and read the totals from the screen (on Nov 6, 2026: 70 tests in 6 suites, all offline). Optionally run `cargo test` in `contracts/gigpay_escrow` (4 contract tests).
 - *"Thanks to the Stellar Development Foundation, Stellar Philippines and Rise In."*
 
 ### After recording
