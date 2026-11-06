@@ -7,7 +7,7 @@ This is the documented Testnet workflow that SOW Deliverable 3 refers to: a disp
 1. The client who funded the task clicks **Freeze & Dispute** and gives a reason.
 2. GigPay records the dispute and refuses to release the escrow while it is open.
 3. Client and freelancer sort out the problem between themselves (outside GigPay).
-4. The client clicks **Resolve Dispute**. The task returns to In Progress.
+4. The client clicks **Resolve Dispute**. The task returns to Under Review if proof of work was already submitted, otherwise to In Progress.
 5. The client can then release the payment as usual (type `CONFIRM`), or raise a new dispute.
 
 ## Important: the contract has no dispute state
@@ -36,7 +36,7 @@ Raising a dispute writes these fields on the task row in Supabase:
 - `disputed_at`: time the dispute was raised
 - `disputed_by`: the client's user id
 
-Resolving writes `status` = `In Progress` and `dispute_resolved_at`. The reason and the original dispute time are kept, so the history stays on the row.
+Resolving writes `dispute_resolved_at` and sets `status` back to `Under Review` when proof of work was already submitted, otherwise `In Progress` (`statusAfterDisputeResolved`, since commit `6546ad8`). The reason and the original dispute time are kept, so the history stays on the row.
 
 If the database write fails (for example, the signed-in user is not the task's client), the app undoes the change on screen and shows an error, so nothing is shown as frozen that is not saved.
 
@@ -60,7 +60,7 @@ The XLM stays locked in the contract during the dispute. Nothing is moved on-cha
 ## How a dispute is resolved (the agreed workflow)
 
 1. **Talk.** Client and freelancer agree on the fix outside GigPay (chat, call, the BCC lab session). GigPay has no messaging or arbitration.
-2. **Unfreeze.** The client clicks **Resolve Dispute**. The task goes back to In Progress, and the freelancer can work on it and submit proof of work again.
+2. **Unfreeze.** The client clicks **Resolve Dispute**. The task goes back to Under Review (proof already submitted) or In Progress, and the freelancer can work on it and submit proof of work again.
 3. **Finish.** When the client is satisfied, they release the payment by typing `CONFIRM`. If not, they can raise a new dispute.
 
 There is no administrator screen. The database trigger does not restrict writes made without a signed-in user (the Supabase dashboard or service role), so a project administrator could set `dispute_resolved_at` by hand if a client cannot. This has not been needed so far. If it is ever used, it should be written down with the date and reason. Even then, only the client's wallet can release the escrow on-chain.
