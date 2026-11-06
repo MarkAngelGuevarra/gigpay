@@ -49,7 +49,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 ### Step 1: Fund Milestone Escrow (Persona A $\rightarrow$ Persona B)
 1. In Freighter, switch to **Persona A (Client)**.
 2. Open [https://gigpay.tech/client](https://gigpay.tech/client) (or local dev `http://localhost:5173/client`).
-3. Click **Connect Freighter** in the header. Verify Persona A's public key appears.
+3. Click **Connect Wallet** in the header and choose Freighter. Verify Persona A's public key appears.
 4. In the "Create New Escrow Task" card:
    - **Task Title:** `Fullstack Soroban Escrow Integration`
    - **Amount:** `1.5` XLM (native XLM only; GigPay does not use USDC)
@@ -59,7 +59,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
    - Freighter pop-up displays the transaction request with description and Soroban contract invocation.
    - Click **Approve / Sign** in Freighter.
 6. The app submits the signed transaction to Soroban Testnet RPC and polls with exponential backoff until confirmed.
-7. Toast notification displays: *"Task Escrow created and funded on Stellar Testnet!"*.
+7. Toast notification displays: *"Funding sent. It is being confirmed on Stellar Testnet (about 5 seconds); the task card shows its status."*
 
 ---
 
@@ -70,8 +70,8 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 4. **Observed Behavior:**
    - The UI immediately halts execution *before* prompting Freighter or calling Horizon.
    - Warning toast appears:  
-     `"Self-dealing prevented: Client wallet and Freelancer destination wallet cannot be identical. Multi-wallet separation is required."`
-   - Zero gas fees or on-chain transactions are wasted.
+     `"Self-dealing prevented: Client and Freelancer wallets cannot be identical."`
+   - No transaction is sent, so no network fee is spent. (This check is in the app; the contract itself does not compare the two addresses.)
 
 ---
 
@@ -89,11 +89,10 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 ### Step 4: Milestone Work Delivery & Client Approval
 1. In the Client Dashboard task list, locate the funded task.
 2. Click **Approve & Release**.
-3. Type `CONFIRM` in the security modal to prevent accidental fund release.
-4. Type **CONFIRM** and click **Release**.
-5. Freighter prompts Persona A to sign the `approve_task` contract call.
-6. Upon confirmation, Soroban smart contract releases the Stroop token balance directly to **Persona B (Freelancer)**.
-7. Toast notification confirms: *"Escrow released on Testnet! Tx: …"*.
+3. In the confirmation modal, type **CONFIRM** and click **Release Escrow Payout**.
+4. Freighter prompts Persona A to sign the `approve_task` contract call.
+5. Once confirmed, the contract sends the escrowed XLM to **Persona B (Freelancer)**.
+6. Toast notification confirms: *"Escrow released on Testnet! Tx: …"*.
 
 ---
 
@@ -107,5 +106,5 @@ All transactions execute on Stellar Testnet and can be verified publicly:
 | **Native SAC Contract** | [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
 | **Escrow #1 funding (team test, Sep 20, 2026)** | [`40df1a722e...`](https://stellar.expert/explorer/testnet/tx/40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda) |
 | **Escrow #1 release (team test)** | [`1770bfa555...`](https://stellar.expert/explorer/testnet/tx/1770bfa5558fa2bcbb95309a1ece394895f788fe1822cdf9a2dbd923f621e984) |
-| **Live Production dApp** | [https://gigpay.tech](https://gigpay.tech) |
+| **Live app (Stellar Testnet)** | [https://gigpay.tech](https://gigpay.tech) |
 | **Pull Request #4** | [https://github.com/MarkAngelGuevarra/gigpay/pull/4](https://github.com/MarkAngelGuevarra/gigpay/pull/4) |

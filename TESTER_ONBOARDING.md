@@ -16,7 +16,7 @@ You need **two people on two different phones or computers**: one acts as the **
 ### Client
 1. If the invite link opened inside Messenger or Teams, tap **⋮ → Open in Chrome/Safari** first. Then sign up with **your own email**, keep **Client (Hiring)** selected, and open the **Client Portal**. Your practice wallet is created and topped up with Testnet XLM automatically (this can take up to 30 seconds).
 2. Create a task: title and a small amount (e.g. 2 XLM). The **freelancer's payout address is already filled in** from the invite link; check it matches what they sent. (No link? Paste their address.)
-   - Left blank, the payment goes to GigPay's test wallet and **does not count** as a real pilot job.
+   - The payout address is required: GigPay won't lock funds without it.
 3. Tap **Lock Funds in Escrow** and wait about 10 seconds. If GigPay says the escrow is **Confirming**, don't lock funds again: it updates by itself.
    - One or two escrows per pair is plenty: the contract has room for a limited number of escrows in total.
 
