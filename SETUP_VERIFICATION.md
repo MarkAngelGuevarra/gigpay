@@ -14,7 +14,7 @@ How to install, test and build GigPay from a clean checkout, and where the real 
 git clone https://github.com/MarkAngelGuevarra/gigpay.git
 cd gigpay
 npm ci          # installs exactly the versions in package-lock.json
-npm test        # 70 offline tests in 6 suites
+npm test        # 85 offline tests in 7 suites
 npm run build   # production build into dist/
 npm run dev     # optional: local app at http://localhost:5173
 ```

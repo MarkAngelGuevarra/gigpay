@@ -10,7 +10,7 @@ The SOW requires the project to run from a clean installation on three separate 
 | 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, not a separate physical computer; kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
 | 3 | A third separate computer (for example a Mac) | ⏳ **Pending** (see "How to add environment 3") |
 
-Two real runs so far. `npm test` today runs 70 offline tests in 6 suites; each log below shows the counts that existed at the commit it ran, so they are lower than today's.
+Two real runs so far. `npm test` today runs 85 offline tests in 7 suites; each log below shows the counts that existed at the commit it ran, so they are lower than today's.
 
 > **Correction, Nov 4, 2026.** An earlier version of this file (and of `SETUP_VERIFICATION.md`) showed passing runs on macOS Sonoma and Ubuntu 24.04. Those logs cannot be matched to any real run:
 > - The two files disagreed on the macOS version (14.4.1 vs 14.5) and on how Ubuntu was run (a cloud node vs Docker and GitHub Actions). The repo had no GitHub Actions workflow at the time.
