@@ -136,5 +136,56 @@ await test('No fake proof links or placeholder balances', () => {
   assert.ok(st.includes('unknown: true'), 'Horizon errors report an unknown balance');
 });
 
+// UI team (Nov 6): shared lab PCs, own-tasks-only, dispute metadata, honest wording.
+await test('Invite payout lives in this tab only and sign-out clears it', async () => {
+  const invite = await import('../src/lib/invite.js');
+  const addr = S.Keypair.random().publicKey();
+  assert.strictEqual(invite.captureInviteFromUrl(`?pay=${addr}`), addr);
+  assert.strictEqual(localStorage.getItem('gigpay_invite_payout'), null, 'never kept in localStorage');
+  assert.ok(sessionStorage.getItem('gigpay_invite_payout'), 'kept in sessionStorage');
+  invite.clearInvitePayout();
+  assert.strictEqual(invite.takeInvitePayout(), null, 'cleared on sign-out');
+  sessionStorage.setItem('gigpay_invite_payout', JSON.stringify({ address: addr, at: Date.now() - 25 * 3600 * 1000 }));
+  assert.strictEqual(invite.takeInvitePayout(), null, 'older than 24h is ignored');
+  assert.ok(read('src/context/AuthContext.jsx').includes('clearInvitePayout();'), 'signOut clears the invite');
+  const dash = read('src/pages/ClientDashboard.jsx');
+  assert.ok(dash.includes('fund-payout-address') && dash.includes('release-payout-address'), 'fund form and release modal show who gets paid');
+});
+
+await test('Clients see and act only on their own tasks', () => {
+  const dash = read('src/pages/ClientDashboard.jsx');
+  assert.ok(!dash.includes("|| !t.client_id)") && !dash.includes("|| !task.client_id;"), 'tasks without client_id are not yours');
+  assert.ok(dash.includes('const isMine = isOwnTask(task);'));
+  assert.ok(dash.includes('const fundedTasks = ownTasks.filter('), 'metrics count only your tasks');
+});
+
+await test('Dispute metadata shows when, by whom and when resolved', async () => {
+  const { getDisputeMetadata } = await import('../src/lib/disputeMetadata.js');
+  const t = { client_id: 'c1', dispute_reason: 'Wrong file', disputed_at: '2026-11-05T02:00:00Z', disputed_by: 'c1', dispute_resolved_at: '2026-11-05T03:00:00Z' };
+  const m = getDisputeMetadata(t, 'c1');
+  assert.ok(m.raisedAt && m.resolvedAt);
+  assert.strictEqual(m.raisedBy, 'the client (you)');
+  assert.strictEqual(getDisputeMetadata({ ...t, dispute_resolved_at: '2026-11-04T00:00:00Z' }).resolvedAt, null, 'older resolution is not current');
+  assert.strictEqual(getDisputeMetadata({ client_id: 'c1' }).raisedBy, 'not recorded');
+  for (const f of ['src/pages/ClientDashboard.jsx', 'src/pages/FreelancerDashboard.jsx']) {
+    assert.ok(read(f).includes('getDisputeMetadata('), `${f} shows dispute metadata`);
+  }
+});
+
+await test('Auth page follows ?mode= changes; guide starts minimized', () => {
+  assert.ok(read('src/pages/AuthPage.jsx').includes('[location.search, location.key]'));
+  assert.ok(/isMinimized: true,\n\s+isDismissed: false/.test(read('src/components/PilotGuideWidget.jsx')));
+  assert.ok(read('src/components/Navbar.jsx').includes('navbar-menu-toggle'), 'phone header has a Menu');
+});
+
+await test('UI wording: Stellar Testnet, no personas, no X-Frame-Options meta', () => {
+  const ui = ['src/pages/ClientDashboard.jsx', 'src/pages/ProfilePage.jsx', 'src/context/AuthContext.jsx',
+    'src/components/PilotGuideWidget.jsx', 'src/components/PilotIntakeBanner.jsx'].map(read).join('\n');
+  for (const bad of ['Protocol 22', 'Official Pilot Feedback', 'Acme Corp', 'Alex Rivera', 'Typical platform fee (up to 20%)', 'Left blank, the payment goes to']) {
+    assert.ok(!ui.includes(bad), `still says "${bad}"`);
+  }
+  assert.ok(!/http-equiv="X-Frame-Options"/.test(read('index.html')));
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);
