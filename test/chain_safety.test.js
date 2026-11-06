@@ -5,6 +5,7 @@
  *    out, and never sends a second release.
  *  - Money is locked only for a real, activated freelancer payout address; never a silent team wallet.
  *  - A "Confirming" escrow whose funding succeeded always resolves, even without an RPC return value.
+ *  - Resolving a dispute returns a task with submitted proof to Under Review, not In Progress.
  *
  * Offline: every network step is an injected mock. Command: node test/chain_safety.test.js
  */
@@ -197,6 +198,22 @@ await test('Confirming: RPC error during lookup is retried later; FAILED / expir
   const ctx = read('src/context/TaskContext.jsx');
   assert.ok(ctx.includes('resolveConfirmingFunding(t, outcome)'), 'TaskContext resolves Confirming tasks through resolveConfirmingFunding');
   assert.ok(/escrowIdUnknown, \.\.\.dbFields/.test(ctx), 'the local escrowIdUnknown flag is not written to the database');
+});
+
+// ---------- 4. Resolving a dispute keeps submitted proof under review ----------
+await test('Dispute resolved after proof was submitted -> Under Review; without proof -> In Progress', async () => {
+  const { mergeTaskRecords, isDisputeActive } = await import('../src/lib/taskLifecycle.js');
+  const disputed = { ...taskRecord, status: 'Disputed', disputed_at: '2026-11-06T01:00:00Z', proof_attached: true, submitted_at: '2026-11-06T00:30:00Z', github_pr_url: 'https://github.com/example/repo/pull/1' };
+  assert.strictEqual(stellar.statusAfterDisputeResolved(disputed), 'Under Review');
+  assert.strictEqual(stellar.statusAfterDisputeResolved({ ...taskRecord, status: 'Disputed', disputed_at: '2026-11-06T01:00:00Z' }), 'In Progress');
+  assert.strictEqual(stellar.statusAfterDisputeResolved({ status: 'Disputed', loom_url: 'https://loom.com/share/x' }), 'Under Review');
+  // The restored status survives sync against a stale Disputed copy, and release is no longer frozen.
+  const resolved = { ...disputed, status: stellar.statusAfterDisputeResolved(disputed), dispute_resolved_at: '2026-11-06T02:00:00Z' };
+  const merged = mergeTaskRecords(disputed, resolved);
+  assert.strictEqual(merged.status, 'Under Review');
+  assert.strictEqual(isDisputeActive(merged), false);
+  const ctx = read('src/context/TaskContext.jsx');
+  assert.ok(ctx.includes('status: statusAfterDisputeResolved(task)'), 'resolveDispute uses statusAfterDisputeResolved');
 });
 
 console.log(`\n  Chain safety: ${passed}/${passed + failed} passed\n`);

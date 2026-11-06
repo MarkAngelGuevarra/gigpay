@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useMemo } from '
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, statusAfterDisputeResolved, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
@@ -513,8 +513,9 @@ export const TaskProvider = ({ children }) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
+    // Proof already submitted before the dispute goes back to the client's review, not to In Progress.
     const resolvedData = {
-      status: 'In Progress',
+      status: statusAfterDisputeResolved(task),
       dispute_resolved_at: new Date().toISOString()
     };
 
@@ -527,7 +528,7 @@ export const TaskProvider = ({ children }) => {
       throw new Error("GigPay couldn't save the resolution, so the task is still frozen. Try again in a moment.");
     }
 
-    addToast("Dispute resolved! Escrow workflow resumed to In Progress.", "success");
+    addToast(`Dispute resolved. The task is back to ${resolvedData.status}.`, "success");
   };
 
   // 8. Update Task Status with Permanent Milestone Completion & Dynamic Public Ledger Registration

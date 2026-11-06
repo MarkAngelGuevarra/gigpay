@@ -1116,6 +1116,15 @@ const ESCROW_NOT_FOUND_MESSAGE =
 const DISPUTE_FROZEN_MESSAGE =
   "This payment is on hold because the task is in dispute. Resolve the dispute first, then release the payment.";
 
+/**
+ * The status a task returns to when its dispute is resolved: back to Under Review when the freelancer had
+ * already submitted proof of work (so the client can review and release), otherwise In Progress.
+ */
+export const statusAfterDisputeResolved = (task) =>
+  (task?.proof_attached || task?.submitted_at || task?.github_pr_url || task?.doc_url || task?.loom_url)
+    ? 'Under Review'
+    : 'In Progress';
+
 const demoReleaseResult = async (label) => {
   console.log(`[DEMO MODE] Simulating approve_task release for ${label}`);
   await new Promise((resolve) => setTimeout(resolve, 1500));
