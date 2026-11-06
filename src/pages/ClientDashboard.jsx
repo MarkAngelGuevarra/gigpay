@@ -596,9 +596,14 @@ const ClientDashboard = () => {
               />
               <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: freelancerWallet.trim() ? 'var(--text-muted)' : '#fbbf24' }}>
                 {freelancerWallet.trim()
-                  ? "The locked payment can only be released to this address."
+                  ? "The locked payment can only be released to this address. Check every character matches what your freelancer sent you:"
                   : "Left blank, the payment goes to GigPay's own test wallet: it won't pay a real freelancer and won't count as a pilot job."}
               </p>
+              {freelancerWallet.trim() && (
+                <code data-testid="fund-payout-address" style={{ display: 'block', marginTop: '0.3rem', padding: '0.45rem 0.55rem', borderRadius: '0.4rem', background: 'rgba(0,0,0,0.3)', color: 'white', wordBreak: 'break-all', fontSize: '0.78rem' }}>
+                  {freelancerWallet.trim()}
+                </code>
+              )}
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 You cannot pay your own address.
               </span>
@@ -695,6 +700,15 @@ const ClientDashboard = () => {
                 </div>
               </div>
             )}
+            {/* Show exactly who gets paid, so a student on a shared PC can check it against the freelancer's address. */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Paid to (freelancer's payout address):</div>
+              {taskToApprove?.freelancer_wallet ? (
+                <code data-testid="release-payout-address" style={{ color: 'white', wordBreak: 'break-all', fontSize: '0.78rem' }}>{taskToApprove.freelancer_wallet}</code>
+              ) : (
+                <span style={{ color: '#fbbf24' }}>Not stored with this task (practice-mode and older tasks have none). An on-chain escrow pays the address set when it was funded.</span>
+              )}
+            </div>
             <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
               <strong>⚠️ Safety check:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
             </div>

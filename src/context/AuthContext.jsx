@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { clearInvitePayout } from '../lib/invite';
 import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet } from '../lib/stellar';
 
 // Friendbot rate-limits by IP, so a room of testers on one Wi-Fi can't all be funded by it. GigPay's
@@ -214,6 +215,8 @@ export const AuthProvider = ({ children }) => {
       console.warn("Storage cleanup notice:", e);
     }
     setPracticeWalletOwner(null);
+    // A freelancer's invite address must not pre-fill the next student's task form on a shared PC.
+    clearInvitePayout();
     try {
       await supabase.auth.signOut();
     } catch (e) {

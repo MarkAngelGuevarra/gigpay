@@ -3,8 +3,9 @@
  *
  * Copying a 56-character Stellar address through chat is error-prone, and one wrong character sends the
  * escrow to the wrong account. The freelancer shares a link instead; the client's task form is pre-filled
- * with the address. The address is held in localStorage (24h) so it survives the sign-up / email
- * confirmation detour before the client reaches /client.
+ * with the address. The address is held in sessionStorage (this tab only, at most 24h) so it survives the
+ * sign-in detour before the client reaches /client, but not the next student on a shared lab PC: it is
+ * gone when the tab closes and is cleared on sign-out (clearInvitePayout).
  */
 import { isValidStellarAddress, isDemoWallet } from './stellar.js';
 
@@ -21,7 +22,7 @@ export const captureInviteFromUrl = (search = globalThis.location?.search || '')
   try {
     const pay = new URLSearchParams(search).get('pay');
     if (!pay || !isInvitable(pay.trim())) return null;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ address: pay.trim(), at: Date.now() }));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ address: pay.trim(), at: Date.now() }));
     return pay.trim();
   } catch {
     return null;
@@ -31,13 +32,19 @@ export const captureInviteFromUrl = (search = globalThis.location?.search || '')
 /** Returns the remembered invite address once (then forgets it), or null if none or expired. */
 export const takeInvitePayout = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     const { address, at } = JSON.parse(raw);
     if (!address || Date.now() - at > MAX_AGE_MS || !isInvitable(address)) return null;
     return address;
   } catch {
     return null;
   }
+};
+
+/** Forgets any remembered invite address (called on sign-out; also removes copies older builds kept). */
+export const clearInvitePayout = () => {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked */ }
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked */ }
 };
