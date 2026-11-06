@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -9,10 +9,17 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   
-  const [isLogin, setIsLogin] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return !(params.get('mode') === 'signup' || params.get('signup') === '1');
-  });
+  const location = useLocation();
+  const isSignupUrl = (search) => {
+    const params = new URLSearchParams(search);
+    return params.get('mode') === 'signup' || params.get('signup') === '1';
+  };
+  const [isLogin, setIsLogin] = useState(() => !isSignupUrl(location.search));
+  // The navbar links to /auth?mode=signup and /auth while this page is already open; follow each
+  // navigation (a new location key, even to the same URL) instead of reading the mode only once.
+  useEffect(() => {
+    setIsLogin(!isSignupUrl(location.search));
+  }, [location.search, location.key]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
