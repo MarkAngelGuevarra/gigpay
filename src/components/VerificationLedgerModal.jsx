@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, ExternalLink, Download, X, Clock, CheckCircle2 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
+import { useToast } from '../context/ToastContext';
 import onchainData from '../data/onchainEscrows.json';
-import { isTeamWallet, isScriptedTestWallet } from '../lib/ledgerIntegrity';
+import { isTeamWallet, isScriptedTestWallet, buildPublicLedger, ledgerToCsv } from '../lib/ledgerIntegrity';
 
 const isOutside = (w) => !!w && !isTeamWallet(w) && !isScriptedTestWallet(w);
 const chainStats = (() => {
@@ -22,7 +23,34 @@ const chainStats = (() => {
 })();
 
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
-  const { ledgerRecords, exportVerificationCsv } = useTasks();
+  const { tasks, ledgerRecords } = useTasks();
+  const { addToast } = useToast() || {};
+
+  // Each on-chain escrow exactly once (enriched with its Supabase task), then database-only rows.
+  const records = useMemo(() => buildPublicLedger({
+    escrows: onchainData.escrows || [],
+    tasks,
+    otherRecords: ledgerRecords,
+    generatedAt: onchainData.generatedAt
+  }), [tasks, ledgerRecords]);
+
+  const exportVerificationCsv = () => {
+    try {
+      const blob = new Blob([ledgerToCsv(records)], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `gigpay_onchain_verification_ledger_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addToast?.(`Exported ${records.length} ledger rows to CSV.`, 'success');
+    } catch (err) {
+      console.error('CSV export failed:', err);
+      addToast?.('Failed to export the verification ledger.', 'error');
+    }
+  };
 
   // Escape key listener for keyboard dismissal
   useEffect(() => {
@@ -229,7 +257,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
               </tr>
             </thead>
             <tbody>
-              {ledgerRecords.map((record) => (
+              {records.map((record) => (
                 <tr key={record.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                   <td style={{ padding: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -238,6 +266,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <div style={{ fontWeight: 600, color: 'white' }}>{record.taskId}</div>
+                    {record.source === 'Database only' && (
+                      <div style={{ fontSize: '0.72rem', color: '#fbbf24' }}>Database only: not in the on-chain index yet, not counted</div>
+                    )}
                     <code style={{ fontSize: '0.75rem', color: '#00f2fe' }}>{record.method}</code>
                   </td>
                   <td style={{ padding: '0.75rem', fontWeight: 600, color: '#00f2fe' }}>

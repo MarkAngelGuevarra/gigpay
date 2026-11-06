@@ -113,5 +113,58 @@ test('Same transaction from two sources is listed once; placeholder rows are dro
   assert.deepStrictEqual(rows.map((r) => r.id), ['completed-task-a', 'other']);
 });
 
+// Fixture shaped like src/data/onchainEscrows.json #41-#46 and the Supabase tasks linked to them.
+const H = (c) => c.repeat(64);
+const ESCROWS = [41, 42, 43, 44, 45, 46].map((n, i) => ({
+  onChainTaskId: n, amount: 0.1, clientWallet: OUTSIDE_CLIENT, freelancerWallet: OUTSIDE_FREELANCER,
+  released: n !== 41 && n !== 44, fundTxHash: H('0123456789ab'[i * 2]), fundedAt: '2026-11-05T05:17:00Z',
+  releaseTxHash: n !== 41 && n !== 44 ? H('0123456789ab'[i * 2 + 1]) : null, releasedAt: n !== 41 && n !== 44 ? '2026-11-05T05:21:25Z' : null,
+  walletKind: 'Team test'
+}));
+const byId = (n) => ESCROWS.find((e) => e.onChainTaskId === n);
+
+test('Public ledger lists every on-chain escrow exactly once, even when DB rows share its hashes', () => {
+  const { buildPublicLedger } = ledgerMod;
+  const tasks = [
+    { id: 'u42', title: 'Logo', on_chain_task_id: 42, tx_hash: byId(42).fundTxHash, release_tx_hash: byId(42).releaseTxHash, status: 'Completed' },
+    { id: 'u43', title: 'Poster', tx_hash: byId(43).fundTxHash, release_tx_hash: byId(43).releaseTxHash, status: 'Completed' }
+  ];
+  const otherRecords = [
+    buildCompletedTaskLedgerRow(tasks[0]),                                         // same release hash as onchain-42
+    buildCompletedTaskLedgerRow(tasks[1]),                                         // same release hash as onchain-43
+    { id: 'tx-fund-1', txHash: byId(45).fundTxHash, status: 'Escrow Locked' },     // fund hash of a released escrow
+    { id: 'onchain-46', txHash: byId(46).fundTxHash }                              // context copy of the chain row
+  ];
+  const rows = buildPublicLedger({ escrows: ESCROWS, tasks, otherRecords });
+  assert.deepStrictEqual(rows.map((r) => r.id), ESCROWS.map((e) => `onchain-${e.onChainTaskId}`));
+  assert.ok(rows.every((r) => r.source === 'On-chain index'));
+  assert.match(rows.find((r) => r.escrowId === 42).taskId, /^Escrow #42 — Logo/);
+  assert.match(rows.find((r) => r.escrowId === 43).taskId, /Poster/, 'linked by hash when on_chain_task_id is missing');
+  assert.strictEqual(rows.find((r) => r.escrowId === 42).txHash, byId(42).releaseTxHash);
+});
+
+test('A hash missing from the on-chain index is a labeled database-only row that never counts', () => {
+  const { buildPublicLedger } = ledgerMod;
+  const extra = labelLedgerRecord({ id: 'completed-task-x', txHash: H('f'), clientWallet: OUTSIDE_CLIENT, freelancerWallet: OUTSIDE_FREELANCER });
+  assert.strictEqual(extra.countsAsOutsideUser, true);
+  const rows = buildPublicLedger({ escrows: ESCROWS, tasks: [], otherRecords: [extra, { ...extra, id: 'tx-rel-1' }, { id: 'demo', txHash: DEMO_RELEASE_TX_HASH }], generatedAt: '2026-11-05 23:33 UTC' });
+  const dbOnly = rows.filter((r) => r.source === 'Database only');
+  assert.strictEqual(rows.length, ESCROWS.length + 1);
+  assert.strictEqual(dbOnly.length, 1, 'same hash twice is one row; demo hashes are dropped');
+  assert.strictEqual(dbOnly[0].countsAsOutsideUser, false);
+  assert.match(dbOnly[0].walletNote, /Not in the on-chain index \(generated 2026-11-05 23:33 UTC\)/);
+});
+
+test('Ledger CSV has one line per row and escapes quotes and formula-like text', () => {
+  const { buildPublicLedger, ledgerToCsv, LEDGER_CSV_HEADERS } = ledgerMod;
+  const rows = buildPublicLedger({ escrows: ESCROWS, tasks: [{ on_chain_task_id: 44, title: '=HYPERLINK("x") "big" logo' }] });
+  const lines = ledgerToCsv(rows).split('\n');
+  assert.strictEqual(lines.length, 1 + ESCROWS.length);
+  assert.strictEqual(lines[0].split(',').length, LEDGER_CSV_HEADERS.length);
+  assert.ok(lines.some((l) => l.includes('"Escrow #44 — =HYPERLINK(""x"") ""big"" logo (Team test)"')));
+  assert.strictEqual(new Set(lines.slice(1).map((l) => l.split(',')[0])).size, ESCROWS.length);
+  assert.ok(ledgerToCsv([{ id: '=1+1' }]).includes(`"'=1+1"`), 'a cell starting with = is not run as a formula');
+});
+
 console.log(`\n  Ledger integrity: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);

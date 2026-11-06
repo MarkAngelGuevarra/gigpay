@@ -126,3 +126,85 @@ export const onChainEarnings = (tasks, payoutAddress) => {
   );
   return { total: paid.reduce((sum, t) => sum + (Number(t.amount) || 0), 0), count: paid.length };
 };
+
+// ---------------------------------------------------------------------------------------------
+// Public ledger: one row per on-chain escrow (SOW D2b/c)
+// ---------------------------------------------------------------------------------------------
+
+const ON_CHAIN_SOURCE = 'On-chain index';
+const DB_ONLY_SOURCE = 'Database only';
+
+/** The Supabase task for an on-chain escrow: same escrow id, or the same fund or release hash. */
+export const findTaskForEscrow = (e, tasks) => {
+  const list = (tasks || []).filter(Boolean);
+  return list.find((t) => t.on_chain_task_id != null && Number(t.on_chain_task_id) === Number(e.onChainTaskId))
+    || list.find((t) => (e.fundTxHash && t.tx_hash === e.fundTxHash) || (e.releaseTxHash && t.release_tx_hash === e.releaseTxHash))
+    || null;
+};
+
+const findTaskForHash = (hash, tasks) =>
+  (tasks || []).find((t) => t && hash && (t.tx_hash === hash || t.release_tx_hash === hash)) || null;
+
+/** Ledger row for one escrow from src/data/onchainEscrows.json, with the linked task's title if any. */
+export const buildOnChainLedgerRow = (e, task = null) => {
+  const hash = e.releaseTxHash || e.fundTxHash;
+  return labelLedgerRecord({
+    id: `onchain-${e.onChainTaskId}`,
+    escrowId: e.onChainTaskId,
+    taskId: `Escrow #${e.onChainTaskId}` + (task?.title ? ` — ${task.title}` : '') + ` (${e.walletKind})`,
+    method: e.released ? 'fund_task & approve_task' : 'fund_task',
+    amount: `${e.amount} XLM`,
+    contractId: GIGPAY_ESCROW_CONTRACT_ID,
+    clientWallet: e.clientWallet,
+    freelancerWallet: e.freelancerWallet,
+    txHash: hash,
+    fundTxHash: e.fundTxHash,
+    releaseHash: e.releaseTxHash,
+    status: e.released ? 'Completed & Released' : 'Escrow Locked (not released)',
+    timestamp: formatUtc(e.releasedAt || e.fundedAt),
+    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${hash}`,
+    source: ON_CHAIN_SOURCE,
+    task
+  });
+};
+
+/**
+ * Rows for the public ledger and its CSV: every escrow in the on-chain index exactly once, then any
+ * database/browser rows whose hash is not in that index (for example an escrow funded after the index
+ * was generated). Those are labeled "Database only" and never count as outside users until the index
+ * is regenerated from the chain. Rows whose hash is already covered by an escrow (its fund or release
+ * transaction) are dropped, so the same escrow is never listed twice.
+ */
+export const buildPublicLedger = ({ escrows = [], tasks = [], otherRecords = [], generatedAt = '' } = {}) => {
+  const chainRows = escrows.map((e) => buildOnChainLedgerRow(e, findTaskForEscrow(e, tasks)));
+  const chainHashes = new Set(escrows.flatMap((e) => [e.fundTxHash, e.releaseTxHash]).filter(Boolean));
+  const covered = (r) => [r.txHash, r.fundTxHash, r.releaseHash].some((h) => h && chainHashes.has(h));
+  const dbOnly = dedupeLedgerByTxHash(
+    (otherRecords || []).filter((r) => r && !String(r.id || '').startsWith('onchain-') && !covered(r))
+  ).map((r) => ({
+    ...r,
+    id: `db-only-${r.txHash}`,
+    source: DB_ONLY_SOURCE,
+    task: r.task || findTaskForHash(r.txHash, tasks),
+    countsAsOutsideUser: false,
+    walletNote: `Not in the on-chain index${generatedAt ? ` (generated ${generatedAt})` : ''}: not counted until it is regenerated. ${r.walletNote || ''}`.trim()
+  }));
+  return [...chainRows, ...dbOnly];
+};
+
+const csvCell = (v) => {
+  let s = v == null ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // keep spreadsheet apps from running cell text as a formula
+  return `"${s.replace(/"/g, '""')}"`;
+};
+
+export const LEDGER_CSV_HEADERS = ['Row ID', 'Escrow #', 'Source', 'Task Title', 'Method', 'Amount', 'Contract ID', 'Client Wallet', 'Freelancer Wallet', 'Transaction Hash', 'Fund Tx Hash', 'Release Tx Hash', 'Status', 'Timestamp (UTC)', 'Stellar Expert URL', 'Counts As Outside User', 'Wallet Note'];
+
+/** CSV text for the public ledger rows (quoted cells, inner quotes doubled). */
+export const ledgerToCsv = (records) => {
+  const rows = (records || []).map((r) => [
+    r.id, r.escrowId ?? '', r.source || '', r.taskId, r.method, r.amount, r.contractId, r.clientWallet, r.freelancerWallet,
+    r.txHash, r.fundTxHash, r.releaseHash, r.status, r.timestamp, r.explorerUrl, r.countsAsOutsideUser ? 'Yes' : 'No', r.walletNote
+  ].map(csvCell).join(','));
+  return [LEDGER_CSV_HEADERS.map(csvCell).join(','), ...rows].join('\n');
+};
