@@ -29,7 +29,7 @@ export const FOUNDER_WALLET = 'GCBXZSKNCLTKTVRHBRZ2XCTFDVNHSBF3G6CIPLBRCK2XBXIGP
 // QA client used by src/test/soroban_sim.test.js; funded escrows #1–#11.
 export const QA_TEST_CLIENT_WALLET = 'GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E';
 
-// Practice wallets created on a team device and used for team testing (escrows #42-#46, Nov 5, 2026).
+// Practice wallets created on a team device and used for team testing (escrows #41-#46, Nov 5, 2026).
 export const TEAM_DEVICE_PRACTICE_WALLETS = [
   'GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE',
   'GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI',

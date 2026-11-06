@@ -25,7 +25,7 @@ const TEAM = {
   GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3: 'team default freelancer wallet',
   GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E: 'team QA client wallet',
   GCBXZSKNCLTKTVRHBRZ2XCTFDVNHSBF3G6CIPLBRCK2XBXIGPQY5RBRN: "founder's wallet",
-  // Practice wallets on a team device (escrows #42-#46, Nov 5, 2026): team testing, not users.
+  // Practice wallets on a team device (escrows #41-#46, Nov 5, 2026): team testing, not users.
   GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE: 'team device practice wallet (client)',
   GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI: 'team device practice wallet (freelancer)',
   // Testnet funding pool (fund-practice-wallet Edge Function). It only creates practice wallets.
