@@ -36,8 +36,8 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 6, 2026: **46 escrows, 1 from outside wallets (#15, not yet released)**. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every user number (onboarded, activated, repeat), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
-4. **Tests:** `npm ci && npm test` runs 65 offline tests in 6 suites.
-5. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
+5. **Tests:** `npm ci && npm test` runs 65 offline tests in 6 suites.
+6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
 
 ## ⚠️ Known limitations (pilot, Testnet only)
 - **No refund or cancel.** Once funded, an escrow can only be released to the named freelancer by the client. If the client never approves, the funds stay locked.
