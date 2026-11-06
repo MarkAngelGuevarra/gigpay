@@ -569,10 +569,9 @@ export default function PilotGuideWidget() {
         } else {
           const docInput = document.querySelector('input[placeholder*="docs.google.com"]');
           const notesInput = document.querySelector('textarea[placeholder*="description of work"]');
-          if (docInput) setNativeValue(docInput, 'https://docs.google.com/document/d/gigpay-pilot-sample-deliverable');
-          if (notesInput) setNativeValue(notesInput, 'Completed milestone deliverables. Tested and verified for client escrow release.');
-          if (docInput || notesInput) {
-            addToast('Sample deliverables auto-filled for quick testing!', 'info');
+          if (notesInput) setNativeValue(notesInput, 'Test submission: no real deliverable (GigPay practice run).');
+          if (notesInput) {
+            addToast('Filled a practice note. Add a real link if you have one.', 'info');
           } else {
             addToast('Accept an active task first to attach proof of work deliverables.', 'warning');
           }

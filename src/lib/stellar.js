@@ -103,7 +103,11 @@ const waitForAccount = async (publicKey, attempts, delayMs) => {
  * Returns false if the account still is not visible on Horizon after the retries.
  */
 export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, delayMs = 2000 } = {}) => {
-  if ((await getAccountBalance(publicKey)).active) return true;
+  const first = await getAccountBalance(publicKey);
+  if (first.active) return true;
+  // Horizon can't be reached, so we can't tell whether the wallet is funded. Don't spend the funding pool on a
+  // guess; let the signing step proceed through Soroban RPC, which fails clearly if the account is missing.
+  if (first.unknown) return true;
   const friendbotAccepted = await requestFriendbotFunding(publicKey);
   // Friendbot refused: go to the pool right away. Friendbot accepted: give Horizon a moment first.
   if (friendbotAccepted && (await waitForAccount(publicKey, attempts, delayMs))) return true;
@@ -385,8 +389,9 @@ export const getAccountBalance = async (publicKey) => {
     if (error?.response?.status === 404 || error?.message?.includes("404")) {
       return { balance: "0.00 (Unfunded)", raw: 0, active: false, isDemo: false };
     }
-    console.warn("[getAccountBalance] Failed to query Horizon, using cached fallback:", error.message);
-    return { balance: "10,000.00", raw: 10000, active: true, isDemo: true };
+    // Horizon unreachable (slow Wi-Fi, outage): say we don't know. Never show a placeholder balance for a real wallet.
+    console.warn("[getAccountBalance] Could not reach Horizon:", error.message);
+    return { balance: "unavailable", raw: 0, active: false, unknown: true, isDemo: false };
   }
 };
 
@@ -642,10 +647,14 @@ export const checkBalanceSufficiency = async (clientAddress, amount) => {
   const reserveBuffer = 1.5; // 1.0 XLM base reserve + 0.5 XLM fee buffer
   const totalRequired = taskAmount + reserveBuffer;
 
-  const { raw: currentBalance, active, isDemo } = await getAccountBalance(clientAddress);
+  const { raw: currentBalance, active, isDemo, unknown } = await getAccountBalance(clientAddress);
 
   if (isDemo) {
     return { sufficient: true, balance: 10000, required: totalRequired };
+  }
+  if (unknown) {
+    // Balance can't be checked right now; the contract call itself rejects an underfunded account.
+    return { sufficient: true, balance: null, required: totalRequired, unchecked: true };
   }
 
   if (!active || currentBalance < totalRequired) {

@@ -65,14 +65,15 @@ const FreelancerDashboard = () => {
     let finalLoomUrl = loomUrl ? loomUrl.trim() : '';
     const finalNotes = submissionNotes ? submissionNotes.trim() : '';
 
-    if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {
-      if (finalNotes) {
-        // If non-dev tester provided notes, auto-assign verified pilot deliverable link
-        finalDocUrl = 'https://docs.google.com/document/d/gigpay-pilot-deliverable';
-      } else {
-        addToast("Please enter a work link, add notes, or click '⚡ Auto-Fill Sample' below.", "warning");
-        return;
-      }
+    if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl && !finalNotes) {
+      addToast("Add a link to your work or a short note about what you delivered.", "warning");
+      return;
+    }
+    // Only real web links are saved as proof; nothing is filled in on the freelancer's behalf.
+    const badLink = [finalGithubUrl, finalDocUrl, finalLoomUrl].find((u) => u && !/^https:\/\//i.test(u));
+    if (badLink) {
+      addToast("Work links must start with https:// so your client can open them.", "warning");
+      return;
     }
 
     setIsSubmittingPoW(true);
@@ -106,7 +107,7 @@ const FreelancerDashboard = () => {
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Discover funded client escrows, accept jobs with 1-click, and submit verifiable deliverables.
+            Discover funded client escrows, accept jobs with 1-click, and submit proof of your work.
           </p>
         </div>
         <button
@@ -429,9 +430,8 @@ const FreelancerDashboard = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setDocUrl('https://docs.google.com/document/d/gigpay-pilot-sample-deliverable');
-                            setSubmissionNotes('Completed milestone deliverables. Tested and verified for client escrow release.');
-                            addToast('Sample deliverables auto-filled for quick testing!', 'info');
+                            setSubmissionNotes('Test submission: no real deliverable (GigPay practice run).');
+                            addToast('Filled a practice note. Add a real link if you have one.', 'info');
                           }}
                           style={{
                             background: 'rgba(0, 242, 254, 0.12)',

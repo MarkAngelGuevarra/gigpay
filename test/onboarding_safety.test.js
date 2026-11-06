@@ -127,5 +127,14 @@ await test('Phone fixes: 16px fields, CONFIRM capitalised, task form first', () 
   assert.ok(dash.includes('setConfirmText(e.target.value.toUpperCase())') && dash.includes('create-task-panel'));
 });
 
+await test('No fake proof links or placeholder balances', () => {
+  const fl = read('src/pages/FreelancerDashboard.jsx') + read('src/components/PilotGuideWidget.jsx');
+  assert.ok(!fl.includes('gigpay-pilot-deliverable') && !fl.includes('gigpay-pilot-sample-deliverable'), 'no made-up proof URLs');
+  assert.ok(fl.includes("startsWith") || /\^https:/.test(fl), 'proof links must be https');
+  const st = read('src/lib/stellar.js');
+  assert.ok(!st.includes('return { balance: "10,000.00", raw: 10000, active: true, isDemo: true }'), 'Horizon errors must not report a fake balance');
+  assert.ok(st.includes('unknown: true'), 'Horizon errors report an unknown balance');
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);

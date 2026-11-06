@@ -33,14 +33,14 @@ const Navbar = () => {
       const showBalance = (res) => {
         if (!isMounted) return;
         // Horizon unreachable: say so instead of showing a placeholder number.
-        if (res.isDemo && isSimulatorWallet(publicKey)) setBalance('unavailable');
+        if (res.unknown || (res.isDemo && isSimulatorWallet(publicKey))) setBalance('unavailable');
         else setBalance(res.balance);
         setIsLoadingBalance(false);
       };
       getAccountBalance(publicKey)
         .then(async (res) => {
           // A new practice wallet is still waiting on Friendbot: show that, retry, then refresh.
-          if (!res.active && isSimulatorWallet(publicKey)) {
+          if (!res.active && !res.unknown && isSimulatorWallet(publicKey)) {
             if (isMounted) setBalance('Funding… (up to 30s)');
             const funded = await ensureEphemeralAccountFunded(publicKey);
             const after = await getAccountBalance(publicKey);
