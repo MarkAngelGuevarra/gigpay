@@ -1,0 +1,59 @@
+# Runs on every push and pull request to main. Needs no secrets and never contacts Stellar or Supabase:
+# the JS suites are offline, and the latency test blocks every request that leaves its local server.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web app (Node 22)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install (D4)
+        run: npm ci
+
+      - name: D1–D4 offline test suites
+        run: npm test
+
+      - name: Production build
+        run: npx vite build
+
+      - name: Install Chromium for the latency test
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: D1 cross-tab sync latency (p95 < 500 ms, two local tabs)
+        run: npm run test:latency
+
+  contract:
+    name: Soroban contract (Rust stable)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts/gigpay_escrow
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/gigpay_escrow
+
+      - name: Contract unit tests
+        run: cargo test --locked
