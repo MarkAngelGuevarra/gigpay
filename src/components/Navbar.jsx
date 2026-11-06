@@ -84,7 +84,7 @@ const Navbar = () => {
       const network = res?.network || '';
 
       if (network && !network.toUpperCase().includes('TESTNET')) {
-        const msg = `Freighter is on ${network}. Please switch network to Testnet in Freighter settings!`;
+        const msg = `Your Varial (formerly Freighter) wallet is on ${network}. Please switch it to Testnet in the wallet settings.`;
         setError(msg);
         addToast(msg, 'warning');
       } else {
@@ -402,15 +402,15 @@ const Navbar = () => {
             </div>
             
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.6' }}>
-              GigPay uses the Stellar blockchain to settle payments in about 5 seconds for a fraction of a cent. To use this app, you need a secure digital wallet.
+              GigPay uses the Stellar blockchain to settle payments in about 5 seconds for a small network fee. To use this app, you need a secure digital wallet.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Download size={20} /></div>
                 <div>
-                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>1. Download Freighter</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Install the official Stellar wallet extension for Chrome, Edge, or Firefox.</p>
+                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>1. Get Varial (formerly Freighter)</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Install the Stellar wallet browser extension built by the Stellar Development Foundation (Chrome, Edge, Firefox or Brave). Or skip this and use the built-in practice wallet.</p>
                 </div>
               </div>
               
@@ -426,20 +426,20 @@ const Navbar = () => {
                 <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Globe size={20} /></div>
                 <div>
                   <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>3. Switch to {import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET'}</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Click the gear icon in Freighter and switch your network to "{import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET'}".</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Open the wallet settings and switch your network to "{import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET'}".</p>
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <a 
-                href="https://www.freighter.app/" 
+                href="https://varialwallet.com/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="btn btn-primary"
                 style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
               >
-                Download Freighter <ExternalLink size={16} />
+                Get Varial <ExternalLink size={16} />
               </a>
               <button 
                 onClick={() => setShowOnboardingModal(false)}

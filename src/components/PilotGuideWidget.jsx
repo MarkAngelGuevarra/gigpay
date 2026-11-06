@@ -93,7 +93,7 @@ const CLIENT_STEPS = [
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
     teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—we create a practice Testnet wallet in this browser and fund it with free test XLM (this can take up to 30 seconds).',
-    description: 'Connect your Freighter Wallet or use the built-in instant Stellar Testnet wallet to sign Soroban smart contract operations.',
+    description: 'Connect your Varial (formerly Freighter) wallet or use the built-in practice wallet on Stellar Testnet to sign Soroban smart contract operations.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
     tip: 'No browser extension needed on mobile: our fallback wallet is auto-provisioned!'
@@ -402,7 +402,7 @@ export default function PilotGuideWidget() {
             addToast('Practice Testnet wallet connected. Test XLM may take up to 30 seconds to arrive.', 'success');
           } else if (typeof connectWallet === 'function') {
             await connectWallet();
-            addToast('Freighter wallet connected!', 'success');
+            addToast('Varial wallet connected!', 'success');
           }
           const walletBtn = document.querySelector('.btn-outline');
           if (walletBtn) spotlightElement(walletBtn);
