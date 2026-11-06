@@ -553,6 +553,22 @@ export const TaskProvider = ({ children }) => {
     // Optimistic Update: instantly update UI & broadcast across all open tabs/windows
     updateTasksAndCache((prev) => prev.map((t) => (t.id === id || t.title === id) ? { ...t, ...updatedFields } : t));
 
+    // The contract reports this escrow as already paid out (an earlier, slow release went through):
+    // record it as Completed without sending a second release or inventing a release hash.
+    const markAlreadyReleased = async (onChainTask) => {
+      const done = { status: 'Completed', completed_at: new Date().toISOString() };
+      restoreTask({
+        ...snapshot,
+        ...done,
+        // Fill in the escrow's own wallets from the chain only where this copy lacks them (write-once fields).
+        client_wallet: snapshot.client_wallet || onChainTask?.client || null,
+        freelancer_wallet: snapshot.freelancer_wallet || onChainTask?.freelancer || null
+      });
+      await writeTask(snapshot.id, done);
+      addToast("Stellar shows this payment was already released to the freelancer, so no new payment was sent. The task is now marked Completed.", "info");
+      return { success: true, alreadyReleased: true };
+    };
+
     let releaseResult = null;
     try {
       if (newStatus === 'Completed') {
@@ -560,7 +576,10 @@ export const TaskProvider = ({ children }) => {
           clientAddress: taskToUpdate.client_wallet || activeKey,
           taskId: taskToUpdate
         });
-        
+        if (releaseResult?.alreadyReleased) {
+          return await markAlreadyReleased(releaseResult.onChainTask);
+        }
+
         const relHash = releaseResult?.hash || ('rel-' + Date.now().toString(16));
         const releaseIsEvidence = !releaseResult?.isDemo && !isNonEvidenceHash(relHash);
         updatedFields.release_tx_hash = relHash;
@@ -587,14 +606,9 @@ export const TaskProvider = ({ children }) => {
         await requestWalletSignature(activeKey, `Action: Task ${String(id).slice(0, 8)}`);
       }
     } catch (signErr) {
-      // The contract says this escrow was already paid (an earlier, slow release went through):
-      // record it as Completed, without inventing a release hash.
+      // Fallback for when the contract's "already approved" text does reach the app.
       if (newStatus === 'Completed' && /already released/i.test(signErr?.message || '')) {
-        const done = { status: 'Completed', completed_at: new Date().toISOString() };
-        restoreTask({ ...snapshot, ...done });
-        await writeTask(snapshot.id, done);
-        addToast("This payment had already been released on Stellar. The task is now marked Completed.", "info");
-        return { success: true, alreadyReleased: true };
+        return await markAlreadyReleased(null);
       }
       restoreTask(snapshot);
       throw signErr;

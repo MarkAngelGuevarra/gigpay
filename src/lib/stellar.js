@@ -919,6 +919,43 @@ export const resolveOnChainTaskId = (taskId) => {
   return toU32TaskId(taskId);
 };
 
+// Read-only simulations still need a source account; this existing Testnet account is never charged or signed for.
+const READ_ONLY_SOURCE_ACCOUNT = DEFAULT_FREELANCER_TESTNET_ADDRESS;
+// get_task on an ID the contract never issued traps on unwrap() (panic = "abort" in release builds).
+const isMissingTaskError = (msg) => /UnreachableCodeReached|InvalidAction|MissingValue/i.test(String(msg || ''));
+
+/**
+ * Reads one escrow through the contract's read-only get_task, by simulation: nothing is signed or sent.
+ * Returns { client, freelancer, amount (stroops, BigInt), token, is_funded, is_approved }, or null when the
+ * contract has no task with that ID. Throws when Soroban RPC can't answer, so "unknown" is never read as "not found".
+ */
+export const getOnChainTask = async (onChainTaskId, { server = sorobanServer } = {}) => {
+  const id = toU32TaskId(onChainTaskId);
+  if (id === null) return null;
+  const tx = new StellarSdk.TransactionBuilder(new StellarSdk.Account(READ_ONLY_SOURCE_ACCOUNT, '0'), {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: PASSPHRASE
+  })
+    .addOperation(new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID).call('get_task', StellarSdk.nativeToScVal(id, { type: 'u32' })))
+    .setTimeout(60)
+    .build();
+  const sim = await withTimeout(server.simulateTransaction(tx), 10000);
+  if (StellarSdk.rpc.Api.isSimulationError(sim)) {
+    if (isMissingTaskError(sim.error)) return null;
+    throw new Error(`get_task simulation failed: ${sim.error}`);
+  }
+  if (!sim?.result?.retval) throw new Error('get_task returned no value');
+  const t = StellarSdk.scValToNative(sim.result.retval);
+  return {
+    client: String(t.client),
+    freelancer: String(t.freelancer),
+    amount: BigInt(t.amount),
+    token: String(t.token),
+    is_funded: !!t.is_funded,
+    is_approved: !!t.is_approved
+  };
+};
+
 /**
  * Assembles and simulates a Soroban approve_task invocation.
  * Releases the escrowed funds from contract to the designated freelancer.
@@ -1003,9 +1040,18 @@ const demoReleaseResult = async (label) => {
  * @param {Object} params
  * @param {string} params.clientAddress - Public key of client
  * @param {number|string|Object} params.taskId - On-chain task ID
- * @returns {Promise<{ success: boolean, hash: string, explorerUrl: string, isDemo: boolean }>}
+ * @param {Object} [deps] - Injectable network steps (offline tests): prepare, send, readTask
+ * @returns {Promise<{ success: boolean, hash: string|null, explorerUrl: string|null, isDemo: boolean, alreadyReleased?: boolean }>}
+ *
+ * If the release fails or is still pending, the contract's get_task decides: when it says the escrow is
+ * already approved, this returns { success: true, alreadyReleased: true, hash: null } (no new release is
+ * sent, and no release hash is invented). The contract's own "Task already approved" text often never
+ * reaches the app, because release builds abort on panic.
  */
-export const submitApproveTask = async ({ clientAddress, taskId }) => {
+export const submitApproveTask = async (
+  { clientAddress, taskId },
+  { prepare = simulateApproveTask, send = sendAndConfirm, readTask = getOnChainTask } = {}
+) => {
   const taskRecord = (taskId && typeof taskId === 'object') ? taskId : null;
   const resolvedTaskId = taskRecord ? (taskRecord.id || taskRecord.taskId) : taskId;
   const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
@@ -1033,9 +1079,29 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
     throw new Error(ESCROW_NOT_FOUND_MESSAGE);
   }
 
+  // Returns the on-chain escrow when get_task says it was already paid out, otherwise null
+  // (including when get_task can't be reached: then the original error stands).
+  const findAlreadyReleased = async () => {
+    try {
+      const onChain = await readTask(resolveOnChainTaskId(taskId));
+      return onChain?.is_approved ? onChain : null;
+    } catch (readErr) {
+      console.warn("[submitApproveTask] get_task check notice:", readErr?.message || readErr);
+      return null;
+    }
+  };
+  const alreadyReleasedResult = (onChainTask) => ({
+    success: true,
+    alreadyReleased: true,
+    hash: null,
+    explorerUrl: null,
+    isDemo: false,
+    onChainTask
+  });
+
   try {
     // 1. Prepare & simulate transaction (throws if the contract would reject the release)
-    const { preparedTx } = await simulateApproveTask({ clientAddress: effectiveClientAddress, taskId });
+    const { preparedTx } = await prepare({ clientAddress: effectiveClientAddress, taskId });
 
     let signedTx;
     if (ephemeralSigner && ephemeralSigner.keypair) {
@@ -1066,8 +1132,10 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
     // 3-4. Submit and wait for confirmation. A release that is not confirmed yet must not mark the task
     // as paid: throw, so the task stays unreleased; pressing Release again later either confirms it or
     // reports "already released" if this one landed in the meantime.
-    const outcome = await sendAndConfirm(signedTx);
+    const outcome = await send(signedTx);
     if (outcome.status === 'PENDING') {
+      const released = await findAlreadyReleased();
+      if (released) return alreadyReleasedResult(released);
       throw new Error(RELEASE_PENDING_MESSAGE);
     }
 
@@ -1080,6 +1148,11 @@ export const submitApproveTask = async ({ clientAddress, taskId }) => {
   } catch (error) {
     // Never report a failed release as a success: TaskContext rolls back the optimistic
     // "Completed" state on throw, which is what keeps every open tab truthful.
+    // The one exception is an escrow the contract itself reports as already paid out.
+    if (error?.message !== RELEASE_PENDING_MESSAGE) {
+      const released = await findAlreadyReleased();
+      if (released) return alreadyReleasedResult(released);
+    }
     console.error("[submitApproveTask] Error:", error);
     throw new Error(formatStellarError(error));
   }
