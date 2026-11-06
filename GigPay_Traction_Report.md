@@ -1,8 +1,10 @@
-# GigPay — Current Traction, User Telemetry & Progress Report
+# GigPay — Sprint 1 Traction & Progress Report (Oct 18, 2026)
+
+> This is the Sprint 1 snapshot. For current, chain-generated numbers see [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 **Stellar Philippines Instawards (Cohort 2026 / SDF / Rise In)**  
 **Lead Developer:** Mark Angel Guevarra (`marcangelguevarra@gmail.com` / GitHub: [`MarkAngelGuevarra`](https://github.com/MarkAngelGuevarra))  
 **Official Repository:** [`https://github.com/MarkAngelGuevarra/gigpay`](https://github.com/MarkAngelGuevarra/gigpay)  
-**Live Production URL:** [`https://gigpay.tech`](https://gigpay.tech) (Mirror: [`https://gigpay-gules.vercel.app`](https://gigpay-gules.vercel.app))  
+**Live app (Stellar Testnet):** [`https://gigpay.tech`](https://gigpay.tech) (Mirror: [`https://gigpay-gules.vercel.app`](https://gigpay-gules.vercel.app))  
 **Active Testnet Contract ID:** [`CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)  
 **Contract SDK:** soroban-sdk 22.0.8  
 **Reporting Date:** Sunday, October 18, 2026  
@@ -38,7 +40,7 @@ All smart contract logic is deployed, live, and publicly verifiable on the Stell
 
 ## 3. Real-World User Adoption & Pilot Telemetry
 
-To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn Obinguar (SDF / Rise In), GigPay launched an active pilot testing intake campaign.
+To meet the Month 2 Instawards eligibility requirements set by the Stellar Philippines chapter, GigPay launched a pilot testing intake campaign.
 
 ### 3.1 Pilot Intake Channels & Workflow
 * **Intake Form:** [`https://forms.gle/oLGjJRcxg5LZ5bC96`](https://forms.gle/oLGjJRcxg5LZ5bC96)
@@ -52,7 +54,7 @@ To fulfill the Month 2 ($5,000) Instawards eligibility gate mandated by Armielyn
 
 ### 3.2 Pilot User Traction Funnel & Conversion Health Analysis
 
-To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks an authentic 3-tier user adoption and settlement funnel:
+To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks a 4-stage user adoption and settlement funnel:
 
 | Funnel Stage | Metric | Verification Source | Evaluation Significance |
 | :--- | :--- | :--- | :--- |
@@ -85,7 +87,7 @@ Visitor, page-view, mobile-share and country figures previously shown here are w
 
 ---
 
-## 5. Security Audit & Invariant Hardening
+## 5. Security Self-Review & Invariant Hardening
 
 Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Deliverable 3:
 * **Threat Mitigation Matrix:** Formally evaluates and resolves 8 threat categories (`THREAT-01` through `THREAT-08`), including unauthorized escrow release, self-dealing collusion, private key extraction, replay attacks, XSS, and RPC timeouts.
@@ -101,6 +103,6 @@ Published in [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) as part of Week 4 Delivera
 | **Week 1** | **Deliverable 1:** Core Soroban Escrow Contract (`lib.rs`), Unit Tests, Testnet Deployment (`CAUU2O...7RD3`) | $1,500 USD | ✅ **COMPLETED (PR #2)** |
 | **Week 2** | **Deliverable 2 (Part 1):** Frontend UI Integration, Freighter Connection, Task State Synchronization | $1,000 USD | ✅ **COMPLETED (PR #3)** |
 | **Week 3** | **Deliverable 2 (Part 2):** Multi-Wallet Hardening, Anti-Self-Dealing Assertion, RPC Backoff Resilience | $1,000 USD | ✅ **COMPLETED (PR #4)** |
-| **Week 4** | **Deliverable 3:** Verification Package, Security Audit, Traction Telemetry, Capstone Loom Walkthrough | $500 USD | ✅ **COMPLETED (PR #5 Merged)** |
+| **Week 4** | **Deliverable 3:** Verification Package, Security Self-Review, Traction Telemetry, Capstone Loom Walkthrough | $500 USD | ✅ **COMPLETED (PR #5 Merged)** |
 | **All weeks** | Infrastructure & buffer (hosting, RPCs, testing) | $1,000 USD | — |
-| **TOTAL** | **Full Month 1 Instawards Scope** | **$5,000 USD** | **100% On Track** |
+| **TOTAL** | **Full Month 1 Instawards Scope** | **$5,000 USD** | **Completed** |

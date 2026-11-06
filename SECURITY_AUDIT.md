@@ -1,7 +1,9 @@
-# 🛡️ GigPay Protocol Security Audit & Threat Mitigation Matrix
+# 🛡️ GigPay Security Self-Review & Threat Mitigation Matrix
+
+> A self-review by the GigPay team, not a third-party audit.
 
 **Project:** GigPay — Decentralized Milestone Escrow on Stellar Soroban  
-**SOW Milestone:** Week 4 / Deliverable 3 — Security Audit & Verification Package  
+**SOW Milestone:** Week 4 / Deliverable 3 — Security Self-Review & Verification Package  
 **Sprint Program:** Stellar Philippines Instawards (2026 Cohort / SDF / Rise In)  
 **Lead Developer:** Mark Angel Guevarra (`marcangelguevarra@gmail.com` / `@GigPayPH`)  
 **Active Testnet Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
@@ -13,7 +15,7 @@
 
 ## 1. Executive Summary
 
-This security audit and architectural verification report evaluates the cryptographic integrity, on-chain state safety, and frontend threat surface of **GigPay** — a decentralized milestone escrow platform designed to eliminate intermediary custodial risk and 20% commission cuts for Filipino freelancers.
+This self-review evaluates the on-chain state safety, and frontend threat surface of **GigPay** — a decentralized milestone escrow platform designed to eliminate intermediary custodial risk and 20% commission cuts for Filipino freelancers.
 
 The audit focuses on four critical defense layers:
 1. **On-Chain Soroban Smart Contract Invariants (`CAUU2O...7RD3`)**
@@ -64,7 +66,7 @@ The Soroban escrow contract enforces an immutable state progression:
 The frontend integration test suite located at [`src/test/soroban_sim.test.js`](src/test/soroban_sim.test.js) validates 9/9 critical security and operational invariants:
 
 ```text
-🧪 Starting GigPay Soroban Protocol 22 Integration Tests...
+🧪 Starting GigPay Soroban Integration Tests...
 
 --- Test 1: RPC Endpoint Health ---
 RPC Endpoint: https://soroban-testnet.stellar.org
@@ -101,7 +103,7 @@ Calculated Polling Intervals: 1500ms -> 2250ms -> 3375ms -> 5000ms -> 5000ms
 Clamped u32 Task ID: 1070320958 (within [1, 4294967295])
 ✅ Test 9 Passed: u32 Task ID clamping and simulateApproveTask verified.
 
-🎉 All 9/9 Soroban Protocol 22 frontend integration tests passed successfully!
+🎉 All 9/9 Soroban frontend integration tests passed successfully!
 ```
 
 ---
@@ -116,7 +118,7 @@ Clamped u32 Task ID: 1070320958 (within [1, 4294967295])
 
 ---
 
-## 6. Audit Conclusion & Compliance Certification
+## 6. Conclusion
 
 Based on static analysis, transaction simulation, and automated test execution:
 This self-review found no way to release an escrow without the funding client's signature. Known limits: the dispute freeze and the client ≠ freelancer check are enforced by the app, not the contract, and the Testnet practice wallet keeps its key in browser storage. Suitable for Testnet pilot testing only; not a substitute for a third-party audit before Mainnet.

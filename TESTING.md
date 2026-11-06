@@ -1,11 +1,11 @@
 # GigPay Multi-Wallet QA Testing Runbook & Protocol Verification
 
-**SOW Alignment:** Deliverable 2 Hardening ($2,000 USD Allocation)  
+**SOW Alignment:** Sprint 1 Deliverable 2 (multi-wallet hardening)  
 **Acceptance Metric (SOW Table 7):** $\ge 2$ unique Freighter wallets executed on Testnet  
 **Target Environment:** Stellar Testnet (contract built with soroban-sdk 22)  
 **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
 **Native XLM SAC ID:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`  
-**Live Production URL:** [https://gigpay.tech](https://gigpay.tech)
+**Live app (Stellar Testnet):** [https://gigpay.tech](https://gigpay.tech)
 
 ---
 

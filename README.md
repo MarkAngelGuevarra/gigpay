@@ -3,13 +3,12 @@
 ![GitHub Repo Size](https://img.shields.io/github/repo-size/MarkAngelGuevarra/gigpay)
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
-![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
 ![Tests](https://img.shields.io/badge/npm%20test-65%2F65%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
-**Live Production URL:** [https://gigpay.tech](https://gigpay.tech)  
+**Live app (Stellar Testnet):** [https://gigpay.tech](https://gigpay.tech)  
 **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
 
 ---
@@ -58,7 +57,7 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 * **Save-failure handling:** If Supabase rejects a write (for example RLS error 42501), the task stays visible locally and the user sees a warning that it was not saved.
 
 ### 2. Zero-Barrier Onboarding & Public Verification Ledger (Deliverable 2 — $1,250)
-* **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate authentic ephemeral Ed25519 keypairs funded with Testnet XLM by Friendbot. One practice wallet per browser, so a client and a freelancer need two devices.
+* **1-Click Testnet Simulator Wallet:** Enables mobile and extensionless users to generate random per-browser practice keypairs funded with Testnet XLM by Friendbot. One practice wallet per browser, so a client and a freelancer need two devices.
 * **Public Verification Ledger:** Every escrow on the contract, generated from the chain (`node scripts/index_escrows.mjs`), with each row labeled outside user vs team/test wallet, plus one-click CSV export.
 
 ### 3. Dispute Mitigation Freeze & Proof-of-Work Verification (Deliverable 3 — $1,250)

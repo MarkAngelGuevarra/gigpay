@@ -1,11 +1,11 @@
 # 🎥 GigPay 3–5 Minute Demo Walkthrough Video Storyboard
-**SDF Instawards Sprint 2 &bull; SOW Deliverable 4 Requirement (Armielyn Obinguar)**
+**Stellar Philippines Instawards Sprint 2 &bull; SOW Deliverable 4 (c)**
 
 Use this exact timing and talking points script to record your **Loom or Screen Recording** demo in **3 to 4 minutes**.
 
 ---
 
-### **Video Checklist (What Armielyn Will Check Off):**
+### **Video Checklist (SOW Deliverable 4 acceptance criteria):**
 - [ ] Task Creation & Escrow Funding
 - [ ] Dual-Wallet (Client & Freelancer) Interaction
 - [ ] Real-Time Cross-Window Synchronization (BroadcastChannel & storage events)
@@ -20,8 +20,8 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 ### **⏱️ Minute-by-Minute Script:**
 
 #### **0:00 – 0:45 | Introduction & Architecture**
-- *"Hi everyone, I'm Mark Angel Guevarra, lead developer of GigPay for the Stellar Philippines Instawards Sprint 2. GigPay is a decentralized Web3 escrow platform that eliminates the 20% platform fee for freelancers with payments that settle in about 5 seconds on Stellar Soroban."*
-- *"Today, I'm demonstrating our Month 2 deliverables responding directly to Armielyn Obinguar's acceptance criteria: real-time state synchronization, zero-barrier onboarding, dispute mitigation freeze, milestone proof of work, and automated test verification."*
+- *"Hi everyone, I'm Mark Angel Guevarra, lead developer of GigPay for the Stellar Philippines Instawards Sprint 2. GigPay is a milestone escrow on Stellar Soroban: the client locks payment before work starts, GigPay takes no platform commission, and payments settle in about 5 seconds."*
+- *"Today, I'm demonstrating our Month 2 deliverables against the Sprint 2 SOW acceptance criteria: real-time state synchronization, zero-barrier onboarding, dispute mitigation freeze, milestone proof of work, and automated test verification."*
 
 #### **0:45 – 1:30 | 1-Click Simulator & Escrow Funding**
 - *"I have two different browsers open side by side (for example Chrome and Edge, or a laptop and a phone): the Client on the left, the Freelancer on the right. Each browser has its own practice wallet."*
@@ -32,8 +32,8 @@ Use this exact timing and talking points script to record your **Loom or Screen 
 
 #### **1:30 – 2:15 | Freelancer Proof of Work Submission**
 - *"Now, the Freelancer accepts the task. The status transitions instantly to 'In Progress'."*
-- *"Per Armielyn's Deliverable 3 requirement, the freelancer must attach verifiable proof before escrow release. I'll click 'Attach Proof of Work Deliverables'."*
-- *"I'll paste our GitHub PR link, our Google Doc deliverable link, and our Loom video link, then click 'Submit Deliverables'. Instantly, verified proof badges appear on both the client and freelancer dashboards."*
+- *"Per SOW Deliverable 3, the freelancer must attach verifiable proof before escrow release. I'll click 'Attach Proof of Work Deliverables'."*
+- *"I'll paste our GitHub PR link, our Google Doc deliverable link, and our Loom video link, then click 'Submit Deliverables'. The proof links then appear on both the client and freelancer dashboards."*
 
 #### **2:15 – 3:00 | Dispute Mitigation Freeze & Release Confirmation**
 - *"Now, let's demonstrate dispute protection. If the client needs revisions, they can click 'Freeze & Dispute'. The task immediately enters the 'Disputed' state, and the release button is locked, preventing premature payouts."*
