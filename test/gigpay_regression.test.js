@@ -3,13 +3,25 @@
  * Designed to satisfy SDF Instawards Month 2 SOW Deliverable 4
  * Checks GigPay's own reading of its Sprint 2 SOW acceptance criteria (not a program sign-off)
  *
+ * What this file covers: none of its 22 tests import anything from src/. They are configuration
+ * checks on literals and on small in-test copies of app logic, so they are named "configuration
+ * check: ...". They do not measure timing or prove that the app behaves this way.
+ *
+ * Suites that exercise the real src code:
+ *   test/escrow_submission_integrity.test.js  src/lib/stellar.js
+ *   test/ledger_integrity.test.js             src/lib/ledgerIntegrity.js, src/lib/stellar.js
+ *   test/onboarding_at_scale.test.js          src/lib/stellar.js, src/lib/invite.js
+ *   test/dispute_sync.test.js                 src/lib/taskLifecycle.js, src/lib/stellar.js
+ *   test/onboarding_safety.test.js            src/lib/stellar.js, plus source checks of TaskContext/AuthContext
+ *   test/sync_latency.test.js                 production build of src/ in two browser tabs (npm run test:latency)
+ *
  * Command: npm test (or node test/gigpay_regression.test.js)
  */
 
 import assert from 'node:assert';
 
 console.log("\n==================================================================");
-console.log("   GIGPAY INSTAWARDS SPRINT 2 — 22 AUTOMATED REGRESSION TESTS");
+console.log("   GIGPAY INSTAWARDS SPRINT 2 — 22 CONFIGURATION CHECKS");
 console.log("   GigPay Sprint 2 SOW self-check (not an official program verification)");
 console.log("==================================================================\n");
 
@@ -31,7 +43,7 @@ function runTest(testNumber, description, fn) {
 // -------------------------------------------------------------
 // Suite 1: Task Lifecycle & Escrow State (Tests 1-3)
 // -------------------------------------------------------------
-runTest(1, "Task initialization validates required escrow schema fields", () => {
+runTest(1, "configuration check: example task record has the escrow schema fields", () => {
   const task = {
     id: 'task-test-01',
     title: 'Soroban Escrow Audit',
@@ -44,7 +56,7 @@ runTest(1, "Task initialization validates required escrow schema fields", () => 
   assert.ok(task.contract_id.startsWith('C'));
 });
 
-runTest(2, "Task transitions state cleanly from Available to In Progress upon acceptance", () => {
+runTest(2, "configuration check: example accepted task carries In Progress status and the freelancer id", () => {
   let task = { id: 'task-test-02', status: 'Available', freelancer_id: null };
   const freelancerId = 'user-freelancer-uuid-101';
   task = { ...task, status: 'In Progress', freelancer_id: freelancerId };
@@ -52,7 +64,7 @@ runTest(2, "Task transitions state cleanly from Available to In Progress upon ac
   assert.strictEqual(task.freelancer_id, freelancerId);
 });
 
-runTest(3, "Task prevents completion transition without prior escrow funding record", () => {
+runTest(3, "configuration check: an unfunded Available task fails the in-test release precondition", () => {
   const task = { id: 'task-test-03', status: 'Available', tx_hash: null };
   const canRelease = task.status === 'In Progress' && task.tx_hash !== null;
   assert.strictEqual(canRelease, false, "Unfunded available task must not allow release");
@@ -61,13 +73,13 @@ runTest(3, "Task prevents completion transition without prior escrow funding rec
 // -------------------------------------------------------------
 // Suite 2: Wallet & Simulator Wallet Flows (Tests 4-6)
 // -------------------------------------------------------------
-runTest(4, "Stellar Testnet public key validates 56-character 'G...' format", () => {
+runTest(4, "configuration check: sample client key is 56 characters and starts with G", () => {
   const clientKey = 'GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E';
   assert.strictEqual(clientKey.length, 56);
   assert.ok(clientKey.startsWith('G'));
 });
 
-runTest(5, "Simulator fallback provisions valid Testnet account without extension", () => {
+runTest(5, "configuration check: sample simulator account literal is marked as a Testnet demo", () => {
   const simulatorAccount = {
     isDemo: true,
     network: 'TESTNET',
@@ -79,7 +91,7 @@ runTest(5, "Simulator fallback provisions valid Testnet account without extensio
   assert.ok(Number(simulatorAccount.balance) >= 1000);
 });
 
-runTest(6, "Self-dealing prevention blocks task creation when Client and Freelancer keys match", () => {
+runTest(6, "configuration check: identical client and freelancer keys compare equal (self-dealing input)", () => {
   const clientKey = 'GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E';
   const targetFreelancer = 'GBUGBTYQ2U6MRYE3JN4Q4S2NVT2CBJNTMHOV2IWDIZ7HRFBLFI6UYG4E';
   const isSelfDealing = clientKey === targetFreelancer;
@@ -89,14 +101,14 @@ runTest(6, "Self-dealing prevention blocks task creation when Client and Freelan
 // -------------------------------------------------------------
 // Suite 3: Real-Time Synchronization & Caching (Tests 7-9)
 // -------------------------------------------------------------
-runTest(7, "Zero-flash hydration successfully retrieves tasks from gigpay_shared_tasks", () => {
+runTest(7, "configuration check: sample gigpay_shared_tasks JSON parses to a task array", () => {
   const mockCache = JSON.stringify([{ id: 'task-cache-1', title: 'Cached Escrow', status: 'Available' }]);
   const parsed = JSON.parse(mockCache);
   assert.ok(Array.isArray(parsed));
   assert.strictEqual(parsed[0].id, 'task-cache-1');
 });
 
-runTest(8, "Cross-window synchronization formats storage event payload within 500ms SLA", () => {
+runTest(8, "configuration check: storage event payload shape for gigpay_shared_tasks (no timing measured; see npm run test:latency)", () => {
   const updatedTasks = [{ id: 'task-sync-1', status: 'In Progress' }];
   const storagePayload = {
     key: 'gigpay_shared_tasks',
@@ -108,7 +120,7 @@ runTest(8, "Cross-window synchronization formats storage event payload within 50
   assert.strictEqual(unpacked[0].status, 'In Progress');
 });
 
-runTest(9, "Optimistic state update safely reverts to previous state on signature rejection", () => {
+runTest(9, "configuration check: in-test rollback restores the previous task snapshot", () => {
   const previousState = [{ id: 'task-rollback', status: 'In Progress' }];
   let currentState = [{ id: 'task-rollback', status: 'Completed' }]; // Optimistic
   const signatureAborted = true;
@@ -121,19 +133,19 @@ runTest(9, "Optimistic state update safely reverts to previous state on signatur
 // -------------------------------------------------------------
 // Suite 4: Proof-of-Work Deliverable Submission (Tests 10-12)
 // -------------------------------------------------------------
-runTest(10, "Freelancer workflow accepts valid GitHub Pull Request URL as deliverable", () => {
+runTest(10, "configuration check: sample GitHub pull request URL matches the PR URL pattern", () => {
   const prUrl = 'https://github.com/MarkAngelGuevarra/gigpay/pull/5';
   const isValidPr = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/.test(prUrl);
   assert.strictEqual(isValidPr, true);
 });
 
-runTest(11, "Freelancer workflow accepts valid deliverable document URL", () => {
+runTest(11, "configuration check: sample deliverable document URL is https on an allowed host", () => {
   const docUrl = 'https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit';
   assert.ok(docUrl.startsWith('https://'));
   assert.ok(docUrl.includes('docs.google.com') || docUrl.includes('figma.com') || docUrl.includes('drive.google.com'));
 });
 
-runTest(12, "Freelancer workflow accepts valid Loom walkthrough video URL", () => {
+runTest(12, "configuration check: sample Loom walkthrough URL is on an allowed video host", () => {
   const loomUrl = 'https://www.loom.com/share/d90e6e47231356cc87c03c3207d16634';
   assert.ok(loomUrl.includes('loom.com') || loomUrl.includes('youtube.com') || loomUrl.includes('vimeo.com'));
 });
@@ -141,13 +153,13 @@ runTest(12, "Freelancer workflow accepts valid Loom walkthrough video URL", () =
 // -------------------------------------------------------------
 // Suite 5: Dispute Freeze & Mitigation Controls (Tests 13-15)
 // -------------------------------------------------------------
-runTest(13, "Client dispute action transitions task status into Disputed", () => {
+runTest(13, "configuration check: a task literal can be set to Disputed", () => {
   let task = { id: 'task-dispute-1', status: 'In Progress' };
   task.status = 'Disputed';
   assert.strictEqual(task.status, 'Disputed');
 });
 
-runTest(14, "Dispute action records mandatory dispute metadata and audit timestamp", () => {
+runTest(14, "configuration check: dispute metadata literal has a reason, timestamp and author", () => {
   const disputeRecord = {
     dispute_reason: 'Milestone code does not meet unit test pass criteria.',
     disputed_at: new Date().toISOString(),
@@ -158,7 +170,7 @@ runTest(14, "Dispute action records mandatory dispute metadata and audit timesta
   assert.strictEqual(disputeRecord.disputed_by, 'client-uuid-001');
 });
 
-runTest(15, "Standard escrow release action is strictly blocked while task is in Disputed state", () => {
+runTest(15, "configuration check: in-test guard rejects release of a Disputed task literal", () => {
   const task = { id: 'task-dispute-2', status: 'Disputed' };
   let releaseBlocked = false;
   try {
@@ -174,19 +186,19 @@ runTest(15, "Standard escrow release action is strictly blocked while task is in
 // -------------------------------------------------------------
 // Suite 6: Release Confirmation & Verification Ledger (Tests 16-18)
 // -------------------------------------------------------------
-runTest(16, "Release confirmation modal rejects mismatched or lowercase inputs ('confirm')", () => {
+runTest(16, "configuration check: lowercase 'confirm' does not equal 'CONFIRM'", () => {
   const testInput = 'confirm';
   const isAuthorized = testInput === 'CONFIRM';
   assert.strictEqual(isAuthorized, false, "Input 'confirm' must not authorize release");
 });
 
-runTest(17, "Release confirmation modal authorizes release only upon exact match 'CONFIRM'", () => {
+runTest(17, "configuration check: exact 'CONFIRM' equals 'CONFIRM'", () => {
   const testInput = 'CONFIRM';
   const isAuthorized = testInput === 'CONFIRM';
   assert.strictEqual(isAuthorized, true, "Exact match 'CONFIRM' must authorize release");
 });
 
-runTest(18, "Verification ledger formats on-chain records and generates valid CSV structure", () => {
+runTest(18, "configuration check: CSV row built in the test contains the contract ID and transaction hash", () => {
   const record = {
     id: 'tx-v1',
     taskId: 'Task #1',
@@ -204,7 +216,7 @@ runTest(18, "Verification ledger formats on-chain records and generates valid CS
 // -------------------------------------------------------------
 // Suite 7: Monotonic Milestone Persistence & Cross-Device Sync (Tests 19-22)
 // -------------------------------------------------------------
-runTest(19, "Monotonic state merge prevents stale remote queries from resetting Completed tasks", () => {
+runTest(19, "configuration check: in-test copy of the rank merge keeps Completed over a stale Available", () => {
   const currentLocalState = [
     { id: 'task-100', title: 'Create a website', amount: '100', status: 'Completed' }
   ];
@@ -229,7 +241,7 @@ runTest(19, "Monotonic state merge prevents stale remote queries from resetting 
   assert.strictEqual(merged[0].amount, '100');
 });
 
-runTest(20, "Public Verification Ledger dynamically surfaces Completed milestone at top of ledger", () => {
+runTest(20, "configuration check: in-test filter maps a Completed task to a ledger row", () => {
   const activeTasks = [
     { id: 'task-web', title: 'Create a website', amount: '100', status: 'Completed', release_tx_hash: '8b1c3e5a...' }
   ];
@@ -247,7 +259,7 @@ runTest(20, "Public Verification Ledger dynamically surfaces Completed milestone
   assert.strictEqual(completedRecords[0].status, 'Completed & Released');
 });
 
-runTest(21, "Verification Ledger contains all 10 verified on-chain SOW Table 7 transactions", () => {
+runTest(21, "configuration check: the 10 SOW Table 7 hashes listed in this test are 64 characters each (not checked against the ledger or chain)", () => {
   const sowTable7Count = 10;
   const verifiedHashes = [
     '40df1a722e724daf317630345cc00d07a81344134938ea9745a0b6440d432dda',
@@ -265,7 +277,7 @@ runTest(21, "Verification Ledger contains all 10 verified on-chain SOW Table 7 t
   verifiedHashes.forEach(h => assert.strictEqual(h.length, 64));
 });
 
-runTest(22, "Extensionless mobile/tablet sessions auto-rehydrate fallback Testnet wallet", () => {
+runTest(22, "configuration check: fallback demo key literal starts with GBDEMO_ and is 43 characters", () => {
   const cachedWalletKey = null; // Fresh mobile visit
   const fallbackKey = 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
   const effectiveKey = cachedWalletKey || fallbackKey;
