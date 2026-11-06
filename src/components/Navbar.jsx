@@ -112,9 +112,9 @@ const Navbar = () => {
         {isPilotCompleted ? (
           <button
             type="button"
-            onClick={() => addToast('✨ Pilot Tester Status: Verified! Thank you for shaping GigPay.', 'info')}
+            onClick={() => addToast('✓ Feedback received. Thank you for shaping GigPay.', 'info')}
             className="btn btn-outline"
-            title="Pilot Tester Status Verified"
+            title="Feedback sent"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -136,7 +136,7 @@ const Navbar = () => {
             type="button"
             onClick={() => {
               markPilotCompleted();
-              addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+              addToast('🎉 Thanks for your feedback!', 'success');
             }}
             className="btn btn-outline"
             title="Click to confirm you completed the form"

@@ -108,9 +108,9 @@ const ClientDashboard = () => {
     }
   };
 
-  const simulateAIEstimate = () => {
+  const suggestAmount = () => {
     if (!newTaskTitle) {
-      addToast("Please enter a task title first so AI can analyze it.", "error");
+      addToast("Enter a task title first to get a suggested amount.", "error");
       return;
     }
     setIsEstimating(true);
@@ -123,7 +123,7 @@ const ClientDashboard = () => {
       
       setNewTaskAmount(est.toString());
       setIsEstimating(false);
-      addToast(`AI estimated a Testnet milestone rate of ${est} XLM for this task.`, "success");
+      addToast(`Suggested Testnet amount for this kind of task: ${est} XLM.`, "success");
     }, 1000);
   };
 
@@ -356,7 +356,7 @@ const ClientDashboard = () => {
                       type="button"
                       onClick={() => {
                         markPilotCompleted();
-                        addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+                        addToast('🎉 Thanks for your feedback!', 'success');
                       }}
                       className="btn btn-outline"
                       title="Confirm you completed the form"
@@ -540,7 +540,7 @@ const ClientDashboard = () => {
                 <label style={{ color: 'var(--text-muted)', margin: 0 }}>Milestone Amount (XLM)</label>
                 <button
                   type="button"
-                  onClick={simulateAIEstimate}
+                  onClick={suggestAmount}
                   disabled={isEstimating}
                   style={{
                     background: 'transparent',
@@ -554,7 +554,7 @@ const ClientDashboard = () => {
                     padding: 0
                   }}
                 >
-                  <Sparkles size={14} /> {isEstimating ? 'Estimating...' : 'AI Fee Estimate'}
+                  <Sparkles size={14} /> {isEstimating ? 'Suggesting...' : 'Suggest amount'}
                 </button>
               </div>
               <input 
@@ -603,20 +603,20 @@ const ClientDashboard = () => {
           {/* Fee Comparison Widget */}
           {newTaskAmount && Number(newTaskAmount) > 0 && (
             <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>💡 0% Escrow Advantage</h4>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>💡 No platform commission</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Traditional Fee (20%):</span>
-                  <span style={{ color: '#ff4444' }}>${(Number(newTaskAmount) * 0.2).toFixed(2)}</span>
+                  <span>Typical platform fee (up to 20%):</span>
+                  <span style={{ color: '#ff4444' }}>{(Number(newTaskAmount) * 0.2).toFixed(2)} XLM</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Stellar Gas Fee:</span>
-                  <span style={{ color: '#4ade80' }}>&lt; $0.0001</span>
+                  <span>Stellar network fee (approx., per transaction):</span>
+                  <span style={{ color: '#4ade80' }}>~0.03 XLM</span>
                 </div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontWeight: 'bold' }}>
-                  <span>Total Savings:</span>
-                  <span>${(Number(newTaskAmount) * 0.2 - 0.0001).toFixed(2)}</span>
+                  <span>You keep instead:</span>
+                  <span>{Math.max(0, Number(newTaskAmount) * 0.2 - 0.03).toFixed(2)} XLM</span>
                 </div>
               </div>
             </div>

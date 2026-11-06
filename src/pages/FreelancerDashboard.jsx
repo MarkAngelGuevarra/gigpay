@@ -262,7 +262,7 @@ const FreelancerDashboard = () => {
                 type="button"
                 onClick={() => {
                   markPilotCompleted();
-                  addToast('🎉 Pilot tester status verified! Thank you for your feedback.', 'success');
+                  addToast('🎉 Thanks for your feedback!', 'success');
                 }}
                 className="btn btn-outline"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.85rem', borderColor: 'rgba(0, 245, 160, 0.4)', background: 'rgba(0, 245, 160, 0.08)', color: 'var(--accent, #00f5a0)' }}

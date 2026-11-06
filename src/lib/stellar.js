@@ -262,7 +262,8 @@ export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
 };
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
-const NETWORK = env.VITE_STELLAR_NETWORK || 'TESTNET';
+// GigPay is a Stellar Testnet pilot only (Sprint 2 SOW: mainnet is out of scope), so the network is fixed.
+const NETWORK = 'TESTNET';
 const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
 

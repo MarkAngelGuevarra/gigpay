@@ -151,7 +151,7 @@ const FREELANCER_STEPS = [
     badge: 'Step 2 of 5 • Browse Escrows',
     icon: Briefcase,
     teacherVoice: 'Browse the "Available Funded Tasks" feed. A task marked funded has its payment locked in the smart contract before you begin work.',
-    description: 'Review task milestones, XLM reward amounts, and client details. Funds are guaranteed by the escrow contract.',
+    description: 'Review task milestones, XLM reward amounts, and client details. Funded tasks have their payment locked in the escrow contract; only the client can release it.',
     actionLabel: 'Scroll to Available Tasks',
     actionType: 'scroll_available',
     tip: 'Tasks marked "locked on-chain" are funded in Soroban contract CAUU2O...7RD3. Each card also shows which payout address it pays.'

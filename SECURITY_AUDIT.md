@@ -15,9 +15,9 @@
 
 ## 1. Executive Summary
 
-This self-review evaluates the on-chain state safety, and frontend threat surface of **GigPay** — a decentralized milestone escrow platform designed to eliminate intermediary custodial risk and 20% commission cuts for Filipino freelancers.
+This self-review evaluates on-chain state safety and the frontend threat surface of **GigPay** — a decentralized milestone escrow platform designed to eliminate intermediary custodial risk and 20% commission cuts for Filipino freelancers.
 
-The audit focuses on four critical defense layers:
+The review focuses on four defense layers:
 1. **On-Chain Soroban Smart Contract Invariants (`CAUU2O...7RD3`)**
 2. **Non-Custodial Cryptographic Key Safety & Multi-Wallet Isolation**
 3. **Frontend Application Security & Content Security Policy (CSP) Hardening**
