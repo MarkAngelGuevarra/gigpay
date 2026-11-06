@@ -33,14 +33,18 @@ const ClientDashboard = () => {
   // only the client who funded an escrow can release it (database guard + contract auth).
   const [viewAllEscrows, setViewAllEscrows] = useState(false);
 
-  const clientTasks = viewAllEscrows
-    ? tasks
-    : tasks.filter(t => t.client_id === user?.id || t.client_id === 'demo-client-uuid-001' || !t.client_id);
+  // A task is yours only when its client_id is your account id. The offline demo account (no database)
+  // also owns local tasks saved without a client_id; a real account never claims those or demo tasks.
+  const isDemoAccount = user?.id === 'demo-client-uuid-001';
+  const isOwnTask = (t) => !!user?.id && (t.client_id === user.id || (isDemoAccount && !t.client_id));
+  const ownTasks = tasks.filter(isOwnTask);
+  const clientTasks = viewAllEscrows ? tasks : ownTasks;
 
   // Metrics count only tasks whose funding transaction is real on Stellar Testnet. Summing every database
   // row showed 6,770 XLM "escrowed" when about 3 XLM of those tasks was actually locked on-chain
   // (19 demo/July tasks were never funded), which would misstate the evidence to anyone viewing the page.
-  const fundedTasks = clientTasks.filter(t => !t.is_simulated && t.status !== 'Confirming' && t.status !== 'Failed' && (
+  // They count only your own tasks, even in the "All testers' escrows" overview.
+  const fundedTasks = ownTasks.filter(t => !t.is_simulated && t.status !== 'Confirming' && t.status !== 'Failed' && (
     t.on_chain_task_id != null || (/^[0-9a-f]{64}$/.test(t.tx_hash || '') && !isSimulatedTxHash(t.tx_hash) && !isNonEvidenceHash(t.tx_hash))
   ));
   const totalEscrowed = fundedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
@@ -80,7 +84,11 @@ const ClientDashboard = () => {
     }
     const taskObj = (taskOrId && typeof taskOrId === 'object') 
       ? taskOrId 
-      : (clientTasks.find(t => t.id === taskOrId) || { id: taskOrId });
+      : (ownTasks.find(t => t.id === taskOrId) || { id: taskOrId });
+    if (!isOwnTask(taskObj)) {
+      addToast("Only the client who funded this escrow can release it.", "warning");
+      return;
+    }
     if (taskObj.status === 'Available') {
       addToast("Cannot release escrow: Task must first be accepted by a freelancer.", "warning");
       return;
@@ -91,6 +99,11 @@ const ClientDashboard = () => {
 
   const handleDisputeSubmit = async () => {
     if (!taskToDispute) return;
+    if (!ownTasks.some(t => t.id === taskToDispute)) {
+      addToast("Only the client who funded this escrow can dispute it.", "warning");
+      setTaskToDispute(null);
+      return;
+    }
     try {
       await raiseDispute(taskToDispute, disputeReason);
       setTaskToDispute(null);
@@ -101,6 +114,7 @@ const ClientDashboard = () => {
   };
 
   const handleResolve = async (id) => {
+    if (!ownTasks.some(t => t.id === id)) return;
     try {
       await resolveDispute(id);
     } catch (error) {
@@ -383,7 +397,7 @@ const ClientDashboard = () => {
             const isDisputed = task.status === 'Disputed';
             const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
             // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
-            const isMine = task.client_id === user?.id || task.client_id === 'demo-client-uuid-001' || !task.client_id;
+            const isMine = isOwnTask(task);
             // Link a transaction only when it really exists on Stellar Testnet (demo tasks have none).
             const hasRealFundTx = !task.is_simulated && !isSimulatedTxHash(task.tx_hash) && !isNonEvidenceHash(task.tx_hash);
 
