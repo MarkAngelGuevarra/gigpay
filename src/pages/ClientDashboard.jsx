@@ -658,13 +658,13 @@ const ClientDashboard = () => {
                   <span style={{ color: '#ff4444' }}>{(Number(newTaskAmount) * 0.2).toFixed(2)} XLM</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Stellar network fee (approx., per transaction):</span>
-                  <span style={{ color: '#4ade80' }}>~0.03 XLM</span>
+                  <span>Stellar network fees, paid by you (lock + release, approx.):</span>
+                  <span style={{ color: '#4ade80' }}>~0.06 XLM</span>
                 </div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontWeight: 'bold' }}>
-                  <span>You keep instead:</span>
-                  <span>{Math.max(0, Number(newTaskAmount) * 0.2 - 0.03).toFixed(2)} XLM</span>
+                  <span>Freelancer receives (full amount):</span>
+                  <span>{Number(newTaskAmount).toFixed(2)} XLM</span>
                 </div>
               </div>
             </div>

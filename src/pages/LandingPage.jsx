@@ -10,7 +10,7 @@ const features = [
     bgIcon: <Zap size={100} />,
     title: "Fast Settlement",
     shortDesc: "Powered by Stellar network, payments settle in about 5 seconds, directly to your wallet.",
-    longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles international payments in 3-5 seconds. This pilot runs on Stellar Testnet with practice XLM; there are no banking hours, FX fees or SWIFT delays to wait for.",
+    longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles payments in about 5 seconds. This pilot runs on Stellar Testnet with practice XLM; there are no banking hours, FX fees or SWIFT delays to wait for.",
     shadowColor: "rgba(59,130,246,0.3)",
     accentColor: "#00f2fe"
   },
@@ -18,9 +18,9 @@ const features = [
     id: 2,
     icon: <DollarSign size={36} color="#4ade80" style={{ marginBottom: '1.5rem' }} />,
     bgIcon: <DollarSign size={100} />,
-    title: "Near-Zero Fees",
-    shortDesc: "Stop giving 20% to traditional platforms. Keep exactly what you earn with fraction-of-a-cent fees.",
-    longDesc: "Traditional gig platforms tax your hard work by taking up to 20% of your earnings. GigPay is a decentralized protocol, meaning there is no corporate middleman taking a cut. The only fee is the Stellar network transaction fee, which is a fraction of a cent.",
+    title: "No Platform Commission",
+    shortDesc: "Traditional platforms can take up to 20%. GigPay takes no cut: the freelancer receives the full escrow amount.",
+    longDesc: "Traditional gig platforms can take up to 20% of your earnings. GigPay takes no platform commission: the contract pays the freelancer the full amount the client locked. The client pays the Stellar network fee for locking and releasing, which the app estimates at about 0.03 XLM per transaction.",
     shadowColor: "rgba(74,222,128,0.3)",
     accentColor: "#4ade80"
   },
