@@ -252,6 +252,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                 <th style={{ padding: '0.85rem 0.75rem' }}>Task / Method</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Amount</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Status</th>
+                <th style={{ padding: '0.85rem 0.75rem' }}>Dispute</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Tx Hash</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Explorer Link</th>
               </tr>
@@ -286,6 +287,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                     }}>
                       {record.status}
                     </span>
+                  </td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.75rem', color: record.dispute?.includes('(open') ? '#fca5a5' : 'var(--text-muted)', minWidth: record.dispute ? '180px' : undefined }}>
+                    {record.dispute || ''}
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <code style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

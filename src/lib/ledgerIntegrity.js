@@ -13,6 +13,7 @@ import {
   DEMO_PUBLIC_KEY,
   GIGPAY_ESCROW_CONTRACT_ID
 } from './stellar.js';
+import { isDisputeActive } from './taskLifecycle.js';
 
 const LEGACY_SYNTHETIC_PREFIXES = ['demo_', 'resilient_', 'sim-tx-', 'rel-', '5f8c1e7a', '8b1c3e5a'];
 
@@ -132,6 +133,29 @@ export const onChainEarnings = (tasks, payoutAddress) => {
 // ---------------------------------------------------------------------------------------------
 
 const ON_CHAIN_SOURCE = 'On-chain index';
+
+const minuteUtc = (iso) => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : '';
+};
+
+/**
+ * Dispute metadata for the public verification view (SOW D3c): when, who (as a role, never a name or
+ * account) and why, plus the resolution time. Address-like text in the reason is removed, and the
+ * reason is shortened. Empty when the task was never disputed.
+ */
+export const describeDispute = (task) => {
+  if (!task || (!task.disputed_at && task.status !== 'Disputed')) return '';
+  const by = task.disputed_by && task.client_id && String(task.disputed_by) === String(task.client_id) ? ' by client' : '';
+  let reason = String(task.dispute_reason || '').replace(/\s+/g, ' ').trim()
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[address removed]');
+  if (reason.length > 160) reason = reason.slice(0, 157) + '...';
+  const when = minuteUtc(task.disputed_at);
+  let text = `Disputed${when ? ' ' + when : ''}${by}${reason ? ': ' + reason : ''}`;
+  if (isDisputeActive(task)) text += ' (open: release frozen in GigPay)';
+  else if (task.dispute_resolved_at) text += `. Resolved ${minuteUtc(task.dispute_resolved_at)}`;
+  return text;
+};
 const DB_ONLY_SOURCE = 'Database only';
 
 /** The Supabase task for an on-chain escrow: same escrow id, or the same fund or release hash. */
@@ -164,6 +188,7 @@ export const buildOnChainLedgerRow = (e, task = null) => {
     timestamp: formatUtc(e.releasedAt || e.fundedAt),
     explorerUrl: `https://stellar.expert/explorer/testnet/tx/${hash}`,
     source: ON_CHAIN_SOURCE,
+    dispute: describeDispute(task),
     task
   });
 };
@@ -181,14 +206,18 @@ export const buildPublicLedger = ({ escrows = [], tasks = [], otherRecords = [],
   const covered = (r) => [r.txHash, r.fundTxHash, r.releaseHash].some((h) => h && chainHashes.has(h));
   const dbOnly = dedupeLedgerByTxHash(
     (otherRecords || []).filter((r) => r && !String(r.id || '').startsWith('onchain-') && !covered(r))
-  ).map((r) => ({
-    ...r,
-    id: `db-only-${r.txHash}`,
-    source: DB_ONLY_SOURCE,
-    task: r.task || findTaskForHash(r.txHash, tasks),
-    countsAsOutsideUser: false,
-    walletNote: `Not in the on-chain index${generatedAt ? ` (generated ${generatedAt})` : ''}: not counted until it is regenerated. ${r.walletNote || ''}`.trim()
-  }));
+  ).map((r) => {
+    const task = r.task || findTaskForHash(r.txHash, tasks);
+    return {
+      ...r,
+      id: `db-only-${r.txHash}`,
+      source: DB_ONLY_SOURCE,
+      task,
+      dispute: describeDispute(task),
+      countsAsOutsideUser: false,
+      walletNote: `Not in the on-chain index${generatedAt ? ` (generated ${generatedAt})` : ''}: not counted until it is regenerated. ${r.walletNote || ''}`.trim()
+    };
+  });
   return [...chainRows, ...dbOnly];
 };
 
@@ -198,13 +227,13 @@ const csvCell = (v) => {
   return `"${s.replace(/"/g, '""')}"`;
 };
 
-export const LEDGER_CSV_HEADERS = ['Row ID', 'Escrow #', 'Source', 'Task Title', 'Method', 'Amount', 'Contract ID', 'Client Wallet', 'Freelancer Wallet', 'Transaction Hash', 'Fund Tx Hash', 'Release Tx Hash', 'Status', 'Timestamp (UTC)', 'Stellar Expert URL', 'Counts As Outside User', 'Wallet Note'];
+export const LEDGER_CSV_HEADERS = ['Row ID', 'Escrow #', 'Source', 'Task Title', 'Method', 'Amount', 'Contract ID', 'Client Wallet', 'Freelancer Wallet', 'Transaction Hash', 'Fund Tx Hash', 'Release Tx Hash', 'Status', 'Timestamp (UTC)', 'Stellar Expert URL', 'Counts As Outside User', 'Wallet Note', 'Dispute'];
 
 /** CSV text for the public ledger rows (quoted cells, inner quotes doubled). */
 export const ledgerToCsv = (records) => {
   const rows = (records || []).map((r) => [
     r.id, r.escrowId ?? '', r.source || '', r.taskId, r.method, r.amount, r.contractId, r.clientWallet, r.freelancerWallet,
-    r.txHash, r.fundTxHash, r.releaseHash, r.status, r.timestamp, r.explorerUrl, r.countsAsOutsideUser ? 'Yes' : 'No', r.walletNote
+    r.txHash, r.fundTxHash, r.releaseHash, r.status, r.timestamp, r.explorerUrl, r.countsAsOutsideUser ? 'Yes' : 'No', r.walletNote, r.dispute || ''
   ].map(csvCell).join(','));
   return [LEDGER_CSV_HEADERS.map(csvCell).join(','), ...rows].join('\n');
 };

@@ -166,5 +166,24 @@ test('Ledger CSV has one line per row and escapes quotes and formula-like text',
   assert.ok(ledgerToCsv([{ id: '=1+1' }]).includes(`"'=1+1"`), 'a cell starting with = is not run as a formula');
 });
 
+test('Dispute metadata (time, initiator role, reason, resolution) is shown without names or addresses', () => {
+  const { describeDispute, buildPublicLedger, ledgerToCsv } = ledgerMod;
+  const base = { client_id: 'c-1', disputed_by: 'c-1', dispute_reason: 'Logo  missing,\n write me at someone@example.com' };
+  const open = describeDispute({ ...base, status: 'Disputed', disputed_at: '2026-11-06T10:12:40.123+00:00' });
+  assert.strictEqual(open, 'Disputed 2026-11-06 10:12 UTC by client: Logo missing, write me at [address removed] (open: release frozen in GigPay)');
+  const resolved = describeDispute({ ...base, status: 'In Progress', disputed_at: '2026-11-06T10:12:00Z', dispute_resolved_at: '2026-11-06T11:30:00Z' });
+  assert.match(resolved, /^Disputed 2026-11-06 10:12 UTC by client: .*\. Resolved 2026-11-06 11:30 UTC$/);
+  assert.doesNotMatch(describeDispute({ ...base, disputed_by: 'someone-else', disputed_at: '2026-11-06T10:12:00Z' }), /by client/);
+  assert.strictEqual(describeDispute({ status: 'Completed' }), '');
+  assert.strictEqual(describeDispute(null), '');
+
+  const rows = buildPublicLedger({ escrows: ESCROWS, tasks: [{ ...base, on_chain_task_id: 44, status: 'Disputed', disputed_at: '2026-11-06T10:12:00Z' }] });
+  assert.match(rows.find((r) => r.escrowId === 44).dispute, /^Disputed 2026-11-06 10:12 UTC by client/);
+  assert.strictEqual(rows.find((r) => r.escrowId === 42).dispute, '');
+  const csv = ledgerToCsv(rows);
+  assert.ok(csv.split('\n')[0].endsWith('"Dispute"'));
+  assert.ok(!csv.includes('@'), 'no address-like text in the export');
+});
+
 console.log(`\n  Ledger integrity: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);
