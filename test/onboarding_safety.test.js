@@ -174,7 +174,8 @@ await test('Dispute metadata shows when, by whom and when resolved', async () =>
 
 await test('Auth page follows ?mode= changes; guide starts minimized', () => {
   assert.ok(read('src/pages/AuthPage.jsx').includes('[location.search, location.key]'));
-  assert.ok(/isMinimized: true,\n\s+isDismissed: false/.test(read('src/components/PilotGuideWidget.jsx')));
+  // \r?\n: Windows checkouts use CRLF line endings (this check failed on Windows while Linux CI passed).
+  assert.ok(/isMinimized: true,\r?\n\s+isDismissed: false/.test(read('src/components/PilotGuideWidget.jsx')));
   assert.ok(read('src/components/Navbar.jsx').includes('navbar-menu-toggle'), 'phone header has a Menu');
 });
 
