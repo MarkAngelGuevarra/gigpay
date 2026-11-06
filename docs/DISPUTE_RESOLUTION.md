@@ -42,8 +42,7 @@ If the database write fails (for example, the signed-in user is not the task's c
 
 Where the dispute is visible:
 
-- Client dashboard task card: freeze notice with the reason.
-- Freelancer dashboard task card: "Escrow Frozen" banner with the reason.
+- Client and freelancer dashboard task cards: the freeze notice with the reason, the dispute time and who raised it (the client); after a resolution, a one-line dispute history with the resolution time (`src/lib/disputeMetadata.js`).
 - Public verification ledger and its CSV: a Dispute column for escrows linked to a task, with the time, "by client" and the reason, and the resolution time once resolved. No names or emails are shown.
 
 ## What is frozen
