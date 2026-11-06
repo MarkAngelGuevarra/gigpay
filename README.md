@@ -47,6 +47,8 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 5. **Tests:** `npm ci && npm test` runs 66 offline tests in 6 suites.
 6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
+7. **Sprint 2 evidence map:** [docs/SPRINT2_EVIDENCE.md](docs/SPRINT2_EVIDENCE.md) maps each D1–D4 acceptance criterion to what exists and what evidence is still missing.
+8. **Dispute workflow:** [docs/DISPUTE_RESOLUTION.md](docs/DISPUTE_RESOLUTION.md) describes the app-level dispute freeze and how a dispute is resolved on Testnet (not arbitration).
 
 ## ⚠️ Known limitations (pilot, Testnet only)
 - **No refund or cancel.** Once funded, an escrow can only be released to the named freelancer by the client. If the client never approves, the funds stay locked.
@@ -94,7 +96,7 @@ npm test
 `npm test` runs 66 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (8), onboarding-at-scale (7), dispute-sync (8) and onboarding-safety (11) suites. The older suites below are not part of `npm test`; run them individually with `node <file>`. `soroban_sim` and `live_headless_e2e` need Stellar Testnet access and were not re-run for this README.
 * `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9 checks).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
-* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (13/14 on Nov 6, 2026: one check still expects an older error message).
+* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
 * `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15 checks).
 * `freelancer_portal_qa.test.js`: Real-time cross-tab sync, double-click protection, work proof submission (12/12).
 * `dual_role_simulation.test.js`: Dynamic role switcher, paired simulator keypairs, anti-self-dealing verification (17/17).
