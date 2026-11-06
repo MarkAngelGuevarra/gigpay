@@ -3,6 +3,7 @@
  *
  *  - A release that fails or stays pending asks the contract (get_task) whether the escrow is already paid
  *    out, and never sends a second release.
+ *  - Money is locked only for a real, activated freelancer payout address; never a silent team wallet.
  *
  * Offline: every network step is an injected mock. Command: node test/chain_safety.test.js
  */
@@ -109,6 +110,54 @@ await test('TaskContext marks an already-released escrow Completed and says no n
   const src = read('src/context/TaskContext.jsx');
   assert.match(src, /releaseResult\?\.alreadyReleased[\s\S]{0,80}markAlreadyReleased/);
   assert.match(src, /no new payment was sent/);
+});
+
+// ---------- 2. Freelancer payout account check before funding ----------
+await test('Payout account check: 404 stops funding, Horizon unreachable warns but allows, active passes', async () => {
+  const notFound = await stellar.checkFreelancerPayoutAccount(freelancer, { getBalance: async () => ({ active: false, isDemo: false, raw: 0 }) });
+  assert.deepStrictEqual(notFound, { ok: false, error: "This payout address isn't activated on Stellar Testnet yet. Ask the freelancer to open GigPay once so their practice wallet is funded." });
+  const unknown = await stellar.checkFreelancerPayoutAccount(freelancer, { getBalance: async () => ({ active: false, unknown: true }) });
+  assert.strictEqual(unknown.ok, true);
+  assert.strictEqual(unknown.warning, stellar.FREELANCER_UNCHECKED_WARNING);
+  assert.deepStrictEqual(await stellar.checkFreelancerPayoutAccount(freelancer, { getBalance: async () => ({ active: true }) }), { ok: true });
+  // The message reaches the client unchanged through formatStellarError (ClientDashboard runs it on every error).
+  assert.strictEqual(stellar.formatStellarError(new Error(stellar.FREELANCER_NOT_ACTIVATED_MESSAGE)), stellar.FREELANCER_NOT_ACTIVATED_MESSAGE);
+});
+
+await test('Real escrow: unactivated payout address is refused before anything is signed', async () => {
+  const checked = [];
+  await assert.rejects(() => stellar.submitFundTask({ clientAddress: client.publicKey(), freelancerAddress: freelancer, amount: '5' }, {
+    checkPayout: async (addr) => { checked.push(addr); return { ok: false, error: stellar.FREELANCER_NOT_ACTIVATED_MESSAGE }; }
+  }), (e) => e.message === stellar.FREELANCER_NOT_ACTIVATED_MESSAGE);
+  assert.deepStrictEqual(checked, [freelancer]);
+});
+
+await test('Real escrow: a missing or placeholder payout address is refused, never replaced by a team wallet', async () => {
+  let checks = 0;
+  const checkPayout = async () => { checks++; return { ok: true }; };
+  for (const missing of [undefined, '', '   ']) {
+    await assert.rejects(() => stellar.submitFundTask({ clientAddress: client.publicKey(), freelancerAddress: missing, amount: '5' }, { checkPayout }),
+      (e) => e.message === stellar.FREELANCER_ADDRESS_REQUIRED_MESSAGE);
+  }
+  await assert.rejects(() => stellar.submitFundTask({ clientAddress: client.publicKey(), freelancerAddress: 'GBDEMO_PLACEHOLDER', amount: '5' }, { checkPayout }),
+    (e) => e.message === stellar.FREELANCER_ADDRESS_INVALID_MESSAGE);
+  assert.strictEqual(checks, 0);
+  const ctx = read('src/context/TaskContext.jsx');
+  assert.ok(!ctx.includes('DEFAULT_FREELANCER_TESTNET_ADDRESS'), 'TaskContext must not fall back to the team wallet');
+});
+
+await test('Offline demo (no signer, nothing on-chain) keeps its explicit demo payout key', async () => {
+  globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER = true;
+  try {
+    const out = await stellar.submitFundTask({ clientAddress: stellar.DEMO_PUBLIC_KEY, amount: '5' }, {
+      checkPayout: async () => { throw new Error('demo path must not check Horizon'); }
+    });
+    assert.strictEqual(out.isDemo, true);
+    assert.strictEqual(out.explorerUrl, null);
+    assert.strictEqual(out.freelancerAddress, stellar.DEMO_FREELANCER_KEY);
+  } finally {
+    delete globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER;
+  }
 });
 
 console.log(`\n  Chain safety: ${passed}/${passed + failed} passed\n`);

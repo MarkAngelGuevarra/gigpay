@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useMemo } from '
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress, DEFAULT_FREELANCER_TESTNET_ADDRESS } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
@@ -347,13 +347,12 @@ export const TaskProvider = ({ children }) => {
   const addTask = async (task) => {
     const activeKey = publicKey || 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
     // The contract fixes the payout recipient at fund time, so the freelancer's own wallet must be
-    // passed here. Before, it was dropped and every escrow paid the team's default Testnet wallet,
-    // which the Customer Development Plan excludes from outside-user counts.
+    // passed here. A missing address is never replaced by a team wallet: submitFundTask requires a real,
+    // activated payout address (only the offline demo, which locks nothing on-chain, uses the demo key).
     const requestedFreelancer = typeof task.freelancer_wallet === 'string' ? task.freelancer_wallet.trim() : '';
     if (requestedFreelancer && !isValidStellarAddress(requestedFreelancer)) {
       throw new Error("The freelancer wallet address isn't valid. It should start with G and be 56 characters long.");
     }
-    const recipientWallet = requestedFreelancer || DEFAULT_FREELANCER_TESTNET_ADDRESS;
 
     // Confirm the Client role in the database BEFORE locking money: otherwise RLS rejects the task row after
     // the escrow is already funded on-chain, stranding it where the freelancer can never see it.
@@ -364,9 +363,10 @@ export const TaskProvider = ({ children }) => {
     try {
       const fundResult = await submitFundTask({
         clientAddress: activeKey,
-        freelancerAddress: recipientWallet,
+        freelancerAddress: requestedFreelancer || undefined,
         amount: task.amount
       });
+      const recipientWallet = fundResult?.freelancerAddress || requestedFreelancer || null;
 
       const txHash = fundResult?.hash || ('sim-tx-' + Date.now());
       // Sent but not confirmed yet: keep the task as "Confirming" (with its hash) and resolve it from the
@@ -442,6 +442,9 @@ export const TaskProvider = ({ children }) => {
         }
       }
 
+      if (fundResult?.payoutWarning) {
+        addToast(fundResult.payoutWarning, "warning");
+      }
       if (isPending) {
         addToast("The network is slow, so your escrow is still confirming. Please don't lock funds again; GigPay will update this task by itself.", "warning");
       } else if (fundResult?.explorerUrl && !fundResult?.isDemo) {

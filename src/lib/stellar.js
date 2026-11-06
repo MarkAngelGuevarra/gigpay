@@ -782,6 +782,27 @@ export const getFundTaskOutcome = async (txHash, { server = sorobanServer } = {}
   return { status: tx.status === 'FAILED' ? 'FAILED' : 'NOT_FOUND' };
 };
 
+export const FREELANCER_ADDRESS_REQUIRED_MESSAGE =
+  "Add your freelancer's payout address first. It starts with G and is 56 characters; they copy it from their GigPay dashboard. No money was locked.";
+export const FREELANCER_ADDRESS_INVALID_MESSAGE =
+  "The freelancer wallet address isn't valid. It should start with G and be 56 characters long. No money was locked.";
+export const FREELANCER_NOT_ACTIVATED_MESSAGE =
+  "This payout address isn't activated on Stellar Testnet yet. Ask the freelancer to open GigPay once so their practice wallet is funded.";
+export const FREELANCER_UNCHECKED_WARNING =
+  "GigPay couldn't reach Stellar to check that the payout address is activated. If your freelancer hasn't opened GigPay yet, the release can fail until they do.";
+
+/**
+ * Checks that the freelancer's payout account exists on Horizon before money is locked for it.
+ * { ok: false, error } when Horizon says the account doesn't exist (404); { ok: true, warning } when
+ * Horizon can't be reached (unknown, so funding may go ahead); { ok: true } when the account exists.
+ */
+export const checkFreelancerPayoutAccount = async (address, { getBalance = getAccountBalance } = {}) => {
+  const info = await getBalance(address);
+  if (info?.unknown) return { ok: true, warning: FREELANCER_UNCHECKED_WARNING };
+  if (!info?.active) return { ok: false, error: FREELANCER_NOT_ACTIVATED_MESSAGE };
+  return { ok: true };
+};
+
 /**
  * Executes the complete fund_task flow:
  * 1. Simulates & prepares the Soroban invocation transaction.
@@ -798,20 +819,40 @@ export const getFundTaskOutcome = async (txHash, { server = sorobanServer } = {}
  */
 export const submitFundTask = async ({
   clientAddress,
-  freelancerAddress = DEFAULT_FREELANCER_TESTNET_ADDRESS,
+  freelancerAddress,
   amount,
   tokenAddress = NATIVE_SAC_CONTRACT_ID
-}) => {
+}, { checkPayout = checkFreelancerPayoutAccount } = {}) => {
+  const requestedPayout = typeof freelancerAddress === 'string' ? freelancerAddress.trim() : '';
   // 1. Enforce multi-wallet separation and anti-self-dealing check
-  const partyValidation = validateEscrowParties(clientAddress, freelancerAddress);
-  if (!partyValidation.valid) {
-    throw new Error(partyValidation.error);
+  if (!clientAddress) throw new Error("Client wallet address is required.");
+  if (requestedPayout) {
+    const partyValidation = validateEscrowParties(clientAddress, requestedPayout);
+    if (!partyValidation.valid) {
+      throw new Error(partyValidation.error);
+    }
   }
 
   // 2. Resolve the signer: Ephemeral / Simulator / Extensionless mode signs on-chain automatically,
   //    once its Testnet account is confirmed to exist.
   const ephemeralSigner = await getOrProvisionEphemeralSigner(clientAddress);
   const effectiveClientAddress = ephemeralSigner ? ephemeralSigner.publicKey : clientAddress;
+  const isOfflineDemo = !effectiveClientAddress || isDemoWallet(effectiveClientAddress);
+
+  // 2b. The payout address is fixed at fund time. Only the offline demo (nothing on-chain) may fall back to
+  //     the demo freelancer key; a real escrow never silently pays a team wallet instead of the freelancer.
+  const payoutAddress = requestedPayout || (isOfflineDemo ? DEMO_FREELANCER_KEY : '');
+  let payoutWarning = null;
+  if (!isOfflineDemo) {
+    if (!payoutAddress) throw new Error(FREELANCER_ADDRESS_REQUIRED_MESSAGE);
+    if (!StellarSdk.StrKey.isValidEd25519PublicKey(payoutAddress)) throw new Error(FREELANCER_ADDRESS_INVALID_MESSAGE);
+    const parties = validateEscrowParties(effectiveClientAddress, payoutAddress);
+    if (!parties.valid) throw new Error(parties.error);
+    const payoutCheck = await checkPayout(payoutAddress);
+    if (!payoutCheck.ok) throw new Error(payoutCheck.error);
+    payoutWarning = payoutCheck.warning || null;
+  }
+
   if (ephemeralSigner && !(await ensureEphemeralAccountFunded(effectiveClientAddress))) {
     throw new Error(formatStellarError({ name: 'NotFoundError', message: 'Not Found' }));
   }
@@ -830,6 +871,7 @@ export const submitFundTask = async ({
       success: true,
       hash: DEMO_FUND_TX_HASH,
       explorerUrl: null, // demo: no on-chain transaction to link
+      freelancerAddress: payoutAddress,
       isDemo: true
     };
   }
@@ -838,7 +880,7 @@ export const submitFundTask = async ({
     // 4. Prepare & simulate transaction on Soroban Testnet RPC
     const { preparedTx } = await simulateFundTask({
       clientAddress: effectiveClientAddress,
-      freelancerAddress,
+      freelancerAddress: payoutAddress,
       amount,
       tokenAddress
     });
@@ -878,6 +920,8 @@ export const submitFundTask = async ({
         hash: outcome.hash,
         onChainTaskId: null,
         clientAddress: effectiveClientAddress,
+        freelancerAddress: payoutAddress,
+        payoutWarning,
         explorerUrl: outcome.explorerUrl,
         isDemo: false
       };
@@ -888,6 +932,8 @@ export const submitFundTask = async ({
       hash: outcome.hash,
       onChainTaskId: outcome.returnValue || null,
       clientAddress: effectiveClientAddress,
+      freelancerAddress: payoutAddress,
+      payoutWarning,
       explorerUrl: outcome.explorerUrl,
       isDemo: false
     };
