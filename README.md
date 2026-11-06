@@ -4,12 +4,23 @@
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
-![Tests](https://img.shields.io/badge/npm%20test-65%2F65%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/npm%20test-66%2F66%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
 **Live app (Stellar Testnet):** [https://gigpay.tech](https://gigpay.tech)  
 **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`
+
+## Testnet honesty and known limits
+- **Stellar Testnet only.** Everything uses practice money (Testnet XLM, no cash value). There is no mainnet deployment and no bank, GCash or fiat withdrawal.
+- **Not externally audited.** [SECURITY_AUDIT.md](SECURITY_AUDIT.md) is the team's own security self-review.
+- **The contract has no refund, cancel or dispute state.** It can only pay the freelancer address named at funding, when the client approves. The dispute freeze and the check that client and freelancer are different wallets are enforced by the GigPay app, not by the contract.
+- **Practice-wallet keys live in the browser** that created them. Clearing browser data or using private mode loses the wallet.
+- **Numbers are wallets, not verified people.** One person can create several wallets. Counting rules: [METRICS.md](METRICS.md).
+- **Clean installs:** verified on Windows 11 (Nov 4, 2026) and Ubuntu 24.04 (Nov 5, 2026, in a cloud container); the third environment is pending. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+- **Walkthrough video:** pending; it will be linked here once published.
+
+More detail is under "Known limitations" below.
 
 ---
 
@@ -22,21 +33,19 @@ The global freelance economy is booming, but the financial infrastructure suppor
 
 ## 🌟 Our Vision & Solution
 
-**GigPay** is a decentralized, Web3-native escrow platform designed to eliminate middlemen and empower the gig economy. 
+**GigPay** is a milestone escrow app for freelancers and their clients, built on Stellar and Soroban smart contracts.
 
 By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 - **Fast Settlement:** Stellar confirms funding and release in about 5 seconds.
-- **No Platform Commission:** GigPay takes no cut (traditional platforms take up to 20%). The only cost is the Stellar network fee, a fraction of a cent.
-- **Trustless Escrow:** Funds are securely locked in a smart contract. Clients fund the contract upfront, proving they have the money. The contract can only pay the freelancer address named when the escrow was funded, and only when the client approves. (There is no refund or cancel: see Known limitations.) Once work is approved, the client releases the funds to the freelancer.
-
-> **Testnet only.** Everything runs on Stellar Testnet with practice XLM. There is no bank, GCash or fiat withdrawal in the app; approved payments go to the freelancer's Testnet address.
+- **No Platform Commission:** GigPay takes no cut (traditional platforms take up to 20%). The only cost is the Stellar network fee (the app estimates about 0.03 XLM per transaction).
+- **Smart-contract escrow:** Funds are locked in the Soroban contract. Clients fund the contract upfront, proving they have the money. The contract can only pay the freelancer address named when the escrow was funded, and only when the client approves. (There is no refund or cancel: see Known limitations.) Once work is approved, the client releases the funds to the freelancer.
 
 ## ✅ Verify in 2 minutes (for reviewers)
 1. **Contract:** [`CAUU2O5Z…7RD3` on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3). Live until about May 2027 (see [DEPLOYED_CONTRACT.md](DEPLOYED_CONTRACT.md)).
 2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 6, 2026: **46 escrows, 1 from outside wallets (#15, not yet released)**. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every user number (onboarded, activated, repeat), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
-5. **Tests:** `npm ci && npm test` runs 65 offline tests in 6 suites.
+5. **Tests:** `npm ci && npm test` runs 66 offline tests in 6 suites.
 6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
 
 ## ⚠️ Known limitations (pilot, Testnet only)
@@ -67,9 +76,10 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 * **Structured Dispute Freeze:** Clients can halt releases and log structured dispute metadata (`dispute_reason`, `disputed_at`). The freeze is enforced by the app; the deployed contract has no dispute or refund state.
 * **Accidental Release Guard:** AWS-style confirmation modal requiring users to type `"CONFIRM"` before escrow funds can be unlocked.
 
-### 4. Comprehensive Testing Suite & Clean-Install Logs (Deliverable 4 — $1,000)
-* **Automated Tests:** `npm test` runs 65 tests offline in 6 suites (22 regression, 10 escrow-integrity, 8 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 10 onboarding-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
-* **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC and in a Linux (Ubuntu 24.04) cloud container; a third separate computer (macOS) is still to do. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+### 4. Automated Tests, Clean-Install Logs & Walkthrough Video (Deliverable 4 — $1,000)
+* **Automated Tests:** `npm test` runs 66 tests offline in 6 suites (22 regression, 10 escrow-integrity, 8 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 11 onboarding-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
+* **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC and in a Linux (Ubuntu 24.04) cloud container; the third environment is still pending. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+* **Walkthrough video:** not yet published. The recording script is [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md).
 
 ---
 
@@ -81,11 +91,11 @@ npm test
 ```
 
 ### Test Suites
-`npm test` runs 65 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (8), onboarding-at-scale (7), dispute-sync (8) and onboarding-safety (10) suites. The suites below run individually with `node <file>`; `soroban_sim` and `live_headless_e2e` need Stellar Testnet access.
-* `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9/9).
+`npm test` runs 66 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (8), onboarding-at-scale (7), dispute-sync (8) and onboarding-safety (11) suites. The older suites below are not part of `npm test`; run them individually with `node <file>`. `soroban_sim` and `live_headless_e2e` need Stellar Testnet access and were not re-run for this README.
+* `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9 checks).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
-* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
-* `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15/15).
+* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (13/14 on Nov 6, 2026: one check still expects an older error message).
+* `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15 checks).
 * `freelancer_portal_qa.test.js`: Real-time cross-tab sync, double-click protection, work proof submission (12/12).
 * `dual_role_simulation.test.js`: Dynamic role switcher, paired simulator keypairs, anti-self-dealing verification (17/17).
 
