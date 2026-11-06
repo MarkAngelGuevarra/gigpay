@@ -23,7 +23,7 @@ On-chain numbers below come from `src/data/onchainEscrows.json`, generated from 
 
 Notes:
 
-- `test/sync_latency.test.js` times dispute raise and resolve between two tabs of the same browser and asserts p95 < 500ms. It does not time a funded task reaching the freelancer feed, and it does not measure sync between devices (Supabase Realtime). No recorded run result is in the repository yet.
+- `test/sync_latency.test.js` times dispute raise and resolve between two tabs of the same browser and asserts p95 < 500ms. It does not time a funded task reaching the freelancer feed, and it does not measure sync between devices (Supabase Realtime). Recorded run: GitHub Actions run 42162411037 on commit `524fe5c` (Nov 6, 2026), n=40, median 1.9 ms, p95 4.9 ms, max 15.9 ms (https://github.com/MarkAngelGuevarra/gigpay/actions/runs/42162411037). CI repeats it on every push to main.
 - The SOW mentions reconciling with "contract events". The contract emits no events. The app reconciles by checking the transaction result and, since `58c4017`, the contract's `get_task`.
 
 ## Deliverable 2: practice wallet and public verification ledger
@@ -59,7 +59,7 @@ Notes:
 
 | Criterion | Status | Files | Commits | Evidence |
 |:---|:---|:---|:---|:---|
-| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 70 tests in 6 suites pass as of `6b87016` |
+| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 90 tests in 7 suites pass as of `524fe5c` |
 | (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Partly | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe` | 2 of 3 runs |
 | (c) 3–5 minute walkthrough video published | Not yet | `DEMO_WALKTHROUGH_SCRIPT.md` (script only) | none | none |
 
@@ -82,7 +82,7 @@ Outside-user releases on-chain: **0**.
 
 1. The 3–5 minute walkthrough video (D4c).
 2. The third clean install on a separate computer (D4b).
-3. A recorded run of `npm run test:latency`, and a measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
+3. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
 4. Escrows funded **and released** between outside wallets, ideally with practice wallets on students' own phones (D2a, success metrics).
 5. Screenshots or a screen recording of proof submission, a dispute freeze and its resolution (SOW section 6.1, D3).
 6. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
