@@ -41,3 +41,11 @@ contracts/**/target/
 # Local tooling and internal planning notes (not for the public repo)
 .claude/
 DEMO_DAY_PRESENTATION_GUIDE*.md
+
+# Local AI assistant rules and scratch files (never public)
+.agent/
+.agents/
+.gemini/
+GEMINI.md
+AGENTS.md
+.antigravity/
