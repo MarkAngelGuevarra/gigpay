@@ -1003,6 +1003,57 @@ export const getOnChainTask = async (onChainTaskId, { server = sorobanServer } =
 };
 
 /**
+ * Finds the escrow ID of a confirmed fund_task whose return value the RPC didn't give us.
+ * The contract issues IDs 1, 2, 3... (ledger order), so this reads get_task upward until the first missing ID
+ * and returns the ID only when exactly ONE open escrow has this client, freelancer, amount and token
+ * (our own escrow is always one of them). Ambiguous or no match -> null; never a guess, because approve_task
+ * pays whichever escrow the ID names. Throws when Soroban RPC can't answer, so the caller can retry later.
+ */
+export const findFundedEscrowId = async (
+  { clientWallet, freelancerWallet, amount, tokenAddress = NATIVE_SAC_CONTRACT_ID },
+  { readTask = getOnChainTask, maxId = 1000 } = {}
+) => {
+  const stroops = Number.isFinite(parseFloat(amount)) ? BigInt(Math.round(parseFloat(amount) * 10_000_000)) : null;
+  if (!clientWallet || !freelancerWallet || stroops === null) return null;
+  const matches = [];
+  for (let id = 1; id <= maxId; id++) {
+    const t = await readTask(id);
+    if (!t) return matches.length === 1 ? matches[0] : null;
+    if (t.client === clientWallet && t.freelancer === freelancerWallet && t.amount === stroops &&
+        t.token === tokenAddress && t.is_funded && !t.is_approved) {
+      matches.push(id);
+    }
+  }
+  return null; // didn't reach the end of the list: not sure enough to pick an ID
+};
+
+/**
+ * Decides what a "Confirming" task (funding sent, not confirmed while the client waited) becomes, from the
+ * chain's answer for its fund transaction. Returns the fields to apply, or null to check again later.
+ *  - SUCCESS with an escrow ID -> Available with that ID.
+ *  - SUCCESS without a return value -> look the ID up (findFundedEscrowId); if it can't be pinned down the task
+ *    still becomes Available (the money is locked; escrowIdUnknown is a local flag, not a DB column).
+ *  - FAILED, or still unknown after 5 minutes (Soroban transactions expire long before that) -> Failed.
+ */
+export const resolveConfirmingFunding = async (task, outcome, { findEscrowId = findFundedEscrowId, now = Date.now() } = {}) => {
+  if (outcome?.status === 'SUCCESS') {
+    const onChainTaskId = outcome.onChainTaskId || await findEscrowId({
+      clientWallet: task.client_wallet,
+      freelancerWallet: task.freelancer_wallet,
+      amount: task.amount
+    });
+    return onChainTaskId
+      ? { status: 'Available', on_chain_task_id: onChainTaskId, is_simulated: false }
+      : { status: 'Available', is_simulated: false, escrowIdUnknown: true };
+  }
+  const ageMs = now - Date.parse(task.created_at || 0);
+  if (outcome?.status === 'FAILED' || (outcome?.status === 'NOT_FOUND' && ageMs > 5 * 60 * 1000)) {
+    return { status: 'Failed' };
+  }
+  return null;
+};
+
+/**
  * Assembles and simulates a Soroban approve_task invocation.
  * Releases the escrowed funds from contract to the designated freelancer.
  *

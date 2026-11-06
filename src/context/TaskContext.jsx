@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useMemo } from '
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
+import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
@@ -261,8 +261,8 @@ export const TaskProvider = ({ children }) => {
   }, [broadcastChannel]);
 
   // 2b. Resolve escrows whose funding was sent but not confirmed while the client waited ("Confirming").
-  // The chain is the source of truth: SUCCESS fills in the escrow ID and opens the task; FAILED, or a
-  // transaction still unknown after 5 minutes (Soroban transactions expire long before that), marks it Failed.
+  // The chain is the source of truth (see resolveConfirmingFunding): SUCCESS opens the task, with its escrow
+  // ID looked up when the RPC returned none; FAILED, or still unknown after 5 minutes, marks it Failed.
   const confirmingKey = tasks
     .filter((t) => t.status === 'Confirming' && t.client_id === user?.id && /^[0-9a-f]{64}$/.test(t.tx_hash || ''))
     .map((t) => t.id)
@@ -270,30 +270,31 @@ export const TaskProvider = ({ children }) => {
   useEffect(() => {
     if (!confirmingKey) return undefined;
     let cancelled = false;
+    let running = false; // the escrow ID lookup can outlast the 15s interval
     const check = async () => {
+      if (running) return;
+      running = true;
       for (const t of tasks.filter((x) => confirmingKey.split(',').includes(x.id))) {
         try {
           const outcome = await getFundTaskOutcome(t.tx_hash);
-          if (cancelled) return;
-          const ageMs = Date.now() - Date.parse(t.created_at || 0);
-          let fields = null;
-          if (outcome.status === 'SUCCESS' && outcome.onChainTaskId) {
-            fields = { status: 'Available', on_chain_task_id: outcome.onChainTaskId, is_simulated: false };
-          } else if (outcome.status === 'FAILED' || (outcome.status === 'NOT_FOUND' && ageMs > 5 * 60 * 1000)) {
-            fields = { status: 'Failed' };
-          }
+          if (cancelled) break;
+          const fields = await resolveConfirmingFunding(t, outcome);
+          if (cancelled) break;
           if (!fields) continue;
-          const { is_simulated: _local, ...dbFields } = fields;
+          const { is_simulated: _local, escrowIdUnknown, ...dbFields } = fields;
           await writeTask(t.id, dbFields);
-          restoreTask({ ...t, ...fields, explorer_url: fields.status === 'Available' ? `https://stellar.expert/explorer/testnet/tx/${t.tx_hash}` : t.explorer_url });
-          addToast(fields.status === 'Available'
-            ? `"${t.title}" is confirmed on Stellar and open for your freelancer.`
-            : `"${t.title}" didn't go through on Stellar, so no money was locked. You can create it again.`,
-          fields.status === 'Available' ? 'success' : 'warning');
+          restoreTask({ ...t, ...dbFields, is_simulated: fields.is_simulated ?? t.is_simulated, explorer_url: fields.status === 'Available' ? `https://stellar.expert/explorer/testnet/tx/${t.tx_hash}` : t.explorer_url });
+          addToast(fields.status !== 'Available'
+            ? `"${t.title}" didn't go through on Stellar, so no money was locked. You can create it again.`
+            : escrowIdUnknown
+              ? `"${t.title}" is confirmed on Stellar and open for your freelancer, but GigPay couldn't read its escrow number, so Release won't work yet. Please don't lock funds again; send the GigPay team this transaction: ${t.tx_hash.slice(0, 12)}…`
+              : `"${t.title}" is confirmed on Stellar and open for your freelancer.`,
+          fields.status === 'Available' && !escrowIdUnknown ? 'success' : 'warning');
         } catch (err) {
           console.warn('[GigPay] Confirming-task check notice:', err?.message || err);
         }
       }
+      running = false;
     };
     check();
     const timer = setInterval(check, 15000);

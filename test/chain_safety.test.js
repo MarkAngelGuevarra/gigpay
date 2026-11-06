@@ -4,6 +4,7 @@
  *  - A release that fails or stays pending asks the contract (get_task) whether the escrow is already paid
  *    out, and never sends a second release.
  *  - Money is locked only for a real, activated freelancer payout address; never a silent team wallet.
+ *  - A "Confirming" escrow whose funding succeeded always resolves, even without an RPC return value.
  *
  * Offline: every network step is an injected mock. Command: node test/chain_safety.test.js
  */
@@ -158,6 +159,44 @@ await test('Offline demo (no signer, nothing on-chain) keeps its explicit demo p
   } finally {
     delete globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER;
   }
+});
+
+// ---------- 3. Confirming task whose funding succeeded without a return value ----------
+const confirming = { id: 'c0nf0000-0000-4000-8000-000000000003', status: 'Confirming', amount: '5', client_wallet: client.publicKey(), freelancer_wallet: freelancer, tx_hash: 'b'.repeat(64), created_at: new Date().toISOString() };
+const escrowList = (list) => async (id) => list[id - 1] || null;
+
+await test('Confirming + SUCCESS with escrow ID -> Available with that ID (no lookup)', async () => {
+  const fields = await stellar.resolveConfirmingFunding(confirming, { status: 'SUCCESS', onChainTaskId: 7 }, { findEscrowId: async () => { throw new Error('no lookup needed'); } });
+  assert.deepStrictEqual(fields, { status: 'Available', on_chain_task_id: 7, is_simulated: false });
+});
+
+await test('Confirming + SUCCESS without return value -> escrow ID found by get_task (unique open match)', async () => {
+  const other = { ...onChainTask(false), freelancer: S.Keypair.random().publicKey() };
+  const releasedTwin = onChainTask(true);
+  const readTask = escrowList([other, releasedTwin, onChainTask(false), other]);
+  const fields = await stellar.resolveConfirmingFunding(confirming, { status: 'SUCCESS', onChainTaskId: null },
+    { findEscrowId: (q) => stellar.findFundedEscrowId(q, { readTask }) });
+  assert.deepStrictEqual(fields, { status: 'Available', on_chain_task_id: 3, is_simulated: false });
+});
+
+await test('Confirming + SUCCESS without return value, ambiguous match -> Available with no guessed ID (never stuck)', async () => {
+  const readTask = escrowList([onChainTask(false), onChainTask(false)]);
+  assert.strictEqual(await stellar.findFundedEscrowId({ clientWallet: client.publicKey(), freelancerWallet: freelancer, amount: '5' }, { readTask }), null);
+  const fields = await stellar.resolveConfirmingFunding(confirming, { status: 'SUCCESS' }, { findEscrowId: (q) => stellar.findFundedEscrowId(q, { readTask }) });
+  assert.deepStrictEqual(fields, { status: 'Available', is_simulated: false, escrowIdUnknown: true });
+  // A list that never ends within maxId is not trusted either.
+  assert.strictEqual(await stellar.findFundedEscrowId({ clientWallet: client.publicKey(), freelancerWallet: freelancer, amount: '5' }, { readTask: async () => onChainTask(false), maxId: 3 }), null);
+});
+
+await test('Confirming: RPC error during lookup is retried later; FAILED / expired -> Failed; fresh unknown waits', async () => {
+  await assert.rejects(() => stellar.resolveConfirmingFunding(confirming, { status: 'SUCCESS' }, { findEscrowId: async () => { throw new Error('fetch failed'); } }));
+  assert.deepStrictEqual(await stellar.resolveConfirmingFunding(confirming, { status: 'FAILED' }), { status: 'Failed' });
+  const old = { ...confirming, created_at: new Date(Date.now() - 6 * 60 * 1000).toISOString() };
+  assert.deepStrictEqual(await stellar.resolveConfirmingFunding(old, { status: 'NOT_FOUND' }), { status: 'Failed' });
+  assert.strictEqual(await stellar.resolveConfirmingFunding(confirming, { status: 'NOT_FOUND' }), null);
+  const ctx = read('src/context/TaskContext.jsx');
+  assert.ok(ctx.includes('resolveConfirmingFunding(t, outcome)'), 'TaskContext resolves Confirming tasks through resolveConfirmingFunding');
+  assert.ok(/escrowIdUnknown, \.\.\.dbFields/.test(ctx), 'the local escrowIdUnknown flag is not written to the database');
 });
 
 console.log(`\n  Chain safety: ${passed}/${passed + failed} passed\n`);
