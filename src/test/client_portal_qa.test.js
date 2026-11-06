@@ -233,7 +233,7 @@ async function testSuite() {
     );
     assert.strictEqual(
       formatStellarError(new Error("HostError: VM call trapped: UnreachableCodeReached")),
-      "This escrow was not funded by your connected wallet on-chain. Create a new task with 'Lock Funds in Escrow' to test live payment release."
+      "The escrow contract rejected this transaction, so nothing was sent and no money moved. Please don't lock funds again; tell the GigPay team which task this was."
     );
     assert.strictEqual(
       formatStellarError(new Error("insufficient_balance")),
