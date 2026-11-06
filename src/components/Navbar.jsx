@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
-import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance, isSimulatorWallet, ensureEphemeralAccountFunded } from '../lib/stellar';
@@ -17,6 +17,11 @@ const Navbar = () => {
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [balance, setBalance] = useState(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  // Phones: secondary links live in a menu so the header stays one or two rows (CSS shows them inline on
+  // wider screens, where this state has no effect).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  useEffect(() => { setMenuOpen(false); }, [location.pathname, location.search]);
 
   const {
     isCompleted: isPilotCompleted,
@@ -107,7 +112,18 @@ const Navbar = () => {
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
       </a>
+      {/* Phones only (see index.css): opens the feedback form, ledger, portals, role switch, profile and sign out. */}
+      <button
+        type="button"
+        className="btn btn-outline navbar-menu-toggle"
+        aria-expanded={menuOpen}
+        aria-controls="navbar-menu"
+        onClick={() => setMenuOpen(o => !o)}
+      >
+        {menuOpen ? <X size={16} /> : <Menu size={16} />} {menuOpen ? 'Close' : 'Menu'}
+      </button>
       <div className="navbar-actions">
+        <div id="navbar-menu" className={`navbar-secondary${menuOpen ? ' is-open' : ''}`} onClick={(e) => { if (e.target.closest('a, button')) setMenuOpen(false); }}>
         {/* Dynamic Pilot Feedback Status Pill */}
         {isPilotCompleted ? (
           <button
@@ -226,7 +242,7 @@ const Navbar = () => {
         >
           <FileSpreadsheet size={13} /> 📜 Public Ledger
         </button>
-        {user ? (
+        {user && (
           <>
             <Link 
               to="/client" 
@@ -289,6 +305,11 @@ const Navbar = () => {
               <span>{user.user_metadata?.role || activeRole || 'client'}</span>
               <span style={{ fontSize: '0.62rem', opacity: 0.75, textTransform: 'none', background: 'rgba(255,255,255,0.12)', padding: '0.08rem 0.3rem', borderRadius: '3px' }}>switch</span>
             </button>
+          </>
+        )}
+        </div>
+        {user && (
+          <>
             {publicKey ? (
               <div className="navbar-wallet-pills" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {/* Live Testnet Network & Balance Pill */}
@@ -344,14 +365,17 @@ const Navbar = () => {
               <button className="btn btn-primary" onClick={handleConnect} style={{ padding: '0.42rem 0.85rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Connect Wallet</button>
             )}
 
-            <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-              <User size={15} /> Profile
-            </Link>
-            <button onClick={handleSignOut} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-              <LogOut size={15} /> Sign Out
-            </button>
+            <div className={`navbar-secondary navbar-secondary-end${menuOpen ? ' is-open' : ''}`}>
+              <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                <User size={15} /> Profile
+              </Link>
+              <button onClick={handleSignOut} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                <LogOut size={15} /> Sign Out
+              </button>
+            </div>
           </>
-        ) : (
+        )}
+        {!user && (
           <Link to="/auth?mode=signup" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>Sign In / Sign Up</Link>
         )}
       </div>

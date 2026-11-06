@@ -66,6 +66,7 @@ export default function PilotIntakeBanner() {
           }}
         >
           <div
+            className="pilot-intake-badge"
             style={{
               display: 'inline-flex',
               alignItems: 'center',

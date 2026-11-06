@@ -135,6 +135,15 @@ p {
   flex-wrap: wrap;
 }
 
+/* Secondary header items: inline on wider screens, inside the Menu on phones. */
+.navbar-secondary {
+  display: contents;
+}
+
+.navbar-menu-toggle {
+  display: none;
+}
+
 .logo {
   font-size: 1.5rem;
   font-weight: 800;
@@ -228,9 +237,48 @@ p {
     gap: 0.4rem;
   }
   .navbar-wallet-pills {
-    width: 100%;
     flex-wrap: wrap;
     gap: 0.35rem;
+  }
+  /* Phones: logo + Menu on the first row, wallet on the second; everything else opens from Menu. */
+  .logo-img {
+    width: 32px;
+    height: 32px;
+  }
+  .logo {
+    font-size: 1.3rem;
+  }
+  .navbar-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  .navbar-secondary {
+    display: none;
+  }
+  .navbar-secondary.is-open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    width: 100%;
+    order: 10;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .navbar-secondary-end.is-open {
+    order: 11;
+    padding-top: 0;
+    border-top: none;
+  }
+  /* The feedback banner scrolls away on phones instead of pinning ~170px over the page. */
+  .pilot-intake-banner {
+    position: static !important;
+  }
+  .pilot-intake-badge {
+    display: none !important;
   }
   .navbar-actions .btn {
     padding: 0.35rem 0.6rem;

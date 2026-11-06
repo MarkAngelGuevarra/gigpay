@@ -218,9 +218,9 @@ export default function PilotGuideWidget() {
       clientStep: 1,
       freelancerStep: 1,
       activeTour: 'client',
-      // On phones the open guide covers about a third of the screen, so first-time visitors start with
-      // the small "Pilot Guide" pill and open it when they want it. Desktop keeps it open.
-      isMinimized: typeof window !== 'undefined' && window.innerWidth < 640,
+      // The open guide covers about a third of a phone screen and, on desktop, the Create Task form.
+      // Everyone starts with the small "Pilot Guide" pill and opens it when they want it.
+      isMinimized: true,
       isDismissed: false
     };
   });
@@ -278,15 +278,17 @@ export default function PilotGuideWidget() {
     const currentTasks = tasks || [];
     const prevTasks = prevTasksRef.current || [];
 
+    // Automatic step changes advance the tour but leave it minimized if it is, so it never pops open
+    // over the form a student is using; the toast says what is next.
     // Client Step 1 -> Step 2 upon wallet connection
     if (isClient && state.clientStep === 1 && publicKey && !prevWalletRef.current) {
-      setState(prev => ({ ...prev, clientStep: 2, isMinimized: false }));
+      setState(prev => ({ ...prev, clientStep: 2 }));
       addToast('🎉 Testnet Wallet Connected! Next: Lock Milestone Escrow.', 'success');
     }
 
     // Client Step 2 -> Step 3 when client creates/funds task escrow
     if (isClient && state.clientStep === 2 && currentTasks.length > prevTasksCountRef.current) {
-      setState(prev => ({ ...prev, clientStep: 3, isMinimized: false }));
+      setState(prev => ({ ...prev, clientStep: 3 }));
       addToast('🎉 Task funded in Soroban escrow! Step 3: Switch to Freelancer to accept.', 'success');
     }
 
@@ -297,7 +299,7 @@ export default function PilotGuideWidget() {
         prevTasks.find(pt => pt.id === t.id)?.status === 'Available'
       );
       if (newlyAccepted) {
-        setState(prev => ({ ...prev, freelancerStep: 4, isMinimized: false }));
+        setState(prev => ({ ...prev, freelancerStep: 4 }));
         addToast('🎉 Contract agreement locked! Step 4: Submit Proof of Work.', 'success');
       }
     }
@@ -309,7 +311,7 @@ export default function PilotGuideWidget() {
         !prevTasks.find(pt => pt.id === t.id)?.proof_attached
       );
       if (newlySubmitted) {
-        setState(prev => ({ ...prev, freelancerStep: 5, isMinimized: false }));
+        setState(prev => ({ ...prev, freelancerStep: 5 }));
         addToast('🎉 Deliverables submitted! Step 5: Get Paid & Check It On-Chain.', 'success');
       }
     }
