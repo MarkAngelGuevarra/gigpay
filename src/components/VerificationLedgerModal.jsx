@@ -22,6 +22,11 @@ const chainStats = (() => {
   return { total: rows.length, outsideWallets: outside.size, outsideFunded, outsideReleased };
 })();
 
+const shortKey = (k) => (k ? `${k.slice(0, 6)}…${k.slice(-4)}` : 'not recorded');
+const WalletLink = ({ address }) => (address
+  ? <a href={`https://stellar.expert/explorer/testnet/account/${address}`} target="_blank" rel="noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
+  : <span style={{ color: 'var(--text-muted)' }}>not recorded</span>);
+
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
   const { tasks, ledgerRecords } = useTasks();
   const { addToast } = useToast() || {};
@@ -251,6 +256,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                 <th style={{ padding: '0.85rem 0.75rem' }}>Timestamp</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Task / Method</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Amount</th>
+                <th style={{ padding: '0.85rem 0.75rem' }}>Client → Freelancer</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Status</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Dispute</th>
                 <th style={{ padding: '0.85rem 0.75rem' }}>Tx Hash</th>
@@ -274,6 +280,10 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                   </td>
                   <td style={{ padding: '0.75rem', fontWeight: 600, color: '#00f2fe' }}>
                     {record.amount}
+                  </td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>
+                    <div style={{ whiteSpace: 'nowrap' }}><WalletLink address={record.clientWallet} /> → <WalletLink address={record.freelancerWallet} /></div>
+                    <div style={{ color: record.countsAsOutsideUser ? '#34d399' : '#94a3b8', marginTop: '0.2rem', minWidth: '180px' }}>{record.walletNote}</div>
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <span style={{
