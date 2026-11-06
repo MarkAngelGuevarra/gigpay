@@ -14,6 +14,16 @@ An earlier version of this file, and of the app's public ledger, overstated GigP
 
 All rows below are generated from the chain, and every row says which kind of wallet was involved. Names are not attached to any wallet.
 
+### Note on old test rows in the database (November 6, 2026)
+
+The Supabase `tasks` table still holds test and demo rows from before Sprint 2 (checked Nov 6, 2026; times in UTC):
+
+- **7 tasks marked Completed with the placeholder release hash `demo_release_1`.** They were marked Completed in batches on Oct 31 (03:42 and 06:19) and Nov 3 (05:23). No release transaction exists for them on Stellar Testnet.
+- **5 tasks from July 17–18, 2026 marked Completed with no release hash.** They were never released on-chain.
+- **6 tasks created before Nov 3 that are now assigned to a freelancer account created on Nov 3, 2026,** so their assignment was changed after the fact.
+
+These are test/demo rows, not user activity. They are not counted in any escrow, release or earnings number: this file, the public ledger and its CSV, and the dashboards count only escrows confirmed on-chain, and placeholder hashes are ignored. The rows were left in place rather than deleted so the history stays visible.
+
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
