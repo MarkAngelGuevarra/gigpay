@@ -76,14 +76,17 @@ Per Instawards Onboarding Slide 13–14 mandate, weekly progress was posted on X
 
 ## 4. Production Web Analytics Telemetry (`@vercel/analytics`)
 
-_Withdrawn (Nov 6, 2026):_ the visitor figures below came from `@vercel/analytics`, which was removed on Oct 30, 2026, and no export was kept, so they cannot be verified and are not claimed:
+_Updated Nov 7, 2026:_ on Nov 6 these figures were withdrawn because no export had been kept. On Nov 7 the team took screenshots of the Vercel Analytics dashboard (Production, "Last 30 Days"), kept in the evidence Drive folder, so the figures below are restored with their limits stated.
 
 | Metric | Value | Source |
 | :--- | :--- | :--- |
+| **Visitors / page views** | **147 visitors, 395 page views** in the 30 days to Nov 7, 2026 | Vercel Analytics dashboard, screenshots taken Nov 7, 2026 |
+| **Visitors from the Philippines** | **79 of 147 (54%)**; United States 45 (31%) | Same screenshots (Countries panel) |
+| **Visitors per page** | `/` 101, `/auth` 65, `/client` 26, `/freelancer` 17, `/profile` 8 | Same screenshots (Pages panel) |
 | **Registered User Accounts** | **16 real sign-ups + 7 team accounts** (corrected Nov 4, recounted Nov 5) | Live Supabase project `gulshfticoirrpuohdxk` |
 | **Active Dual-Role Testers** | **Not measured** (corrected Nov 4) | No record supports the earlier "18+" figure |
 
-Visitor, page-view, mobile-share and country figures previously shown here are withdrawn (see note above).
+Limits: these are anonymous page visits, not users or on-chain activity. They include the team's own visits and link-preview traffic. Recording stopped on Oct 30, 2026, when `@vercel/analytics` was removed from the app, so the daily chart shows visits only from about Oct 11 to Oct 30. On-chain escrow counts (`EVIDENCE_TABLE.md`) remain the primary traction metric.
 
 ---
 
