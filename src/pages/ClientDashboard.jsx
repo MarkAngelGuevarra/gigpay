@@ -327,7 +327,7 @@ const ClientDashboard = () => {
                 Welcome to the GigPay Client Portal on <strong>Stellar Testnet</strong> (practice money). Follow these 3 quick steps to complete your pilot evaluation:
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.86rem', color: 'var(--text-main)' }}>
-                <div><strong>1️⃣ Connect Wallet (Optional on Mobile):</strong> Click <em>Connect Wallet</em> in the top bar (or pre-fill a sample task below).</div>
+                <div><strong>1️⃣ Your practice wallet:</strong> Signed-in testers get one automatically; it shows in the top bar with a <em>Practice</em> label. Open your freelancer's invite link to fill in their payout address.</div>
                 <div><strong>2️⃣ Lock Testnet Escrow:</strong> Click the button below to pre-fill a <strong>2 XLM</strong> sample milestone and lock it in Soroban contract <code>CAUU2O...7RD3</code>.</div>
                 <div><strong>3️⃣ Record Your Session:</strong> Take a quick screenshot of this dashboard and submit the 60-second Pilot Tester Form!</div>
               </div>
