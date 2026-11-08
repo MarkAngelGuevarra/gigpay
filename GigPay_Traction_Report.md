@@ -86,7 +86,7 @@ _Updated Nov 7, 2026:_ on Nov 6 these figures were withdrawn because no export h
 | **Registered User Accounts** | **16 real sign-ups + 7 team accounts** (corrected Nov 4, recounted Nov 5) | Live Supabase project `gulshfticoirrpuohdxk` |
 | **Active Dual-Role Testers** | **Not measured** (corrected Nov 4) | No record supports the earlier "18+" figure |
 
-Limits: these are anonymous page visits, not users or on-chain activity. They include the team's own visits and link-preview traffic. Recording stopped on Oct 30, 2026, when `@vercel/analytics` was removed from the app, so the daily chart shows visits only from about Oct 11 to Oct 30. On-chain escrow counts (`EVIDENCE_TABLE.md`) remain the primary traction metric.
+Limits: these are anonymous page visits, not users or on-chain activity. They include the team's own visits and link-preview traffic. Recording stopped on Oct 30, 2026, when `@vercel/analytics` was removed from the app, so the daily chart shows visits only from about Oct 11 to Oct 30. Page-view tracking was turned back on Nov 8, 2026 (page views only, no custom events). On-chain escrow counts (`EVIDENCE_TABLE.md`) remain the primary traction metric.
 
 ---
 
