@@ -12,6 +12,7 @@ import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PilotGuideWidget from './components/PilotGuideWidget';
 import PilotIntakeBanner from './components/PilotIntakeBanner';
+import { Analytics } from '@vercel/analytics/react';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -69,6 +70,7 @@ function App() {
                 </Routes>
               </div>
               <PilotGuideWidget />
+              <Analytics />
             </Router>
           </TaskProvider>
         </ToastProvider>

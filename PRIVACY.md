@@ -8,6 +8,7 @@ GigPay is a pilot running on **Stellar Testnet** as part of the Stellar Philippi
 - **Account:** your email address and the role you choose (client or freelancer). Your password is handled by our authentication provider (Supabase) and is never visible to us.
 - **Pilot activity:** the tasks you create or accept, proof-of-work links you submit, and dispute notes.
 - **Wallet:** your Stellar Testnet wallet address. A practice wallet is created in your browser; its key stays in that browser.
+- **Page visits:** anonymous page-view counts (such as page URL, country, and device type, without cookies or personal identifiers) recorded via Vercel Web Analytics.
 - **Feedback:** anything you choose to tell us in the tester form or by email.
 
 ## Why we collect it
