@@ -75,7 +75,7 @@ runTest(4, "AuthContext.jsx persists publicKey on connectWallet and removes on d
 // -------------------------------------------------------------
 runTest(5, "ClientDashboard.jsx computes totalEscrowed, activeEscrows, and totalReleased", () => {
   const content = readSource('src/pages/ClientDashboard.jsx');
-  assert.ok(content.includes('const totalEscrowed = fundedTasks.reduce(') && content.includes('const fundedTasks = clientTasks.filter('), "Must compute totalEscrowed via reduce");
+  assert.ok(content.includes('const totalEscrowed = fundedTasks.reduce(') && content.includes('const fundedTasks = ownTasks.filter('), "Must compute totalEscrowed via reduce");
   assert.ok(content.includes("const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length"), "Must compute activeEscrows strictly for active states");
   assert.ok(content.includes("const totalReleased = fundedTasks.filter(t => t.status === 'Completed').reduce("), "Must compute totalReleased");
 });
@@ -104,7 +104,7 @@ runTest(8, "FreelancerDashboard.jsx awaits updateTaskStatus in handleAcceptWork"
 runTest(9, "FreelancerDashboard.jsx provides handleAcceptTask alias and exact toast feedback", () => {
   const content = readSource('src/pages/FreelancerDashboard.jsx');
   assert.ok(content.includes("const handleAcceptTask = handleAcceptWork"), "Must define handleAcceptTask alias");
-  assert.ok(content.includes("Task accepted! Funds remain locked in Soroban escrow until completion."), "Must display exact escrow confirmation toast");
+  assert.ok(content.includes("Task accepted. The payment stays locked in the escrow until the client releases it."), "Must display exact escrow confirmation toast");
   assert.ok(content.includes("Failed to accept task:"), "Must catch errors and display error toast");
 });
 

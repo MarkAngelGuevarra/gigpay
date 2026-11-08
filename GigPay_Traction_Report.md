@@ -58,7 +58,7 @@ To provide full transparency for SDF and Rise In grant evaluation, GigPay tracks
 
 | Funnel Stage | Metric | Verification Source | Evaluation Significance |
 | :--- | :--- | :--- | :--- |
-| **Stage 1: Top of Funnel Discovery** | Not measured | Web analytics were removed on Oct 30, 2026 (commit 1696410) | Earlier visitor figures are withdrawn: no committed evidence supports them. |
+| **Stage 1: Top of Funnel Discovery** | **147 visitors, 395 page views** (30 days to Nov 7, 2026; visits, not users) | Vercel Analytics screenshots taken Nov 7, 2026 (see §4) | Recording stopped Oct 30 (commit 1696410) and was turned back on Nov 8; limits in §4. |
 | **Stage 2: User Registration (Acquisition)** | **16 real sign-ups** (23 accounts incl. 7 team accounts) — *corrected Nov 4, recounted Nov 5* | Live Supabase Auth (`gulshfticoirrpuohdxk`) | Real onboarding interest from the community sessions. |
 | **Stage 3: Active Portal Flow Testers** | **Not measured** — *corrected Nov 4* | — | The earlier "18+ active testers" figure had no supporting record. |
 | **Stage 4: Verified On-Chain Settlements** | **10 releases, all from team test wallets** — *corrected Nov 4* | Stellar Testnet Explorer (`CAUU2O...7RD3`) | Proves the contract works end to end; no tester-owned wallet had settled an escrow yet. |

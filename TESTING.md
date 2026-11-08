@@ -37,7 +37,7 @@ node src/test/soroban_sim.test.js
 To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets on Stellar Testnet:
 
 ### Prerequisites:
-- Install the **Freighter Wallet** browser extension ([freighter.app](https://www.freighter.app/)).
+- Install the **Varial (formerly Freighter)** wallet browser extension ([freighter.app](https://www.freighter.app/) now redirects to Varial). "Freighter" below means this extension.
 - Switch Freighter network to **Testnet** (Settings $\rightarrow$ Network $\rightarrow$ Testnet).
 - Prepare two separate keypairs:
   - **Persona A (Client Wallet):** Funds the milestone escrow.
