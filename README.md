@@ -4,7 +4,7 @@
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
-![Tests](https://img.shields.io/badge/npm%20test-85%2F85%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/npm%20test-90%2F90%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  

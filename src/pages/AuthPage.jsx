@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff } from 'lucide-react';
+import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
 
 const AuthPage = () => {
   const { signIn, signUp, loginSimulationMode } = useAuth();
@@ -61,6 +62,17 @@ const AuthPage = () => {
         navigate(userRole === 'client' ? '/client' : '/freelancer');
       } else {
         const data = await signUp(cleanEmail, cleanPassword, { role });
+        const activeWallet = (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_wallet_public_key')) || 'Practice Keypair Pending';
+        recordStudentToGoogleSheet({
+          studentName: cleanEmail.split('@')[0],
+          studentId: cleanEmail,
+          programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',
+          walletAddress: activeWallet,
+          taskTitle: 'Awaiting Escrow Milestone',
+          amount: '2.0',
+          releaseTxHash: 'Registered',
+          feedbackSubmitted: false,
+        });
         if (data?.session || data?.user) {
           addToast("Pilot account created! Redirecting to your dashboard...", "success");
           navigate(role === 'client' ? '/client' : '/freelancer');

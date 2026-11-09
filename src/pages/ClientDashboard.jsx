@@ -10,6 +10,7 @@ import { takeInvitePayout } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
+import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
 
 const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet, switchRole } = useAuth();
@@ -157,6 +158,18 @@ const ClientDashboard = () => {
     setIsTransacting(true);
     try {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
+      const releaseHash = result?.txHash || (typeof result === 'string' ? result : 'Confirmed on Testnet');
+      const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
+      recordStudentToGoogleSheet({
+        studentName: user?.email ? user.email.split('@')[0] : 'Client Tester',
+        studentId: user?.email || 'Baliuag Student',
+        programSection: 'Client (Milestone Payout Released)',
+        walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
+        taskTitle: taskObj?.title || 'Milestone Escrow Release',
+        amount: String(taskObj?.amount || '2.0'),
+        releaseTxHash: releaseHash,
+        feedbackSubmitted: false,
+      });
       setTaskToApprove(null);
       setConfirmText('');
       // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an
