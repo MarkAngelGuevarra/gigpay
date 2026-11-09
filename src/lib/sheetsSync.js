@@ -1,6 +1,42 @@
 export const GOOGLE_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwA95Fxsf-PoPK1f95qvVZ3fLnGoGLZg7hW7iNy0EWh2WqE1pR6qO_QaK38Az2G5FNTPg/exec';
 
 /**
+ * Detect event / campus source from:
+ * 1. URL query parameters (e.g. ?source=bcc or ?event=bcc)
+ * 2. Session persistence (if they arrived via BCC QR code and then clicked around)
+ * 3. School email domain (@baliuag.edu.ph vs @umak.edu.ph)
+ */
+export const detectEventSource = (userEmail = '') => {
+  if (typeof window === 'undefined') return 'Baliuag University CITE';
+  try {
+    const cleanEmail = String(userEmail || '').toLowerCase();
+    if (cleanEmail.includes('umak.edu.ph')) {
+      return 'BCC - UMak (Blockchain Campus Conference)';
+    }
+    if (cleanEmail.includes('baliuag') || cleanEmail.includes('cite')) {
+      return 'Baliuag University CITE';
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const src = (params.get('source') || params.get('event') || params.get('ref') || '').toLowerCase();
+    if (src.includes('bcc') || src.includes('umak')) {
+      try { sessionStorage.setItem('gigpay_event_source', 'bcc'); } catch {}
+      return 'BCC - UMak (Blockchain Campus Conference)';
+    }
+
+    // Check if previously tagged in this session (e.g. arrived via QR code then navigated to /auth)
+    const saved = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gigpay_event_source') : null;
+    if (saved === 'bcc') {
+      return 'BCC - UMak (Blockchain Campus Conference)';
+    }
+
+    return 'Baliuag University CITE';
+  } catch {
+    return 'Baliuag University CITE';
+  }
+};
+
+/**
  * Detect user device friendly string
  */
 export const detectUserDevice = () => {
@@ -31,16 +67,18 @@ export async function recordStudentToGoogleSheet({
   if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
 
   try {
+    const detectedSource = detectEventSource(studentId || studentName);
     const payload = {
       student_name: studentName || 'Baliuag Student',
       student_id: studentId || 'CITE-Tester',
-      program_section: programSection || 'CITE Department',
+      program_section: programSection ? `${programSection} [${detectedSource}]` : detectedSource,
       device_used: deviceUsed || detectUserDevice(),
       wallet_address: walletAddress || 'N/A',
       task_title: taskTitle || 'Milestone Escrow Simulation',
       amount: String(amount || '2.0'),
       release_tx_hash: releaseTxHash || 'Pending Escrow Release',
       feedback_submitted: Boolean(feedbackSubmitted),
+      event_source: detectedSource.includes('BCC') ? 'bcc' : 'baliuag',
       timestamp: new Date().toISOString(),
     };
 
