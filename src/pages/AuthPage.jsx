@@ -63,7 +63,7 @@ const AuthPage = () => {
       } else {
         const data = await signUp(cleanEmail, cleanPassword, { role });
         const activeWallet = (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_wallet_public_key')) || 'Practice Keypair Pending';
-        recordStudentToGoogleSheet({
+        await recordStudentToGoogleSheet({
           studentName: cleanEmail.split('@')[0],
           studentId: cleanEmail,
           programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',

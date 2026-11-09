@@ -85,6 +85,7 @@ export async function recordStudentToGoogleSheet({
     await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
       method: 'POST',
       mode: 'no-cors',
+      keepalive: true,
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },

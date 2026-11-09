@@ -160,7 +160,7 @@ const ClientDashboard = () => {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
       const releaseHash = result?.txHash || (typeof result === 'string' ? result : 'Confirmed on Testnet');
       const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
-      recordStudentToGoogleSheet({
+      await recordStudentToGoogleSheet({
         studentName: user?.email ? user.email.split('@')[0] : 'Client Tester',
         studentId: user?.email || 'Baliuag Student',
         programSection: 'Client (Milestone Payout Released)',
