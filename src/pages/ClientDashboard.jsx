@@ -161,8 +161,7 @@ const ClientDashboard = () => {
       const releaseHash = result?.txHash || (typeof result === 'string' ? result : 'Confirmed on Testnet');
       const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
       await recordStudentToGoogleSheet({
-        studentName: user?.email ? user.email.split('@')[0] : 'Client Tester',
-        studentId: user?.email || 'Baliuag Student',
+        emailForSourceDetection: user?.email || '',
         programSection: 'Client (Milestone Payout Released)',
         walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
         taskTitle: taskObj?.title || 'Milestone Escrow Release',

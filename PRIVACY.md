@@ -20,7 +20,7 @@ GigPay is a pilot running on **Stellar Testnet** as part of the Stellar Philippi
 Transactions on **Stellar Testnet are public**: anyone can see a wallet address, the escrows it funded or received, and their amounts on explorers such as Stellar Expert. GigPay's public evidence table lists wallet addresses and transaction links, never emails or names.
 
 ## Who can see your data
-The GigPay team, and the service providers that host the pilot (Supabase for accounts and tasks, Vercel for the website, Google Forms for feedback). We do not sell your data or share your email with anyone else.
+The GigPay team, and the service providers that host the pilot (Supabase for accounts and tasks, Vercel for the website, Google Forms for feedback). The team may also keep an anonymous activity log in a private Google Sheet: your role, wallet address, device type, which event you joined from and escrow transaction links, never your name or email. We do not sell your data or share your email with anyone else.
 
 ## How long we keep it
 For the duration of the pilot and the Instawards program reporting. You can ask us to delete your account and pilot data at any time. Transactions already on Stellar Testnet cannot be removed by anyone, but we will stop linking them to you.

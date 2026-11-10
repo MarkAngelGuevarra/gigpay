@@ -49,13 +49,15 @@ export const detectUserDevice = () => {
 };
 
 /**
- * Asynchronously posts student registration and escrow activity to the Google Sheet.
+ * Asynchronously posts anonymous registration and escrow activity to the Google Sheet.
+ * Privacy: no name or email is ever sent (PRIVACY.md promises we don't share emails).
+ * `emailForSourceDetection` is used only in this browser to tell which campus event the
+ * tester came from; it is not included in the payload.
  * Uses mode: 'no-cors' and text/plain to avoid CORS preflight while ensuring Apps Script parses e.postData.contents.
  * Non-blocking: failures never disrupt the user experience or throw errors.
  */
 export async function recordStudentToGoogleSheet({
-  studentName,
-  studentId,
+  emailForSourceDetection = '',
   programSection,
   deviceUsed,
   walletAddress,
@@ -67,10 +69,10 @@ export async function recordStudentToGoogleSheet({
   if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
 
   try {
-    const detectedSource = detectEventSource(studentId || studentName);
+    const detectedSource = detectEventSource(emailForSourceDetection);
     const payload = {
-      student_name: studentName || 'Baliuag Student',
-      student_id: studentId || 'CITE-Tester',
+      student_name: 'Anonymous tester',
+      student_id: 'Not collected',
       program_section: programSection ? `${programSection} [${detectedSource}]` : detectedSource,
       device_used: deviceUsed || detectUserDevice(),
       wallet_address: walletAddress || 'N/A',

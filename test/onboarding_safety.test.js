@@ -188,5 +188,20 @@ await test('UI wording: Stellar Testnet, no personas, no X-Frame-Options meta', 
   assert.ok(!/http-equiv="X-Frame-Options"/.test(read('index.html')));
 });
 
+await test('Activity log never sends a name or email', async () => {
+  const sent = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { sent.push(String(init?.body || '')); return new Response('{}'); };
+  try {
+    const { recordStudentToGoogleSheet } = await import('../src/lib/sheetsSync.js');
+    await recordStudentToGoogleSheet({ emailForSourceDetection: 'juan.delacruz@umak.edu.ph', programSection: 'Client', walletAddress: 'GTEST' });
+  } finally { globalThis.fetch = realFetch; }
+  assert.strictEqual(sent.length, 1);
+  assert.ok(!sent[0].includes('@') && !sent[0].includes('juan'), 'no email or name in the payload');
+  for (const f of ['src/pages/AuthPage.jsx', 'src/pages/ClientDashboard.jsx']) {
+    assert.ok(!/studentId:|studentName:/.test(read(f)), `${f} must not pass names or emails to the activity log`);
+  }
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);
