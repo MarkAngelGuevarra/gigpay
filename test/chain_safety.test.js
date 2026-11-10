@@ -200,6 +200,44 @@ await test('Confirming: RPC error during lookup is retried later; FAILED / expir
   assert.ok(/escrowIdUnknown, \.\.\.dbFields/.test(ctx), 'the local escrowIdUnknown flag is not written to the database');
 });
 
+// ---------- 3b. Releasing from a browser that doesn't hold the escrow's practice wallet ----------
+await test('Release from the wrong browser: clear message at once, nothing prepared or sent (no 30s Freighter wait)', async () => {
+  const otherWallet = S.Keypair.random().publicKey();
+  let prepared = false;
+  let sent = false;
+  await assert.rejects(
+    stellar.submitApproveTask(
+      { clientAddress: otherWallet, taskId: { ...taskRecord, client_wallet: otherWallet } },
+      { prepare: async () => { prepared = true; return { preparedTx: unsignedTx() }; }, send: async () => { sent = true; return { status: 'SUCCESS' }; }, readTask: async () => null, freighterReady: async () => false }
+    ),
+    (err) => err.message === stellar.wrongBrowserReleaseMessage(otherWallet) && err.message.includes(otherWallet.slice(0, 8)) && /no money moved/.test(err.message)
+  );
+  assert.strictEqual(prepared, false, 'nothing is prepared');
+  assert.strictEqual(sent, false, 'nothing is sent');
+});
+
+await test('Release from the wrong browser with Freighter/Varial ready still goes to Freighter (desktop users)', async () => {
+  const otherWallet = S.Keypair.random().publicKey();
+  let prepared = false;
+  await assert.rejects(
+    stellar.submitApproveTask(
+      { clientAddress: otherWallet, taskId: { ...taskRecord, client_wallet: otherWallet } },
+      { prepare: async () => { prepared = true; hostError(); }, readTask: async () => null, freighterReady: async () => true }
+    )
+  );
+  assert.strictEqual(prepared, true, 'the release is prepared for Freighter signing');
+});
+
+await test('Timeouts: a slow network says nothing was sent (not "unlock Freighter"); waits sized for shared Wi-Fi', async () => {
+  const msg = stellar.formatStellarError(new Error('TIMEOUT'));
+  assert.strictEqual(msg, stellar.TIMEOUT_MESSAGE);
+  assert.ok(/nothing was sent and no money moved/.test(msg));
+  assert.ok(stellar.NETWORK_LOAD_TIMEOUT_MS >= 15000 && stellar.NETWORK_RPC_TIMEOUT_MS >= 20000);
+  const src = read('src/lib/stellar.js');
+  assert.ok(!/loadAccount\([^)]*\), 5000\)/.test(src), 'no 5s Horizon account loads left');
+  assert.ok(!/(simulate|prepare)Transaction\(tx\), 10000\)/.test(src), 'no 10s simulate/prepare caps left');
+});
+
 // ---------- 4. Resolving a dispute keeps submitted proof under review ----------
 await test('Dispute resolved after proof was submitted -> Under Review; without proof -> In Progress', async () => {
   const { mergeTaskRecords, isDisputeActive } = await import('../src/lib/taskLifecycle.js');

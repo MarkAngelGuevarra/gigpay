@@ -14,6 +14,11 @@ const {
 } = freighterApi || {};
 
 // Utility to prevent infinite hanging if Freighter is blocked by Edge/Antivirus
+// Network waits sized for a classroom on one shared Wi-Fi: 5s/10s caps made healthy-but-slow Horizon and
+// Soroban RPC answers fail (seen in the Nov 11, 2026 dry run). Nothing is sent before these steps finish.
+export const NETWORK_LOAD_TIMEOUT_MS = 15000;
+export const NETWORK_RPC_TIMEOUT_MS = 20000;
+
 const withTimeout = (promise, ms) => {
   return Promise.race([
     promise,
@@ -374,7 +379,7 @@ export const getAccountBalance = async (publicKey) => {
 
   try {
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
-    const account = await withTimeout(server.loadAccount(publicKey), 5000);
+    const account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
     const nativeBalance = account.balances.find((b) => b.asset_type === "native");
     const rawNum = nativeBalance ? parseFloat(nativeBalance.balance) : 0;
 
@@ -411,12 +416,12 @@ export const requestWalletSignature = async (publicKey, description) => {
     let account;
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
     try {
-      account = await withTimeout(server.loadAccount(publicKey), 5000);
+      account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
     } catch (loadErr) {
       if (NETWORK === 'TESTNET' && (loadErr?.response?.status === 404 || loadErr?.message?.includes("404"))) {
         try {
           await withTimeout(fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`), 5000);
-          account = await withTimeout(server.loadAccount(publicKey), 5000);
+          account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
         } catch {
           account = new StellarSdk.Account(publicKey, "0");
         }
@@ -503,7 +508,7 @@ export const simulateFundTask = async ({
   }
 
   const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
-  const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
+  const account = await withTimeout(horizon.loadAccount(clientAddress), NETWORK_LOAD_TIMEOUT_MS);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
 
   // Convert decimal amount to 7-decimal Stroops (i128 BigInt)
@@ -525,13 +530,13 @@ export const simulateFundTask = async ({
     .setTimeout(60)
     .build();
 
-  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), 10000);
+  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
 
   if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
     throw new Error(`Soroban simulation failed: ${simResult.error}`);
   }
 
-  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), 10000);
+  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
 
   return {
     simulation: simResult,
@@ -561,12 +566,15 @@ export const simulateFundTask = async ({
  * @param {Error|Object|string} error 
  * @returns {string} Human-friendly error description
  */
+export const TIMEOUT_MESSAGE =
+  "Stellar took too long to answer, so nothing was sent and no money moved. Wait a few seconds and try again. (Using the Varial/Freighter extension? Unlock it first.)";
+
 export const formatStellarError = (error) => {
   if (!error) return "Unknown transaction error occurred.";
   const msg = typeof error === 'string' ? error : error.message || JSON.stringify(error);
 
   if (msg.includes("TIMEOUT")) {
-    return "Wallet request timed out. Please unlock Freighter and try again.";
+    return TIMEOUT_MESSAGE;
   }
   if (msg.includes("User declined") || msg.includes("User rejected") || msg.includes("declined")) {
     return "Transaction signing was rejected in Freighter.";
@@ -985,7 +993,7 @@ export const getOnChainTask = async (onChainTaskId, { server = sorobanServer } =
     .addOperation(new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID).call('get_task', StellarSdk.nativeToScVal(id, { type: 'u32' })))
     .setTimeout(60)
     .build();
-  const sim = await withTimeout(server.simulateTransaction(tx), 10000);
+  const sim = await withTimeout(server.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
   if (StellarSdk.rpc.Api.isSimulationError(sim)) {
     if (isMissingTaskError(sim.error)) return null;
     throw new Error(`get_task simulation failed: ${sim.error}`);
@@ -1079,7 +1087,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
     throw new Error(ESCROW_NOT_FOUND_MESSAGE);
   }
   const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
-  const account = await withTimeout(horizon.loadAccount(clientAddress), 5000);
+  const account = await withTimeout(horizon.loadAccount(clientAddress), NETWORK_LOAD_TIMEOUT_MS);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
 
   const tx = new StellarSdk.TransactionBuilder(account, {
@@ -1092,7 +1100,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
     .setTimeout(60)
     .build();
 
-  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), 10000);
+  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
 
   if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
     // The contract rejected this release (wrong signer, already released, unknown task...).
@@ -1100,7 +1108,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId }) => {
     throw new Error(`Soroban simulation failed: ${simResult.error}`);
   }
 
-  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), 10000);
+  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
 
   return {
     simulation: simResult,
@@ -1154,9 +1162,22 @@ const demoReleaseResult = async (label) => {
  * sent, and no release hash is invented). The contract's own "Task already approved" text often never
  * reaches the app, because release builds abort on panic.
  */
+/** Freighter/Varial installed and answering (freighter-api v6 returns { isConnected }, older versions a boolean). */
+export const isFreighterReady = async () => {
+  const r = await checkFreighterConnection();
+  return r === true || r?.isConnected === true;
+};
+
+// A practice wallet's key lives only in the browser that created it. Releasing from another browser (for
+// example Chrome after locking inside Messenger's in-app browser) used to fall through to Freighter, wait
+// 30s and say "unlock Freighter", which phone testers can't act on (Nov 11, 2026 dry run).
+export const wrongBrowserReleaseMessage = (address) =>
+  `This escrow was locked from practice wallet ${String(address || '').slice(0, 8)}…, which isn't in this browser. ` +
+  "Open GigPay in the browser where you locked the funds (usually the one you opened from the invite link) and release it there. Nothing was sent and no money moved.";
+
 export const submitApproveTask = async (
   { clientAddress, taskId },
-  { prepare = simulateApproveTask, send = sendAndConfirm, readTask = getOnChainTask } = {}
+  { prepare = simulateApproveTask, send = sendAndConfirm, readTask = getOnChainTask, freighterReady = isFreighterReady } = {}
 ) => {
   const taskRecord = (taskId && typeof taskId === 'object') ? taskId : null;
   const resolvedTaskId = taskRecord ? (taskRecord.id || taskRecord.taskId) : taskId;
@@ -1174,6 +1195,10 @@ export const submitApproveTask = async (
 
   if (!effectiveClientAddress || isDemoWallet(effectiveClientAddress) || isMockTask) {
     return demoReleaseResult(`Task #${resolvedTaskId}`);
+  }
+
+  if (!ephemeralSigner && isEphemeralSignerAllowed() && !(await freighterReady())) {
+    throw new Error(wrongBrowserReleaseMessage(effectiveClientAddress));
   }
 
   // A task funded in demo mode has no on-chain escrow, so its release is a demo too (isDemo: true).

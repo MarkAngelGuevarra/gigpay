@@ -9,6 +9,7 @@ import {
   isValidStellarAddress,
   checkBalanceSufficiency,
   formatStellarError,
+  TIMEOUT_MESSAGE,
   pollSorobanTransactionWithBackoff,
   getAccountBalance
 } from '../lib/stellar.js';
@@ -225,7 +226,7 @@ async function testSuite() {
   await runTest('Error Handling: Stellar Error Normalization (Timeouts, HostError, Rejection)', async () => {
     assert.strictEqual(
       formatStellarError(new Error("TIMEOUT")),
-      "Wallet request timed out. Please unlock Freighter and try again."
+      TIMEOUT_MESSAGE
     );
     assert.strictEqual(
       formatStellarError(new Error("User declined transaction")),

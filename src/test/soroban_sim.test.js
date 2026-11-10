@@ -119,7 +119,7 @@ async function runSorobanSimulationTests() {
     throw new Error(`Unexpected message for user decline: ${userDeclinedErr}`);
   }
   const timeoutErr = formatStellarError(new Error('TIMEOUT: signature request exceeded 30000ms'));
-  if (!timeoutErr.includes('Wallet request timed out')) {
+  if (!timeoutErr.includes('nothing was sent and no money moved')) {
     throw new Error(`Unexpected message for timeout: ${timeoutErr}`);
   }
   console.log('✅ Test 8 Passed: User cancellations and wallet timeouts normalized gracefully.\n');
