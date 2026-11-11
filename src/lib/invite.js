@@ -43,6 +43,18 @@ export const captureInviteFromUrl = (search = globalThis.location?.search || '')
   }
 };
 
+/** True when this tab arrived from a valid, unexpired invite (QR or link) that hasn't been used yet. Doesn't consume it. */
+export const hasPendingInvite = () => {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const { address, at } = JSON.parse(raw);
+    return !!address && Date.now() - at <= MAX_AGE_MS && isInvitable(address);
+  } catch {
+    return false;
+  }
+};
+
 /** Returns the remembered invite address once (then forgets it), or null if none or expired. */
 export const takeInvitePayout = () => {
   try {

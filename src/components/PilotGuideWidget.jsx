@@ -93,7 +93,7 @@ const CLIENT_STEPS = [
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
     teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—we create a practice Testnet wallet in this browser and fund it with free test XLM (this can take up to 30 seconds).',
-    description: 'Connect your Varial (formerly Freighter) wallet or use the built-in practice wallet on Stellar Testnet to sign Soroban smart contract operations.',
+    description: 'Your practice wallet is created for you after you sign in. Wait until the top bar shows a balance.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
     tip: 'No browser extension needed on mobile: our fallback wallet is auto-provisioned!'
@@ -107,7 +107,7 @@ const CLIENT_STEPS = [
     description: 'Deposit native XLM into the Soroban escrow contract on Stellar Testnet. Funds are locked safely until you review deliverables.',
     actionLabel: '⚡ Fill Sample Task (2 XLM)',
     actionType: 'fill_sample_task',
-    tip: 'Smart contract CAUU2O...7RD3 holds the funds. Self-dealing protection blocks matching client and freelancer addresses.'
+    tip: "Your partner's payout address must be filled in (scan their QR first). You can't pay your own address."
   },
   {
     step: 3,
@@ -125,11 +125,11 @@ const CLIENT_STEPS = [
     title: 'Authorize Release',
     badge: 'Step 4 of 4 • On-Chain Settlement',
     icon: CheckCircle2,
-    teacherVoice: 'Deliverables verified! Tap below to open release authorization, type CONFIRM, and trigger the Soroban approve_task method on Stellar Testnet.',
-    description: 'Releases the locked XLM directly to the freelancer\'s wallet and mints a public immutable verification proof on StellarExpert.',
+    teacherVoice: 'Work checked? Tap below, type CONFIRM, and the locked XLM goes to your partner on Stellar Testnet.',
+    description: 'Sends the locked XLM to your freelancer. The payment can be seen on Stellar Expert.',
     actionLabel: 'Approve & Release Milestone',
     actionType: 'scroll_escrows',
-    tip: 'Evaluation invariant: SOW Table 7 requires typing uppercase CONFIRM to prevent accidental releases.'
+    tip: 'Typing CONFIRM prevents accidental releases. Release from the same browser you locked the payment in.'
   }
 ];
 
@@ -292,7 +292,7 @@ export default function PilotGuideWidget() {
     // Client Step 2 -> Step 3 when client creates/funds task escrow
     if (isClient && state.clientStep === 2 && currentTasks.length > prevTasksCountRef.current) {
       setState(prev => ({ ...prev, clientStep: 3 }));
-      addToast(sim('Task saved. Step 3: Switch to Freelancer to accept (the task card shows whether funding is confirmed).', 'Simulation: practice task saved, nothing locked on-chain. Step 3: Switch to Freelancer to accept.'), 'info');
+      addToast(sim('Payment locked. Next: your partner taps "Accept Work" on their phone, then submits their work.', 'Simulation: practice task saved, nothing locked on-chain. Step 3: Switch to Freelancer to accept.'), 'info');
     }
 
     // Freelancer Step 3 -> Step 4 when task is accepted
@@ -367,16 +367,10 @@ export default function PilotGuideWidget() {
     addToast(`Restarted ${isClient ? 'Client' : 'Freelancer'} Tour at Step 1`, 'info');
   };
 
+  // The tour tabs only change which steps are shown. They used to switch the signed-in student's role and
+  // page, which broke two-phone pairs (a client tapping the Freelancer tab became a freelancer).
   const handleSelectTour = (tour) => {
-    if (typeof switchRole === 'function') {
-      switchRole(tour);
-    }
     setState(prev => ({ ...prev, activeTour: tour, isMinimized: false }));
-    if (tour === 'client' && location.pathname !== '/client') {
-      navigate('/client');
-    } else if (tour === 'freelancer' && location.pathname !== '/freelancer') {
-      navigate('/freelancer');
-    }
   };
 
   // Execute Action and smoothly fade/minimize the instruction card with 0 interruption
@@ -804,6 +798,8 @@ export default function PilotGuideWidget() {
             width: calc(100vw - 28px) !important;
             max-width: calc(100vw - 28px) !important;
             padding: 1rem !important;
+            max-height: 50vh !important;
+            overflow-y: auto !important;
             border-radius: 14px !important;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 242, 254, 0.25) !important;
           }

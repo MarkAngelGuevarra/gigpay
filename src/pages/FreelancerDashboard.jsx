@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X, RotateCcw } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,8 @@ import { getDisputeMetadata } from '../lib/disputeMetadata';
 
 const FreelancerDashboard = () => {
   const { user, publicKey, switchRole } = useAuth();
-  const { tasks, isLoading, updateTaskStatus, submitProofOfWork } = useTasks();
+  const { tasks, isLoading, refreshTasks, updateTaskStatus, submitProofOfWork } = useTasks();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
   // Invite QR: the partner scans it with the camera app, so the link opens in the phone's real browser
@@ -122,9 +123,10 @@ const FreelancerDashboard = () => {
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Discover funded client escrows, accept jobs with 1-click, and submit proof of your work.
+            Show your partner your invite QR, accept their task, then submit your work to get paid.
           </p>
         </div>
+        {user?.is_simulation_mode && (
         <button
           type="button"
           onClick={() => {
@@ -146,6 +148,7 @@ const FreelancerDashboard = () => {
         >
           <ArrowLeft size={14} /> Switch to Client Portal
         </button>
+        )}
       </div>
 
       {/* Payout address: the contract fixes the recipient when the client funds the escrow, so the
@@ -161,8 +164,13 @@ const FreelancerDashboard = () => {
             )}
           </div>
           <p style={{ color: 'var(--text-muted)', margin: '0 0 0.6rem', fontSize: '0.88rem' }}>
-            Send this to your client before they lock the payment. GigPay pays the escrow to this address when they approve your work. Easiest: share your invite link, which fills the address in for them.
+            GigPay pays you at this address when your partner approves your work.
           </p>
+          <ol data-testid="freelancer-invite-steps" style={{ margin: '0 0 0.75rem', paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: 1.55 }}>
+            <li>Wait until the top bar shows your balance (usually 10,000 XLM, up to 30 seconds).</li>
+            <li>Tap <strong>Show invite QR</strong>.</li>
+            <li>Your partner scans it with their phone's camera app and signs up as <strong>Client</strong>.</li>
+          </ol>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <code style={{ flex: '1 1 260px', minWidth: 0, overflowWrap: 'anywhere', background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.8rem' }}>
               {publicKey}
@@ -184,7 +192,7 @@ const FreelancerDashboard = () => {
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-outline"
               style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
               onClick={async () => {
                 // One link instead of a 56-character address: the client's task form is pre-filled with it.
@@ -209,7 +217,7 @@ const FreelancerDashboard = () => {
             </button>
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-primary"
               data-testid="show-invite-qr"
               style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
               onClick={showInviteQr}
@@ -237,7 +245,7 @@ const FreelancerDashboard = () => {
               type="button"
               aria-label="Close"
               onClick={() => setInviteQr(null)}
-              style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem' }}
+              style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.75rem', minWidth: '44px', minHeight: '44px' }}
             >
               <X size={20} />
             </button>
@@ -339,14 +347,31 @@ const FreelancerDashboard = () => {
       )}
 
       {/* Available Jobs */}
-      <h3 style={{ marginBottom: '1.5rem' }}>Available Funded Tasks</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <h3 style={{ margin: 0 }}>Available Funded Tasks</h3>
+        <button
+          type="button"
+          className="btn btn-outline"
+          data-testid="refresh-tasks"
+          disabled={isRefreshing}
+          onClick={async () => {
+            setIsRefreshing(true);
+            const ok = await refreshTasks();
+            setIsRefreshing(false);
+            addToast(ok ? 'Tasks refreshed.' : "Couldn't refresh. Check your connection and try again.", ok ? 'success' : 'warning');
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', padding: '0.45rem 0.9rem' }}
+        >
+          <RotateCcw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh tasks'}
+        </button>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {isLoading ? (
           <div className="glass-panel" style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--accent)' }}>
-            Syncing with Supabase Realtime...
+            Loading your tasks...
           </div>
         ) : availableTasks.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No tasks available right now.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Waiting for your partner to lock the payment. It appears here within a few seconds; tap Refresh tasks if it doesn't.</p>
         ) : null}
         {!isLoading && availableTasks.map(task => {
           // The contract pays the address the client entered when funding; whoever accepts cannot change it.
@@ -398,7 +423,7 @@ const FreelancerDashboard = () => {
                     <div>
                       <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{task.title}</h4>
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        Client: {task.client_id ? task.client_id.slice(0, 8) + '...' : 'Unknown'} &bull; Escrow Contract: <code>CAUU2O...7RD3</code>
+                        Client: {task.client_id ? task.client_id.slice(0, 8) + '...' : 'Unknown'}
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -417,7 +442,7 @@ const FreelancerDashboard = () => {
                         fontSize: '0.8rem'
                       }}>
                         {isDisputed ? <ShieldAlert size={14} /> : <CheckCircle size={14} />} 
-                        {isDisputed ? 'Dispute Frozen' : 'In Progress'}
+                        {isDisputed ? 'Dispute Frozen' : task.status === 'Under Review' ? 'Submitted: waiting for client approval' : 'In Progress'}
                       </span>
                     </div>
                   </div>

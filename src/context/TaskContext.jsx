@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
@@ -6,6 +6,8 @@ import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskO
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
+
+export const TASK_REFRESH_INTERVAL_MS = 10000;
 
 const TaskContext = createContext();
 
@@ -303,23 +305,51 @@ export const TaskProvider = ({ children }) => {
   }, [confirmingKey]);
 
   // 3. Database Fetch & Supabase Realtime Pipeline
+  // Phones drop the Realtime websocket whenever a student switches to the camera (to scan the invite QR) or a
+  // chat app, and missed events are never replayed. So tasks are also re-read every 10s while the page is
+  // visible, whenever the student comes back to it, and on the "Refresh tasks" button (refreshTasks).
+  const fetchTasksRef = useRef(null);
+  const refreshTasks = () => (fetchTasksRef.current ? fetchTasksRef.current() : Promise.resolve(false));
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (!error && data && data.length > 0) {
-          updateTasksAndCache(data);
+    let inFlight = null;
+    const fetchTasks = () => {
+      if (inFlight) return inFlight;
+      inFlight = (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (error) {
+            console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", error.message || error);
+            return false;
+          }
+          if (data && data.length > 0) {
+            updateTasksAndCache(data);
+          }
+          return true;
+        } catch (err) {
+          console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", err);
+          return false;
+        } finally {
+          inFlight = null;
         }
-      } catch (err) {
-        console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", err);
-      }
+      })();
+      return inFlight;
     };
+    fetchTasksRef.current = fetchTasks;
 
     fetchTasks();
+
+    const isVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
+    const onReturn = () => { if (isVisible()) fetchTasks(); };
+    const poll = setInterval(() => { if (isVisible()) fetchTasks(); }, TASK_REFRESH_INTERVAL_MS);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onReturn);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onReturn);
+      window.addEventListener('online', onReturn);
+    }
 
     // Supabase Realtime Webhook Channel
     const channel = supabase
@@ -340,6 +370,12 @@ export const TaskProvider = ({ children }) => {
       .subscribe();
 
     return () => {
+      clearInterval(poll);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onReturn);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onReturn);
+        window.removeEventListener('online', onReturn);
+      }
       supabase.removeChannel(channel);
     };
   }, [user]);
@@ -713,6 +749,7 @@ export const TaskProvider = ({ children }) => {
     <TaskContext.Provider value={{ 
       tasks, 
       isLoading, 
+      refreshTasks,
       addTask, 
       updateTaskStatus, 
       approveMilestone,

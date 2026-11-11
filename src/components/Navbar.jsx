@@ -391,9 +391,9 @@ const Navbar = () => {
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowOnboardingModal(false);
           }}
-          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(5,10,24,0.92)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999, backdropFilter: 'blur(10px)' }}
+          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', backgroundColor: 'rgba(5,10,24,0.92)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', padding: '1rem', boxSizing: 'border-box', zIndex: 99999, backdropFilter: 'blur(10px)' }}
         >
-          <div className="glass-panel animate-fade-in" style={{ width: '90%', maxWidth: '500px', backgroundColor: '#0d1527', border: '1px solid rgba(0,242,254,0.3)', padding: '2.5rem', position: 'relative', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
+          <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '500px', margin: 'auto 0', backgroundColor: '#0d1527', border: '1px solid rgba(0,242,254,0.3)', padding: 'clamp(1.25rem, 5vw, 2.5rem)', position: 'relative', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--accent)' }}>
               <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '0.75rem', borderRadius: '1rem' }}>
                 <Wallet size={32} />

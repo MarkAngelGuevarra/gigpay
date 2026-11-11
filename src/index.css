@@ -185,7 +185,39 @@ p {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.6s ease-out forwards;
+  /* "backwards", not "forwards": a kept transform made every position:fixed pop-up inside the page (Release
+     CONFIRM, Dispute) centre on the page column instead of the screen, sometimes off-screen on phones. */
+  animation: fadeIn 0.6s ease-out backwards;
+}
+
+/* Pop-up messages (ToastContext) */
+.toast-stack {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100001;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.toast-item {
+  min-width: 250px;
+  line-height: 1.4;
+}
+
+:focus-visible {
+  outline: 2px solid #00f2fe;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 
@@ -197,11 +229,28 @@ p {
   .navbar-actions button,
   .pilot-intake-banner button,
   .pilot-intake-banner a {
-    min-height: 40px;
+    min-height: 44px;
   }
   .pilot-guide-min-pill button[title="Dismiss Guide"] {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Keep the minimised guide pill from permanently covering the last button on the page. */
+  body {
+    padding-bottom: 72px;
+  }
+  /* The four stat cards pushed the task list and the Lock button far down on phones. */
+  .client-metrics {
+    display: none !important;
+  }
+  .toast-stack {
+    left: 16px;
+    right: 16px;
+    bottom: 84px;
+    max-width: none;
+  }
+  .toast-item {
+    min-width: 0;
   }
   /* iOS zooms the page into any field under 16px; inline styles set ~13px, hence !important. */
   input,

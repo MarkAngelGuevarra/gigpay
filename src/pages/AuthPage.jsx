@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
+import { hasPendingInvite } from '../lib/invite';
 
 const AuthPage = () => {
   const { signIn, signUp, loginSimulationMode } = useAuth();
@@ -15,18 +16,26 @@ const AuthPage = () => {
     const params = new URLSearchParams(search);
     return params.get('mode') === 'signup' || params.get('signup') === '1';
   };
-  const [isLogin, setIsLogin] = useState(() => !isSignupUrl(location.search));
+  // A partner who scanned the invite QR (or opened the invite link) is new and will be the Client: start on
+  // Sign Up with Client chosen, instead of "Welcome Back" (the redirect to /auth drops ?pay= and the mode).
+  const invited = hasPendingInvite();
+  const startOnSignup = (search) => isSignupUrl(search) || hasPendingInvite();
+  const [isLogin, setIsLogin] = useState(() => !startOnSignup(location.search));
   // The navbar links to /auth?mode=signup and /auth while this page is already open; follow each
   // navigation (a new location key, even to the same URL) instead of reading the mode only once.
   useEffect(() => {
-    setIsLogin(!isSignupUrl(location.search));
+    setIsLogin(!startOnSignup(location.search));
   }, [location.search, location.key]);
+  // Grant reviewers' shared demo accounts and the sandbox only appear on /auth?reviewer=1, so students
+  // can't wander into activity that never counts as a tester.
+  const showReviewerTools = new URLSearchParams(location.search).get('reviewer') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
-  const [role, setRole] = useState('client');
+  // No silent default: a freelancer who skipped the picker used to become a Client. Invited partners are Clients.
+  const [role, setRole] = useState(() => (hasPendingInvite() ? 'client' : null));
   const [isLoading, setIsLoading] = useState(false);
 
   const processSubmit = async () => {
@@ -40,6 +49,11 @@ const AuthPage = () => {
 
     if (!cleanPassword) {
       addToast("Please enter your password.", "error");
+      return;
+    }
+
+    if (!isLogin && !role) {
+      addToast("Choose your role first: Freelancer (you do the work) or Client (you pay).", "error");
       return;
     }
 
@@ -180,11 +194,51 @@ const AuthPage = () => {
             : 'Register with your email to join the GigPay Testnet pilot. Practice money only.'}
         </p>
         
+        {!isLogin && invited && (
+          <div data-testid="invite-banner" style={{ background: 'rgba(0, 242, 254, 0.1)', border: '1px solid rgba(0, 242, 254, 0.4)', borderRadius: '0.5rem', padding: '0.65rem 0.8rem', marginBottom: '1rem', fontSize: '0.9rem', color: 'white' }}>
+            Your partner invited you. Create your <strong>Client</strong> account below, then do everything in this browser.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {!isLogin && (
+            <div data-testid="role-picker">
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'white', fontWeight: 600 }}>Your role in this pair</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { value: 'freelancer', title: 'Freelancer (Working)', sub: 'I do the work and get paid (sign up first)', color: '#a78bfa' },
+                  { value: 'client', title: 'Client (Hiring)', sub: 'I pay for the work (I scanned my partner\'s QR)', color: 'var(--accent)' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={role === opt.value}
+                    onClick={() => setRole(opt.value)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '0.7rem 0.85rem',
+                      minHeight: '48px',
+                      borderRadius: '0.5rem',
+                      border: role === opt.value ? `2px solid ${opt.color}` : '1px solid var(--border)',
+                      background: role === opt.value ? 'rgba(0, 240, 255, 0.08)' : 'rgba(0,0,0,0.2)',
+                      color: 'white',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: role === opt.value ? opt.color : 'white' }}>
+                      {role === opt.value ? '✓ ' : ''}{opt.title}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{opt.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email</label>
             <input 
-              type="email" 
+              type="email"
+              autoComplete="email" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com" 
@@ -198,6 +252,7 @@ const AuthPage = () => {
               <input 
                 type={showPassword ? "text" : "password"} 
                 value={password}
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" 
                 style={{ 
@@ -215,7 +270,10 @@ const AuthPage = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: 'absolute',
-                  right: '0.75rem',
+                  right: '0.25rem',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  justifyContent: 'center',
                   background: 'none',
                   border: 'none',
                   color: showPassword ? 'var(--primary)' : 'var(--text-muted)',
@@ -240,6 +298,7 @@ const AuthPage = () => {
                 <input 
                   type={showPassword ? "text" : "password"} 
                   value={confirmPassword}
+                  autoComplete="new-password"
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••" 
                   style={{ 
@@ -257,7 +316,10 @@ const AuthPage = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '0.75rem',
+                    right: '0.25rem',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    justifyContent: 'center',
                     background: 'none',
                     border: 'none',
                     color: showPassword ? 'var(--primary)' : 'var(--text-muted)',
@@ -276,48 +338,6 @@ const AuthPage = () => {
             </div>
           )}
           
-          {!isLogin && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>I am a...</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setRole('client')}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: role === 'client' ? '2px solid var(--accent)' : '1px solid var(--border)',
-                    background: role === 'client' ? 'rgba(0, 240, 255, 0.1)' : 'rgba(0,0,0,0.2)',
-                    color: role === 'client' ? 'var(--accent)' : 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    fontWeight: role === 'client' ? 'bold' : 'normal'
-                  }}
-                >
-                  Client (Hiring)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('freelancer')}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    border: role === 'freelancer' ? '2px solid var(--accent)' : '1px solid var(--border)',
-                    background: role === 'freelancer' ? 'rgba(0, 240, 255, 0.1)' : 'rgba(0,0,0,0.2)',
-                    color: role === 'freelancer' ? 'var(--accent)' : 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    fontWeight: role === 'freelancer' ? 'bold' : 'normal'
-                  }}
-                >
-                  Freelancer (Working)
-                </button>
-              </div>
-            </div>
-          )}
-
           {!isLogin && (
             // Privacy notice and consent (Philippine Data Privacy Act, RA 10173): testers should know what the
             // pilot collects, why, and that Stellar Testnet activity is public, before they create an account.
@@ -346,20 +366,9 @@ const AuthPage = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button 
-            onClick={() => {
-              setIsLogin(!isLogin);
-            }} 
-            style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {isLogin ? 'Sign Up' : 'Sign In'}
-          </button>
-        </div>
-
         {/* Grant Reviewer Quick-Fill. Folded away so testers sign up with their own email: activity on these
             shared accounts cannot be tied to a real person, so it never counts as tester traction. */}
+        {showReviewerTools && (
         <details style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <summary style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', cursor: 'pointer', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             For grant reviewers: shared demo accounts
@@ -459,6 +468,7 @@ const AuthPage = () => {
             ⚡ 1-Click Dual-Role Sandbox (Simulate Client & Freelancer)
           </button>
         </details>
+        )}
       </div>
     </div>
   );

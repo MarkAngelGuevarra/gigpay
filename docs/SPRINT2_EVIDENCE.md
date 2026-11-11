@@ -59,7 +59,7 @@ Notes:
 
 | Criterion | Status | Files | Commits | Evidence |
 |:---|:---|:---|:---|:---|
-| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 95 tests in 7 suites pass as of Nov 11, 2026 |
+| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 99 tests in 7 suites pass as of Nov 11, 2026 |
 | (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Partly | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe` | 2 of 3 runs |
 | (c) 3–5 minute walkthrough video published | Not yet | `DEMO_WALKTHROUGH_SCRIPT.md` (script only) | none | none |
 

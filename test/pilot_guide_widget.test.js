@@ -156,8 +156,10 @@ runTest(13, "Vertical viewport bounds containment specifies maxHeight and scroll
   assert.ok(widgetSrc.includes("overflowY: 'auto'"), "Must allow vertical scrolling if content exceeds viewport");
 });
 
-runTest(14, "Tour selection synchronizes active persona via switchRole and provisions demo session", () => {
-  assert.ok(widgetSrc.includes("switchRole(tour)"), "handleSelectTour must invoke switchRole(tour) to synchronize auth state");
+runTest(14, "Tour tabs only change the shown steps; they never switch a signed-in student's role (Nov 11, 2026)", () => {
+  assert.ok(!widgetSrc.includes("switchRole(tour)"), "handleSelectTour must not switch roles: in two-phone pairs it turned a client into a freelancer");
+  const handler = widgetSrc.slice(widgetSrc.indexOf('const handleSelectTour'), widgetSrc.indexOf('};', widgetSrc.indexOf('const handleSelectTour')));
+  assert.ok(handler.includes('activeTour: tour') && !handler.includes('navigate('), "the tab updates activeTour only");
 });
 
 // -------------------------------------------------------------

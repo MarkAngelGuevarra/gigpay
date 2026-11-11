@@ -219,5 +219,65 @@ await test('Invite QR encodes exactly the invite link and tells the partner to u
   assert.ok(/img-src[^;]*data:/.test(fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8')), 'CSP allows data: images');
 });
 
+await test('Partner sees new tasks without reloading: Realtime on tasks, 10s refresh, refresh on return, Refresh button', async () => {
+  const ctx = fs.readFileSync(new URL('../src/context/TaskContext.jsx', import.meta.url), 'utf8');
+  assert.ok(/TASK_REFRESH_INTERVAL_MS = 10000/.test(ctx), 'tasks are re-read every 10 seconds');
+  assert.ok(ctx.includes("addEventListener('visibilitychange', onReturn)") && ctx.includes("addEventListener('focus', onReturn)"), 'tasks are re-read when the student comes back to the page');
+  assert.ok(ctx.includes('clearInterval(poll)') && ctx.includes("removeEventListener('visibilitychange', onReturn)"), 'timers and listeners are cleaned up');
+  assert.ok(/refreshTasks,/.test(ctx), 'refreshTasks is provided to the pages');
+  for (const page of ['src/pages/ClientDashboard.jsx', 'src/pages/FreelancerDashboard.jsx']) {
+    const src = fs.readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
+    assert.ok(src.includes('data-testid="refresh-tasks"') && src.includes('await refreshTasks()'), `${page} has a Refresh tasks button`);
+  }
+  const migrations = fs.readdirSync(new URL('../supabase/migrations/', import.meta.url));
+  const sql = migrations.map((m) => fs.readFileSync(new URL(`../supabase/migrations/${m}`, import.meta.url), 'utf8')).join('\n');
+  assert.ok(/alter publication supabase_realtime add table public\.tasks/i.test(sql), 'tasks table is in the Realtime publication');
+});
+
+await test('Scanning the invite QR opens Sign Up with Client chosen; no silent role default otherwise', async () => {
+  const S = await import('@stellar/stellar-sdk');
+  const invite = await import('../src/lib/invite.js');
+  invite.clearInvitePayout();
+  assert.strictEqual(invite.hasPendingInvite(), false, 'no invite yet');
+  const addr = S.Keypair.random().publicKey();
+  invite.captureInviteFromUrl(`?pay=${addr}`);
+  assert.strictEqual(invite.hasPendingInvite(), true, 'an invite from the QR is pending');
+  assert.strictEqual(invite.hasPendingInvite(), true, 'checking does not use it up');
+  assert.strictEqual(invite.takeInvitePayout(), addr, 'the client form still gets the address');
+  assert.strictEqual(invite.hasPendingInvite(), false, 'once used, the next visit is a normal one');
+  const auth = fs.readFileSync(new URL('../src/pages/AuthPage.jsx', import.meta.url), 'utf8');
+  assert.ok(auth.includes('isSignupUrl(search) || hasPendingInvite()'), 'an invited visitor starts on Sign Up');
+  assert.ok(auth.includes("useState(() => (hasPendingInvite() ? 'client' : null))"), 'invited = Client; otherwise no default role');
+  assert.ok(/!isLogin && !role\)/.test(auth) && auth.includes('Choose your role first'), 'sign-up refuses to continue without a role');
+  assert.ok(auth.indexOf('data-testid="role-picker"') < auth.indexOf('type="email"'), 'the role picker is above the email field');
+  assert.ok(auth.includes('data-testid="invite-banner"'), 'invited visitors are told their partner invited them');
+});
+
+await test('Students never see grant-reviewer demo accounts, the sandbox or role-switch buttons', () => {
+  const auth = fs.readFileSync(new URL('../src/pages/AuthPage.jsx', import.meta.url), 'utf8');
+  assert.ok(auth.includes("get('reviewer') === '1'") && auth.includes('{showReviewerTools && ('), 'demo accounts and sandbox only on /auth?reviewer=1');
+  for (const [page, label] of [['src/pages/ClientDashboard.jsx', 'Switch to Freelancer Portal'], ['src/pages/FreelancerDashboard.jsx', 'Switch to Client Portal']]) {
+    const src = fs.readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
+    const at = src.indexOf(label);
+    assert.ok(src.lastIndexOf('{user?.is_simulation_mode && (', at) > src.lastIndexOf('return (', at), `${label} only shows in the sandbox`);
+  }
+  const widget = fs.readFileSync(new URL('../src/components/PilotGuideWidget.jsx', import.meta.url), 'utf8');
+  assert.ok(!widget.includes('switchRole(tour)') && !widget.includes('Step 3: Switch to Freelancer to accept (the task card'), 'the guide never tells a client to switch roles');
+});
+
+await test('Phone layout: pop-ups centre on the screen, messages are readable and stay 6s, tap targets 44px', () => {
+  const css = fs.readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.ok(/animation: fadeIn 0\.6s ease-out backwards;/.test(css), 'fade-in leaves no transform behind (fixed pop-ups stay on screen)');
+  assert.ok(/min-height: 44px;/.test(css) && /\.client-metrics \{\s*display: none !important;/.test(css), '44px buttons; stat cards hidden on phones');
+  assert.ok(/prefers-reduced-motion: reduce/.test(css), 'reduced motion is respected');
+  const toast = fs.readFileSync(new URL('../src/context/ToastContext.jsx', import.meta.url), 'utf8');
+  assert.ok(toast.includes("type === 'error' ? 9000 : 6000") && toast.includes('aria-live="polite"') && toast.includes("'#070a12'"), 'toasts: 6s/9s, announced, dark text on light colours');
+  const client = fs.readFileSync(new URL('../src/pages/ClientDashboard.jsx', import.meta.url), 'utf8');
+  assert.ok(client.includes("confirmText === 'CONFIRM' ? '#047857'") && client.includes('aria-label="Type CONFIRM to release the payment"'), 'release button contrast and CONFIRM label');
+  assert.strictEqual((client.match(/overflowY: 'auto', zIndex: 100000/g) || []).length, 2, 'release and dispute pop-ups scroll when the keyboard is open');
+  const nav = fs.readFileSync(new URL('../src/components/Navbar.jsx', import.meta.url), 'utf8');
+  assert.ok(nav.includes("height: '100dvh'") && nav.includes("overflowY: 'auto', padding: '1rem'"), 'the Connect Wallet pop-up can scroll on phones');
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);
