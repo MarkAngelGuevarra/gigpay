@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-05 23:33 UTC",
+  "generatedAt": "2026-11-11 01:47 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -553,6 +553,30 @@
       "releaseTxHash": null,
       "releasedAt": null,
       "walletKind": "Team test (team device practice wallet (client) → team device practice wallet (freelancer))"
+    },
+    {
+      "onChainTaskId": 47,
+      "amount": 2,
+      "clientWallet": "GBVGNI4FMAR2M5PL2M75C3M6QJP5GY6NAHOILCVXZ3M677JN7SQRO4QE",
+      "freelancerWallet": "GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W",
+      "released": true,
+      "fundTxHash": "d508b283edd0090dc8604ac62e54b72e2098480d2c5f24b13a5038f9d21298bd",
+      "fundedAt": "2026-11-10T23:39:18Z",
+      "releaseTxHash": "2c1bda85e5984ab2697b206658db49b78a6dfa9799e4efc0f73835fdf6d21228",
+      "releasedAt": "2026-11-10T23:51:13Z",
+      "walletKind": "Team test (team dry-run phone (client) → team dry-run phone (freelancer))"
+    },
+    {
+      "onChainTaskId": 48,
+      "amount": 2,
+      "clientWallet": "GDTCEGKHNCF22RJX5RMCCCD34P2EZ7VQNFQXWNAKLE5RQUFJPXGHF6SG",
+      "freelancerWallet": "GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W",
+      "released": true,
+      "fundTxHash": "6bfc9583cfa813625b8c94b2d9d5080a7afedba1aa6bfc5d17fc07c765087aac",
+      "fundedAt": "2026-11-11T01:05:03Z",
+      "releaseTxHash": "73e86e7079aac1a5412e32045f0da222a19d5412fe26f39a30fe8a229c6fca10",
+      "releasedAt": "2026-11-11T01:05:48Z",
+      "walletKind": "Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer))"
     }
   ]
 }

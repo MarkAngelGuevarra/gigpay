@@ -31,6 +31,8 @@ const TEAM = {
   // Founder's two-phone dry run before the Baliuag session (escrow #47, Nov 11, 2026): team testing, not users.
   GBVGNI4FMAR2M5PL2M75C3M6QJP5GY6NAHOILCVXZ3M677JN7SQRO4QE: 'team dry-run phone (client)',
   GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W: 'team dry-run phone (freelancer)',
+  // Same founder test, second run after the UX fixes (escrow #48, Nov 11, 2026): new browser on the client phone.
+  GDTCEGKHNCF22RJX5RMCCCD34P2EZ7VQNFQXWNAKLE5RQUFJPXGHF6SG: 'team dry-run phone (client, 2nd browser)',
   // Testnet funding pool (fund-practice-wallet Edge Function). It only creates practice wallets.
   GAG74N2WUFBRSUP5JXQGGNZYO7VH73C72CZ3JTNEJDPICLWM7MNODYPZ: 'team Testnet funding pool'
 };
