@@ -203,5 +203,21 @@ await test('Activity log never sends a name or email', async () => {
   }
 });
 
+await test('Invite QR encodes exactly the invite link and tells the partner to use the camera app', async () => {
+  const S = await import('@stellar/stellar-sdk');
+  const QRCode = (await import('qrcode')).default;
+  const invite = await import('../src/lib/invite.js');
+  const addr = S.Keypair.random().publicKey();
+  const link = invite.buildInviteLink(addr, 'https://www.gigpay.tech');
+  const url = await invite.buildInviteQrDataUrl(addr, 'https://www.gigpay.tech');
+  assert.ok(url.startsWith('data:image/png;base64,'), 'QR is an inline PNG (allowed by the CSP img-src data:)');
+  const encoded = QRCode.create(link, { errorCorrectionLevel: 'M' }).segments.map((seg) => Buffer.from(seg.data).toString('utf8')).join('');
+  assert.strictEqual(encoded, link, 'the QR holds the same invite link as Share invite link');
+  const dash = fs.readFileSync(new URL('../src/pages/FreelancerDashboard.jsx', import.meta.url), 'utf8');
+  assert.ok(dash.includes('Show invite QR') && dash.includes('buildInviteQrDataUrl(publicKey)'), 'freelancer dashboard offers the QR for its own payout address');
+  assert.ok(/camera app/.test(dash) && /same browser/.test(dash), 'the QR tells the partner to scan with the camera and stay in that browser');
+  assert.ok(/img-src[^;]*data:/.test(fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8')), 'CSP allows data: images');
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);

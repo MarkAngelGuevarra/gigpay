@@ -7,6 +7,7 @@
  * sign-in detour before the client reaches /client, but not the next student on a shared lab PC: it is
  * gone when the tab closes and is cleared on sign-out (clearInvitePayout).
  */
+import QRCode from 'qrcode';
 import { isValidStellarAddress, isDemoWallet } from './stellar.js';
 
 const STORAGE_KEY = 'gigpay_invite_payout';
@@ -16,6 +17,19 @@ const isInvitable = (a) => isValidStellarAddress(a) && !isDemoWallet(a);
 
 export const buildInviteLink = (payoutAddress, origin = globalThis.location?.origin || 'https://www.gigpay.tech') =>
   `${origin}/client?pay=${encodeURIComponent(payoutAddress)}`;
+
+/**
+ * The invite link as a QR code (PNG data URL). Scanning it with the phone's camera opens the link in the
+ * phone's own browser (Chrome/Safari), not a chat app's in-app browser, so the client signs up, locks and
+ * releases in one browser: the practice wallet's key lives only in the browser that created it.
+ */
+export const buildInviteQrDataUrl = (payoutAddress, origin) =>
+  QRCode.toDataURL(buildInviteLink(payoutAddress, origin), {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 320,
+    color: { dark: '#0b1226', light: '#ffffff' },
+  });
 
 /** Reads ?pay= from the current URL and remembers it if it is a valid Stellar address. */
 export const captureInviteFromUrl = (search = globalThis.location?.search || '') => {

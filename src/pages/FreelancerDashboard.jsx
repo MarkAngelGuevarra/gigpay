@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2 } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, isDemoWallet, isSimulatorWallet } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
-import { buildInviteLink } from '../lib/invite';
+import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
@@ -16,6 +17,16 @@ const FreelancerDashboard = () => {
   const { tasks, isLoading, updateTaskStatus, submitProofOfWork } = useTasks();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  // Invite QR: the partner scans it with the camera app, so the link opens in the phone's real browser
+  // (never a chat app's in-app browser) and the client signs up, locks and releases in that one browser.
+  const [inviteQr, setInviteQr] = useState(null);
+  const showInviteQr = async () => {
+    try {
+      setInviteQr({ src: await buildInviteQrDataUrl(publicKey), link: buildInviteLink(publicKey) });
+    } catch {
+      addToast("Couldn't draw the QR code. Use Share invite link instead.", 'warning');
+    }
+  };
 
   const {
     isCompleted: isPilotCompleted,
@@ -196,8 +207,56 @@ const FreelancerDashboard = () => {
             >
               <Share2 size={14} /> Share invite link
             </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              data-testid="show-invite-qr"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+              onClick={showInviteQr}
+            >
+              <QrCode size={14} /> Show invite QR
+            </button>
           </div>
         </div>
+      )}
+
+      {inviteQr && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Invite QR code"
+          onClick={() => setInviteQr(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(3, 7, 18, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        >
+          <div
+            className="glass-panel"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '360px', textAlign: 'center', position: 'relative', padding: '1.25rem' }}
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setInviteQr(null)}
+              style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem' }}
+            >
+              <X size={20} />
+            </button>
+            <h4 style={{ margin: '0 0 0.75rem' }}>Your partner scans this</h4>
+            <img
+              src={inviteQr.src}
+              alt="QR code of your GigPay invite link"
+              data-testid="invite-qr-image"
+              style={{ width: '100%', maxWidth: '280px', aspectRatio: '1 / 1', background: '#fff', borderRadius: '0.6rem', padding: '0.4rem' }}
+            />
+            <p style={{ margin: '0.85rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+              <strong style={{ color: 'white' }}>Partner:</strong> scan with your <strong style={{ color: 'white' }}>camera app</strong>, then sign up as <strong style={{ color: 'white' }}>Client</strong> and do everything (lock and release) in that same browser.
+            </p>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{inviteQr.link}</p>
+          </div>
+        </div>,
+        // Rendered on <body>: the dashboard's fade-in animation uses a transform, which would otherwise
+        // trap this fixed overlay inside the page column instead of covering the screen.
+        document.body
       )}
 
       {/* Earnings Overview Header */}
