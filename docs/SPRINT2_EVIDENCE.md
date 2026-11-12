@@ -1,6 +1,6 @@
 # Sprint 2 evidence map (D1–D4)
 
-Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026. Statuses are GigPay's own reading, not a program sign-off.
+Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 12, 2026 after BCC 2026 day 1. Statuses are GigPay's own reading, not a program sign-off.
 
 - **Done:** the behaviour is in `main` and has a test or a public record.
 - **Partly:** some of it is in place, or it works but the required evidence is not there yet.
@@ -10,7 +10,7 @@ Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and 
 
 The SOW was submitted on October 22, 2026, to start on approval. **The commits dated October 26, 2026 are the pre-sprint baseline**, the state of the code when Sprint 2 work began: `6866518`, `58b5eb6`, `d02ca3f`, `3f94496`, `e04bc14`, `a78417e`, `28d36cd`, `222526d`, `0c7ea19`, `6a256c2`. They are listed below only where a later commit built on them. Two of them made claims that were later corrected: `0c7ea19` reported clean installs on three environments that could not be matched to real runs (corrected in `ab47c2b`, Nov 4), and `222526d` is the regression suite described under D4(a).
 
-On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-05 23:33 UTC.
+On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-12 11:13 UTC.
 
 ## Deliverable 1: real-time task and escrow sync
 
@@ -24,13 +24,14 @@ On-chain numbers below come from `src/data/onchainEscrows.json`, generated from 
 Notes:
 
 - `test/sync_latency.test.js` times dispute raise and resolve between two tabs of the same browser and asserts p95 < 500ms. It does not time a funded task reaching the freelancer feed, and it does not measure sync between devices (Supabase Realtime). Recorded run: GitHub Actions run 42162411037 on commit `524fe5c` (Nov 6, 2026), n=40, median 1.9 ms, p95 4.9 ms, max 15.9 ms (https://github.com/MarkAngelGuevarra/gigpay/actions/runs/42162411037). CI repeats it on every push to main.
+- Since Nov 11, 2026 (`cdd89b7`), the `tasks` table is in Supabase's Realtime publication, and the app also re-reads tasks every 10 seconds and when the page regains focus. Delivery between devices was seen working in two-phone dry runs but is not benchmarked.
 - The SOW mentions reconciling with "contract events". The contract emits no events. The app reconciles by checking the transaction result and, since `58c4017`, the contract's `get_task`.
 
 ## Deliverable 2: practice wallet and public verification ledger
 
 | Criterion | Status | Files | Commits | Tests |
 |:---|:---|:---|:---|:---|
-| (a) Mobile and extensionless users can fund and approve with the badged Testnet practice wallet | Done (team-tested only) | `src/lib/stellar.js`, `src/context/AuthContext.jsx`, `supabase/functions/fund-practice-wallet` | `663514e`, `e0256b6`, `65a0959` | `test/escrow_submission_integrity.test.js`, `test/onboarding_at_scale.test.js`, `test/onboarding_safety.test.js` |
+| (a) Mobile and extensionless users can fund and approve with the badged Testnet practice wallet | Done (used on students' phones by outside wallets on Nov 12, 2026; see Success metric) | `src/lib/stellar.js`, `src/context/AuthContext.jsx`, `supabase/functions/fund-practice-wallet` | `663514e`, `e0256b6`, `65a0959` | `test/escrow_submission_integrity.test.js`, `test/onboarding_at_scale.test.js`, `test/onboarding_safety.test.js` |
 | (b) Public ledger shows every on-chain escrow, methods, caller public keys, timestamps and Stellar Expert links | Done | `src/components/VerificationLedgerModal.jsx`, `src/lib/ledgerIntegrity.js`, `scripts/index_escrows.mjs` | `9f5f2e9`, `8702923`, `b5e36eb`, `6b87016` | `test/ledger_integrity.test.js` |
 | (c) 1-click CSV export of the ledger | Done | `src/components/VerificationLedgerModal.jsx`, `src/lib/ledgerIntegrity.js` (`ledgerToCsv`) | baseline `d02ca3f`; `b5e36eb`, `d20f800` | `test/ledger_integrity.test.js` |
 
@@ -70,19 +71,30 @@ Notes:
 
 ## Success metric: on-chain transactions
 
-The index has 46 escrows: 83 contract transactions (46 `fund_task`, 37 `approve_task`). That passes the SOW's "≥ 50 transactions" target as a raw count, but almost all of it is testing:
+SOW section 6.3 targets **at least 50 verifiable transactions between outside (non-team) wallets**; team, QA and scripted escrows are excluded.
 
-- #1–#14 and #36–#46 (25 escrows): team or test wallets.
+As of 2026-11-12 11:13 UTC the contract has 59 escrows: 106 contract transactions (59 `fund_task`, 47 `approve_task`). Most are testing:
+
+- #1–#14, #36–#48 (27 escrows): team, QA or dry-run wallets.
 - #16–#35 (20 escrows): created by a script on Nov 3, 2026.
-- #15 (1 escrow): between outside wallets, funded, not released.
+- #15 and #49–#59 (12 escrows): **between outside wallets**. #49–#59 were funded on Nov 12, 2026 at the Blockchain Campus Conference (University of Makati).
 
-Outside-user releases on-chain: **0**.
+| Outside-wallet count (Nov 12, 2026) | Value |
+|:---|:---:|
+| Outside wallets | 20 |
+| Escrows funded | 12 (10 distinct tasks: #52 and #53 look like duplicate locks) |
+| Escrows released end to end | 8 |
+| **Outside-wallet transactions (funds + releases)** | **20** (18 without the 2 duplicates) **of the 50 targeted** |
+
+- 19 of the 20 outside wallets were created and funded by the public Testnet Friendbot, not by a team wallet or the GigPay funding pool. Horizon showed no funding operation for the remaining one.
+- Counts are wallets, not verified people. Duplicate locks and the funding check are also disclosed in `EVIDENCE_TABLE.md`.
+- The target is **not met yet**. BCC day 2 is Nov 13, 2026; the numbers will be regenerated afterwards.
 
 ## Evidence still missing
 
 1. The 3–5 minute walkthrough video (D4c).
 2. The third clean install on a separate computer (D4b).
 3. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
-4. Escrows funded **and released** between outside wallets, ideally with practice wallets on students' own phones (D2a, success metrics).
+4. More escrows funded **and released** between outside wallets: 20 of the 50 targeted transactions as of Nov 12, 2026 (success metrics).
 5. Screenshots or a screen recording of proof submission, a dispute freeze and its resolution (SOW section 6.1, D3).
 6. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
