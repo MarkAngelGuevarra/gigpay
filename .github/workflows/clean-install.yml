@@ -1,0 +1,73 @@
+# Clean-install check for SOW Deliverable 4b on a machine that is not one of the two in CLEAN_INSTALL_LOGS.md.
+# It runs on a fresh GitHub-hosted macOS virtual machine and follows CLEAN_INSTALL_LOGS.md "How to add
+# environment 3" exactly: a plain `git clone` of the public repo (no checkout action, no npm cache), then
+# npm ci, npm test and npm run build. Needs no secrets; npm test is offline.
+# The full output is on the run's page (public) and in the job summary.
+name: Clean install (macOS)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/clean-install.yml
+
+permissions:
+  contents: read
+
+jobs:
+  clean-install:
+    name: Clean install on macOS (GitHub-hosted VM)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Environment
+        run: |
+          set -x
+          date -u
+          sw_vers
+          uname -m
+          node -v; npm -v; git --version
+
+      - name: Fresh clone of the public repository
+        run: |
+          mkdir -p "$RUNNER_TEMP/clean" && cd "$RUNNER_TEMP/clean"
+          git clone https://github.com/MarkAngelGuevarra/gigpay.git
+          cd gigpay
+          git rev-parse --short HEAD
+
+      - name: npm ci
+        working-directory: ${{ runner.temp }}/clean/gigpay
+        run: npm ci 2>&1 | tee "$RUNNER_TEMP/ci.log"
+
+      - name: npm test
+        working-directory: ${{ runner.temp }}/clean/gigpay
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$RUNNER_TEMP/test.log"
+          echo "npm test exit code: $?"
+
+      - name: npm run build
+        working-directory: ${{ runner.temp }}/clean/gigpay
+        run: npm run build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Job summary (unedited key lines)
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/clean/gigpay" 2>/dev/null || true
+          {
+            echo "## Clean install on macOS (GitHub-hosted VM)"
+            echo '```'
+            date -u
+            sw_vers
+            uname -m
+            echo "node $(node -v), npm $(npm -v), $(git --version)"
+            echo "commit $(git rev-parse --short HEAD 2>/dev/null)"
+            grep -E "added [0-9]+ packages" "$RUNNER_TEMP/ci.log" || echo "(npm ci: no 'added' line)"
+            grep -E "[0-9]+/[0-9]+ passed|STATUS:" "$RUNNER_TEMP/test.log" || echo "(npm test: no summary lines)"
+            grep -E "built in|error" "$RUNNER_TEMP/build.log" || echo "(build: no 'built in' line)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
