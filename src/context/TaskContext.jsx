@@ -498,8 +498,21 @@ export const TaskProvider = ({ children }) => {
     const task = tasks.find(t => t.id === id);
     if (!task) throw new Error("Task not found");
 
+    // A client can release while this phone still shows In Progress (BCC Day 1, escrow #55). Check the
+    // shared record first: proof sent after a release is attached, but the task stays Completed.
+    let currentStatus = task.status;
+    if (isUuid(id)) {
+      try {
+        const { data } = await supabase.from('tasks').select('status').eq('id', id).maybeSingle();
+        if (data?.status) currentStatus = data.status;
+      } catch (readErr) {
+        console.warn("Supabase status check notice:", readErr);
+      }
+    }
+    const alreadyReleased = currentStatus === 'Completed' || currentStatus === 'Paid';
+
     const proofData = {
-      status: 'Under Review',
+      status: alreadyReleased ? currentStatus : 'Under Review',
       github_pr_url: githubPrUrl || null,
       doc_url: docUrl || null,
       loom_url: loomUrl || null,
@@ -517,7 +530,9 @@ export const TaskProvider = ({ children }) => {
       throw new Error("GigPay couldn't save your proof of work, so your client can't see it yet. Check you're signed in as the freelancer on this task, then try again.");
     }
 
-    addToast("Proof of work submitted! The client can now review your deliverables.", "success");
+    addToast(alreadyReleased
+      ? "Proof of work attached. Your client already released this payment, so the task stays Completed."
+      : "Proof of work submitted! The client can now review your deliverables.", "success");
   };
 
   // 6. Raise Dispute Freeze Action
