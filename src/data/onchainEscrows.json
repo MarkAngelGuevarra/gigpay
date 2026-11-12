@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-11 01:47 UTC",
+  "generatedAt": "2026-11-12 11:20 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -577,6 +577,138 @@
       "releaseTxHash": "73e86e7079aac1a5412e32045f0da222a19d5412fe26f39a30fe8a229c6fca10",
       "releasedAt": "2026-11-11T01:05:48Z",
       "walletKind": "Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer))"
+    },
+    {
+      "onChainTaskId": 49,
+      "amount": 2,
+      "clientWallet": "GBFLH2NCHFPJGSMHBC7W3XQ5NN3MAG2HXK66ZKCDCW2ZX5YBNVXOS6TU",
+      "freelancerWallet": "GA3IYPVS2R2JSPEQAN5WNBHCNVARDIUUQHQNCJC4CAKI2SZFZVVEGJ66",
+      "released": true,
+      "fundTxHash": "e64fb06fa5b7fa6c64af6584cda0444818299b570b04f8562319d5c580d26ca0",
+      "fundedAt": "2026-11-12T04:49:08Z",
+      "releaseTxHash": "80a7512f6254e6641b970b86d558fb47c5d89e697881c9ce339f353216eba47b",
+      "releasedAt": "2026-11-12T04:50:18Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 50,
+      "amount": 2,
+      "clientWallet": "GCYX3AHZL425UGB4CUIZ52HJB73A2Y7NX5LLHTULC35KHUIJUKSC5OQV",
+      "freelancerWallet": "GDT64YQWEFT47W34U3DB67RAC33GFZAAUIGGW7C2YDLU6PP34H4VKKVZ",
+      "released": true,
+      "fundTxHash": "8673715e381a6caeb45b6cb9c3fcaf5d80f58c1fa42700d60287077b48589b85",
+      "fundedAt": "2026-11-12T04:53:23Z",
+      "releaseTxHash": "0eec31b4354dcb9c34fec5a7af258bbfa6aca9a224e61dfa4c54ce2f52dda1e1",
+      "releasedAt": "2026-11-12T04:54:43Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 51,
+      "amount": 5,
+      "clientWallet": "GCBXYVOCIRFEB5SS6INM6JF4FUFHLWAAYWY32OIJDEYTKG5W5C5UFJTW",
+      "freelancerWallet": "GD7SGRMDA4STCFNM7EVXNSLI2KNGGK2HEO323BJBDKWNR4TZHEAEEBZC",
+      "released": true,
+      "fundTxHash": "14bc6f48927496ed0bf1d73fac6fc0d6ce2d0c4cd3cad2a1f5e9964506e1a817",
+      "fundedAt": "2026-11-12T05:10:23Z",
+      "releaseTxHash": "9e33c09b22147eeffb105730c5f38ba84fa4891991bbd128d6361f9b2de85c4a",
+      "releasedAt": "2026-11-12T05:13:48Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 52,
+      "amount": 5,
+      "clientWallet": "GCBXYVOCIRFEB5SS6INM6JF4FUFHLWAAYWY32OIJDEYTKG5W5C5UFJTW",
+      "freelancerWallet": "GD7SGRMDA4STCFNM7EVXNSLI2KNGGK2HEO323BJBDKWNR4TZHEAEEBZC",
+      "released": false,
+      "fundTxHash": "0c2fd63fb3e26f69468f0d98fb3a25a7e49f408c5ef35cd10283cbef5af18e5b",
+      "fundedAt": "2026-11-12T05:12:18Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 53,
+      "amount": 2,
+      "clientWallet": "GBMHCXZULWPBD7W2UIXBH2HUDSOUACUBZLW2RLJIWAC3QENLEIDYGNDB",
+      "freelancerWallet": "GDZERXWXKHOYKKE5MHJJ4XMIDVGVUZJHGLLCIJHTIHDRK7EX2JFX5KIW",
+      "released": false,
+      "fundTxHash": "d05f39ee4255b765f4c9f3e9779a97dc5dd6a28c05566c78f8099edb9632bd76",
+      "fundedAt": "2026-11-12T05:44:48Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 54,
+      "amount": 2,
+      "clientWallet": "GBP6CINK4HLOTC2TXHP5I6FL3XXGV523G652PV2K6LOVGQE3ZBZ3UL52",
+      "freelancerWallet": "GC2PQCDLA4E35HKV4VD2K5QVDH6RLUB2HMBU7QDHCIIDTF2TLXIBZ4QC",
+      "released": true,
+      "fundTxHash": "dd62b2a45b073ff3ac6d6f2e2a972a0724b009d20010820376902e1dfb790992",
+      "fundedAt": "2026-11-12T05:45:33Z",
+      "releaseTxHash": "183de7242202493848a8bd86924f035a0f38650c1ef15aa513f78bfb68fbaa67",
+      "releasedAt": "2026-11-12T05:47:28Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 55,
+      "amount": 2,
+      "clientWallet": "GBMHCXZULWPBD7W2UIXBH2HUDSOUACUBZLW2RLJIWAC3QENLEIDYGNDB",
+      "freelancerWallet": "GDZERXWXKHOYKKE5MHJJ4XMIDVGVUZJHGLLCIJHTIHDRK7EX2JFX5KIW",
+      "released": true,
+      "fundTxHash": "51756bdd9da5a495b073feb52f3bb9c6a07cc772db94855cda07c8e023a9fcd5",
+      "fundedAt": "2026-11-12T05:45:38Z",
+      "releaseTxHash": "629d2afeebcaebcac03c411e9dfa9396654806c0d38fc8446b1ed0225b4cc9f9",
+      "releasedAt": "2026-11-12T05:48:38Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 56,
+      "amount": 2,
+      "clientWallet": "GCWU2L5KSRE5UORRZOOZXUBJ5NUFW46WEOLCA3VF65W75BJHDMJJ2OJP",
+      "freelancerWallet": "GDNNZAJQMRUKQAOZGERWMINAPW34OWRSUAFVZNCUQ6N7PXNILEBI6UD5",
+      "released": true,
+      "fundTxHash": "3b77f32b6e6d41307dd688ea3ca56c384de313c7fbca24aa363f2c7f51ed3cc2",
+      "fundedAt": "2026-11-12T06:08:38Z",
+      "releaseTxHash": "6514b0dae4596d5cd5859108713c87d74090e630dd0c482e1a80e83d6c9e813d",
+      "releasedAt": "2026-11-12T06:09:43Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 57,
+      "amount": 10,
+      "clientWallet": "GCZ6XL6XYORF7B7K6O5OI7PGO6IKZF5G3OMXNVSSOMDNN2KD4776LAEM",
+      "freelancerWallet": "GD5JBRENYMLJN6WIFEIL2NO3NBOP7MGA6XNSXLZ4T4CWRTBV6G47OBM6",
+      "released": false,
+      "fundTxHash": "7901cd3d7ff1e0ed58567603853f0354919383fa4a6c5af5824a1729c5ba166e",
+      "fundedAt": "2026-11-12T07:24:28Z",
+      "releaseTxHash": null,
+      "releasedAt": null,
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 58,
+      "amount": 5,
+      "clientWallet": "GBCCKIHLSR7K5I7DYDVTUPQYL5HBQXHTEINMKC2A37JJJDROBXCW2ZDY",
+      "freelancerWallet": "GCDHWLIRBIX7JPHH2RLY3UXJWMIH7DDZOAPRHSREFTLKJK52T2ELSDKI",
+      "released": true,
+      "fundTxHash": "5d12464ff063789c36226fdd430f2990ed0e564160b8535a302fb78d66ad8486",
+      "fundedAt": "2026-11-12T07:27:08Z",
+      "releaseTxHash": "811aa369867a187f67c0eb82d52f3982830afeb01745a985f2757b531983af2c",
+      "releasedAt": "2026-11-12T07:28:28Z",
+      "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 59,
+      "amount": 2,
+      "clientWallet": "GDWINYOPBGINJJCQT46AA7VL2KPAW47BILTYYVRTQ43ZFI6X2FZTQG3P",
+      "freelancerWallet": "GACFUIX5VUPHJEJQCDCE4UZZP23A3LKZSVGQS6ZS3H3OZSOE5MX2V2SK",
+      "released": true,
+      "fundTxHash": "d094c2ffcea9c23e0cca04dcb9813411b81fc672827df298b906bac272f7d076",
+      "fundedAt": "2026-11-12T08:16:13Z",
+      "releaseTxHash": "6dbbe287f64ceb91a06c5e7712e5b30b32294f378fc98c25daf4640be8c08052",
+      "releasedAt": "2026-11-12T08:20:38Z",
+      "walletKind": "Outside wallet"
     }
   ]
 }

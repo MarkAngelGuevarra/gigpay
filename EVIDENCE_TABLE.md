@@ -27,38 +27,39 @@ These are test/demo rows, not user activity. They are not counted in any escrow,
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
-_Generated 2026-11-11 01:47 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
+_Generated 2026-11-12 11:20 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
 
 | SOW metric | On-chain count |
 |:---|:---:|
-| Outside wallets with escrow activity (onboarded) | 2 |
-| Escrows funded between outside wallets | 1 |
-| End-to-end workflows released on-chain (activated) | 0 |
-| Repeat wallets (2+ escrows) | 0 (clients: 0, freelancers: 0) |
+| Outside wallets with escrow activity (onboarded) | 20 |
+| Escrows funded between outside wallets | 12 |
+| End-to-end workflows released on-chain (activated) | 8 |
+| Repeat wallets (2+ escrows) | 4 (clients: 2, freelancers: 2) |
 
 | Week of (Mon, UTC) | New outside wallets | Escrows funded | Released | Cumulative wallets |
 |:---|:---:|:---:|:---:|:---:|
 | 2026-10-26 | 2 | 1 | 0 | 2 |
+| 2026-11-09 | 18 | 11 | 8 | 20 |
 <!-- END GENERATED TRACTION -->
 
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-11 01:47 UTC from Stellar Testnet. 48 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 13 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-12 11:20 UTC from Stellar Testnet. 59 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 13 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|
 | Team test (team QA client wallet → team default freelancer wallet) | 11 | 22 XLM |
 | Team test (founder's wallet → team default freelancer wallet) | 3 | 450 XLM |
-| Outside wallet | 1 | 2 XLM |
+| Outside wallet | 12 | 41 XLM |
 | Scripted test (Nov 3, 2026) | 20 | 1166 XLM |
 | Pays team wallet (test) | 5 | 1750 XLM |
 | Team test (team device practice wallet (client) → team default freelancer wallet) | 1 | 0.1 XLM |
 | Team test (team device practice wallet (client) → team device practice wallet (freelancer)) | 5 | 2.5 XLM |
 | Team test (team dry-run phone (client) → team dry-run phone (freelancer)) | 1 | 2 XLM |
 | Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer)) | 1 | 2 XLM |
-| **Released on-chain** | **39** | **2591.3 XLM** |
-| **Escrows from outside wallets** | **1** | 2 XLM |
+| **Released on-chain** | **47** | **2613.3 XLM** |
+| **Escrows from outside wallets** | **12** | 41 XLM |
 
 | # | Funded (UTC) | Client | Freelancer | Amount | Fund tx | Release tx | Released | Wallets |
 |:---:|:---|:---|:---|:---:|:---|:---|:---:|:---|
@@ -110,6 +111,17 @@ _Generated 2026-11-11 01:47 UTC from Stellar Testnet. 48 escrows. Every funding 
 | 46 | 2026-11-05 05:24:15 | [`GDC2RIYO…`](https://stellar.expert/explorer/testnet/account/GDC2RIYOYD6A45E27FG5CAVHVPUN6URQDJLYBSBZDK7HMVG3JZSDOPAE) | [`GBX7C2H7…`](https://stellar.expert/explorer/testnet/account/GBX7C2H7IN3SRUQ5BWEC4IDXWNARPKVQVY5UTGURKPTZRF2N3P4YT6RI) | 1.1 XLM | [`fa215387a2…`](https://stellar.expert/explorer/testnet/tx/fa215387a2b0613a71e4f3ebd1b6960782139a5dbafc7c88f81422b24e8c3ad8) | — | No | Team test (team device practice wallet (client) → team device practice wallet (freelancer)) |
 | 47 | 2026-11-10 23:39:18 | [`GBVGNI4F…`](https://stellar.expert/explorer/testnet/account/GBVGNI4FMAR2M5PL2M75C3M6QJP5GY6NAHOILCVXZ3M677JN7SQRO4QE) | [`GDPGUVRS…`](https://stellar.expert/explorer/testnet/account/GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W) | 2 XLM | [`d508b283ed…`](https://stellar.expert/explorer/testnet/tx/d508b283edd0090dc8604ac62e54b72e2098480d2c5f24b13a5038f9d21298bd) | [`2c1bda85e5…`](https://stellar.expert/explorer/testnet/tx/2c1bda85e5984ab2697b206658db49b78a6dfa9799e4efc0f73835fdf6d21228) | Yes | Team test (team dry-run phone (client) → team dry-run phone (freelancer)) |
 | 48 | 2026-11-11 01:05:03 | [`GDTCEGKH…`](https://stellar.expert/explorer/testnet/account/GDTCEGKHNCF22RJX5RMCCCD34P2EZ7VQNFQXWNAKLE5RQUFJPXGHF6SG) | [`GDPGUVRS…`](https://stellar.expert/explorer/testnet/account/GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W) | 2 XLM | [`6bfc9583cf…`](https://stellar.expert/explorer/testnet/tx/6bfc9583cfa813625b8c94b2d9d5080a7afedba1aa6bfc5d17fc07c765087aac) | [`73e86e7079…`](https://stellar.expert/explorer/testnet/tx/73e86e7079aac1a5412e32045f0da222a19d5412fe26f39a30fe8a229c6fca10) | Yes | Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer)) |
+| 49 | 2026-11-12 04:49:08 | [`GBFLH2NC…`](https://stellar.expert/explorer/testnet/account/GBFLH2NCHFPJGSMHBC7W3XQ5NN3MAG2HXK66ZKCDCW2ZX5YBNVXOS6TU) | [`GA3IYPVS…`](https://stellar.expert/explorer/testnet/account/GA3IYPVS2R2JSPEQAN5WNBHCNVARDIUUQHQNCJC4CAKI2SZFZVVEGJ66) | 2 XLM | [`e64fb06fa5…`](https://stellar.expert/explorer/testnet/tx/e64fb06fa5b7fa6c64af6584cda0444818299b570b04f8562319d5c580d26ca0) | [`80a7512f62…`](https://stellar.expert/explorer/testnet/tx/80a7512f6254e6641b970b86d558fb47c5d89e697881c9ce339f353216eba47b) | Yes | Outside wallet |
+| 50 | 2026-11-12 04:53:23 | [`GCYX3AHZ…`](https://stellar.expert/explorer/testnet/account/GCYX3AHZL425UGB4CUIZ52HJB73A2Y7NX5LLHTULC35KHUIJUKSC5OQV) | [`GDT64YQW…`](https://stellar.expert/explorer/testnet/account/GDT64YQWEFT47W34U3DB67RAC33GFZAAUIGGW7C2YDLU6PP34H4VKKVZ) | 2 XLM | [`8673715e38…`](https://stellar.expert/explorer/testnet/tx/8673715e381a6caeb45b6cb9c3fcaf5d80f58c1fa42700d60287077b48589b85) | [`0eec31b435…`](https://stellar.expert/explorer/testnet/tx/0eec31b4354dcb9c34fec5a7af258bbfa6aca9a224e61dfa4c54ce2f52dda1e1) | Yes | Outside wallet |
+| 51 | 2026-11-12 05:10:23 | [`GCBXYVOC…`](https://stellar.expert/explorer/testnet/account/GCBXYVOCIRFEB5SS6INM6JF4FUFHLWAAYWY32OIJDEYTKG5W5C5UFJTW) | [`GD7SGRMD…`](https://stellar.expert/explorer/testnet/account/GD7SGRMDA4STCFNM7EVXNSLI2KNGGK2HEO323BJBDKWNR4TZHEAEEBZC) | 5 XLM | [`14bc6f4892…`](https://stellar.expert/explorer/testnet/tx/14bc6f48927496ed0bf1d73fac6fc0d6ce2d0c4cd3cad2a1f5e9964506e1a817) | [`9e33c09b22…`](https://stellar.expert/explorer/testnet/tx/9e33c09b22147eeffb105730c5f38ba84fa4891991bbd128d6361f9b2de85c4a) | Yes | Outside wallet |
+| 52 | 2026-11-12 05:12:18 | [`GCBXYVOC…`](https://stellar.expert/explorer/testnet/account/GCBXYVOCIRFEB5SS6INM6JF4FUFHLWAAYWY32OIJDEYTKG5W5C5UFJTW) | [`GD7SGRMD…`](https://stellar.expert/explorer/testnet/account/GD7SGRMDA4STCFNM7EVXNSLI2KNGGK2HEO323BJBDKWNR4TZHEAEEBZC) | 5 XLM | [`0c2fd63fb3…`](https://stellar.expert/explorer/testnet/tx/0c2fd63fb3e26f69468f0d98fb3a25a7e49f408c5ef35cd10283cbef5af18e5b) | — | No | Outside wallet |
+| 53 | 2026-11-12 05:44:48 | [`GBMHCXZU…`](https://stellar.expert/explorer/testnet/account/GBMHCXZULWPBD7W2UIXBH2HUDSOUACUBZLW2RLJIWAC3QENLEIDYGNDB) | [`GDZERXWX…`](https://stellar.expert/explorer/testnet/account/GDZERXWXKHOYKKE5MHJJ4XMIDVGVUZJHGLLCIJHTIHDRK7EX2JFX5KIW) | 2 XLM | [`d05f39ee42…`](https://stellar.expert/explorer/testnet/tx/d05f39ee4255b765f4c9f3e9779a97dc5dd6a28c05566c78f8099edb9632bd76) | — | No | Outside wallet |
+| 54 | 2026-11-12 05:45:33 | [`GBP6CINK…`](https://stellar.expert/explorer/testnet/account/GBP6CINK4HLOTC2TXHP5I6FL3XXGV523G652PV2K6LOVGQE3ZBZ3UL52) | [`GC2PQCDL…`](https://stellar.expert/explorer/testnet/account/GC2PQCDLA4E35HKV4VD2K5QVDH6RLUB2HMBU7QDHCIIDTF2TLXIBZ4QC) | 2 XLM | [`dd62b2a45b…`](https://stellar.expert/explorer/testnet/tx/dd62b2a45b073ff3ac6d6f2e2a972a0724b009d20010820376902e1dfb790992) | [`183de72422…`](https://stellar.expert/explorer/testnet/tx/183de7242202493848a8bd86924f035a0f38650c1ef15aa513f78bfb68fbaa67) | Yes | Outside wallet |
+| 55 | 2026-11-12 05:45:38 | [`GBMHCXZU…`](https://stellar.expert/explorer/testnet/account/GBMHCXZULWPBD7W2UIXBH2HUDSOUACUBZLW2RLJIWAC3QENLEIDYGNDB) | [`GDZERXWX…`](https://stellar.expert/explorer/testnet/account/GDZERXWXKHOYKKE5MHJJ4XMIDVGVUZJHGLLCIJHTIHDRK7EX2JFX5KIW) | 2 XLM | [`51756bdd9d…`](https://stellar.expert/explorer/testnet/tx/51756bdd9da5a495b073feb52f3bb9c6a07cc772db94855cda07c8e023a9fcd5) | [`629d2afeeb…`](https://stellar.expert/explorer/testnet/tx/629d2afeebcaebcac03c411e9dfa9396654806c0d38fc8446b1ed0225b4cc9f9) | Yes | Outside wallet |
+| 56 | 2026-11-12 06:08:38 | [`GCWU2L5K…`](https://stellar.expert/explorer/testnet/account/GCWU2L5KSRE5UORRZOOZXUBJ5NUFW46WEOLCA3VF65W75BJHDMJJ2OJP) | [`GDNNZAJQ…`](https://stellar.expert/explorer/testnet/account/GDNNZAJQMRUKQAOZGERWMINAPW34OWRSUAFVZNCUQ6N7PXNILEBI6UD5) | 2 XLM | [`3b77f32b6e…`](https://stellar.expert/explorer/testnet/tx/3b77f32b6e6d41307dd688ea3ca56c384de313c7fbca24aa363f2c7f51ed3cc2) | [`6514b0dae4…`](https://stellar.expert/explorer/testnet/tx/6514b0dae4596d5cd5859108713c87d74090e630dd0c482e1a80e83d6c9e813d) | Yes | Outside wallet |
+| 57 | 2026-11-12 07:24:28 | [`GCZ6XL6X…`](https://stellar.expert/explorer/testnet/account/GCZ6XL6XYORF7B7K6O5OI7PGO6IKZF5G3OMXNVSSOMDNN2KD4776LAEM) | [`GD5JBREN…`](https://stellar.expert/explorer/testnet/account/GD5JBRENYMLJN6WIFEIL2NO3NBOP7MGA6XNSXLZ4T4CWRTBV6G47OBM6) | 10 XLM | [`7901cd3d7f…`](https://stellar.expert/explorer/testnet/tx/7901cd3d7ff1e0ed58567603853f0354919383fa4a6c5af5824a1729c5ba166e) | — | No | Outside wallet |
+| 58 | 2026-11-12 07:27:08 | [`GBCCKIHL…`](https://stellar.expert/explorer/testnet/account/GBCCKIHLSR7K5I7DYDVTUPQYL5HBQXHTEINMKC2A37JJJDROBXCW2ZDY) | [`GCDHWLIR…`](https://stellar.expert/explorer/testnet/account/GCDHWLIRBIX7JPHH2RLY3UXJWMIH7DDZOAPRHSREFTLKJK52T2ELSDKI) | 5 XLM | [`5d12464ff0…`](https://stellar.expert/explorer/testnet/tx/5d12464ff063789c36226fdd430f2990ed0e564160b8535a302fb78d66ad8486) | [`811aa36986…`](https://stellar.expert/explorer/testnet/tx/811aa369867a187f67c0eb82d52f3982830afeb01745a985f2757b531983af2c) | Yes | Outside wallet |
+| 59 | 2026-11-12 08:16:13 | [`GDWINYOP…`](https://stellar.expert/explorer/testnet/account/GDWINYOPBGINJJCQT46AA7VL2KPAW47BILTYYVRTQ43ZFI6X2FZTQG3P) | [`GACFUIX5…`](https://stellar.expert/explorer/testnet/account/GACFUIX5VUPHJEJQCDCE4UZZP23A3LKZSVGQS6ZS3H3OZSOE5MX2V2SK) | 2 XLM | [`d094c2ffce…`](https://stellar.expert/explorer/testnet/tx/d094c2ffcea9c23e0cca04dcb9813411b81fc672827df298b906bac272f7d076) | [`6dbbe287f6…`](https://stellar.expert/explorer/testnet/tx/6dbbe287f64ceb91a06c5e7712e5b30b32294f378fc98c25daf4640be8c08052) | Yes | Outside wallet |
 <!-- END GENERATED ESCROW TABLE -->
 
 ## User adoption: verified numbers
