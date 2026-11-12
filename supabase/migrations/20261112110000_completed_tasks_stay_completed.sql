@@ -1,10 +1,10 @@
 -- Applied to Supabase project gulshfticoirrpuohdxk on 2026-11-12.
 -- GigPay: a task released on-chain stays Completed.
 -- At BCC Day 1 a client released escrow #55 and the freelancer submitted proof 33 seconds later from a
--- Data correction applied the same day (service role): escrow #55, released on-chain in tx 629d2afe…cc9f9,
--- had been set back to Under Review by the late proof write; its status was set to Completed.
 -- phone that still showed the task In Progress; the proof write set the status back to Under Review.
 -- Now: once a task is Completed (or Paid), nobody can change its status. A freelancer may still attach
+-- Data correction applied the same day (service role): escrow #55, released on-chain in tx 629d2afe…cc9f9,
+-- had been set back to Under Review by the late proof write; its status was set to Completed.
 -- proof to it; the status simply stays Completed.
 create or replace function public.enforce_task_update()
 returns trigger
