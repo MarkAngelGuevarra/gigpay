@@ -24,6 +24,21 @@ The Supabase `tasks` table still holds test and demo rows from before Sprint 2 (
 
 These are test/demo rows, not user activity. They are not counted in any escrow, release or earnings number: this file, the public ledger and its CSV, and the dashboards count only escrows confirmed on-chain, and placeholder hashes are ignored. The rows were left in place rather than deleted so the history stays visible.
 
+### Note on duplicate locks at BCC 2026 day 1 (November 12, 2026)
+
+On Nov 12, 2026 (Blockchain Campus Conference, University of Makati), 11 escrows (#49–#59) were funded by outside wallets, but the app recorded 10 tasks that day. Two escrows look like the same client tapping **Lock Funds** twice for one task:
+
+- **#52** has the same client, freelancer and amount (5 XLM) as #51, funded about 2 minutes later. #51 was released; #52 was not.
+- **#53** has the same client, freelancer and amount (2 XLM) as #55, funded 50 seconds earlier. #55 was released; #53 was not.
+
+Both are real transactions signed by outside wallets, so the generated tables below still include them. Read the numbers with this in mind:
+
+- **"Escrows funded between outside wallets" includes these 2 duplicates.** Without them, it is 10 escrows for distinct tasks.
+- **"Repeat wallets" is inflated by them.** The two clients and two freelancers behind #51/#52 and #53/#55 count as repeat wallets only because of the duplicate lock, so we make no repeat-use claim from this data.
+- **"Released end to end" (8) is not affected.**
+
+Funding check (Nov 12, 2026): 19 of the 20 outside wallets were created and funded by Stellar's public Testnet Friendbot, not by a team wallet or the GigPay funding pool. Horizon returned no funding operation for the remaining one. Counts are wallets, not verified people. A fix that blocks a second Lock tap while the first is still processing is planned after the event.
+
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
