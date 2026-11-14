@@ -1,6 +1,6 @@
 # Sprint 2 evidence map (D1–D4)
 
-Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 12, 2026 after BCC 2026 day 1. Statuses are GigPay's own reading, not a program sign-off.
+Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 14, 2026 after BCC 2026 (Nov 12–13). Statuses are GigPay's own reading, not a program sign-off.
 
 - **Done:** the behaviour is in `main` and has a test or a public record.
 - **Partly:** some of it is in place, or it works but the required evidence is not there yet.
@@ -10,7 +10,7 @@ Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and 
 
 The SOW was submitted on October 22, 2026, to start on approval. **The commits dated October 26, 2026 are the pre-sprint baseline**, the state of the code when Sprint 2 work began: `6866518`, `58b5eb6`, `d02ca3f`, `3f94496`, `e04bc14`, `a78417e`, `28d36cd`, `222526d`, `0c7ea19`, `6a256c2`. They are listed below only where a later commit built on them. Two of them made claims that were later corrected: `0c7ea19` reported clean installs on three environments that could not be matched to real runs (corrected in `ab47c2b`, Nov 4), and `222526d` is the regression suite described under D4(a).
 
-On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-12 11:13 UTC.
+On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-14 11:34 UTC.
 
 ## Deliverable 1: real-time task and escrow sync
 
@@ -37,8 +37,8 @@ Notes:
 
 Notes:
 
-- (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. No outside user has funded and released an escrow with a practice wallet yet.
-- (b) The ledger reads a snapshot of the chain (46 escrows). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
+- (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. Outside users did so at BCC 2026 (see Success metric).
+- (b) The ledger reads a snapshot of the chain (71 escrows on Nov 14, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
 - Before `b5e36eb` the CSV listed some escrows twice and left out #42, #43 and #45 as on-chain rows.
 
 ## Deliverable 3: proof of work, dispute freeze, CONFIRM
@@ -73,28 +73,29 @@ Notes:
 
 SOW section 6.3 targets **at least 50 verifiable transactions between outside (non-team) wallets**; team, QA and scripted escrows are excluded.
 
-As of 2026-11-12 11:13 UTC the contract has 59 escrows: 106 contract transactions (59 `fund_task`, 47 `approve_task`). Most are testing:
+As of 2026-11-14 11:34 UTC the contract has 71 escrows. Most early ones are testing:
 
 - #1–#14, #36–#48 (27 escrows): team, QA or dry-run wallets.
 - #16–#35 (20 escrows): created by a script on Nov 3, 2026.
-- #15 and #49–#59 (12 escrows): **between outside wallets**. #49–#59 were funded on Nov 12, 2026 at the Blockchain Campus Conference (University of Makati).
+- #15 and #49–#71 (24 escrows): **between outside wallets**. #49–#70 were funded at the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026).
 
-| Outside-wallet count (Nov 12, 2026) | Value |
-|:---|:---:|
-| Outside wallets | 20 |
-| Escrows funded | 12 (10 distinct tasks: #52 and #53 look like duplicate locks) |
-| Escrows released end to end | 8 |
-| **Outside-wallet transactions (funds + releases)** | **20** (18 without the 2 duplicates) **of the 50 targeted** |
+| Outside-wallet count (Nov 14, 2026) | As indexed | Without the 3 duplicate locks (#52, #53, #66) |
+|:---|:---:|:---:|
+| Outside wallets | 42 (41 exist on-chain) | 42 (41) |
+| Escrows funded | 24 | 21 |
+| Escrows released end to end | 19 | 19 |
+| Repeat wallets | 6 | **0** |
+| **Outside-wallet transactions (funds + releases)** | 43 | **40 of the 50 targeted** |
 
-- 19 of the 20 outside wallets were created and funded by the public Testnet Friendbot, not by a team wallet or the GigPay funding pool. Horizon showed no funding operation for the remaining one.
-- Counts are wallets, not verified people. Duplicate locks and the funding check are also disclosed in `EVIDENCE_TABLE.md`.
-- The target is **not met yet**. BCC day 2 is Nov 13, 2026; the numbers will be regenerated afterwards.
+- All 41 outside wallets that exist on-chain were created by the public Testnet Friendbot, not by a team wallet or the GigPay funding pool.
+- Counts are wallets, not verified people. Duplicate locks, #15's unactivated wallet, after-hours escrows (#60, #71) and large Testnet amounts are disclosed in `EVIDENCE_TABLE.md`.
+- The target is **not met yet**: 10 more transactions (5 completed escrows) are needed on the deduplicated count.
 
 ## Evidence still missing
 
 1. The 3–5 minute walkthrough video (D4c).
 2. Optional: a clean install on a second personal computer, since two of the three D4b runs are virtual machines.
 3. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
-4. More escrows funded **and released** between outside wallets: 20 of the 50 targeted transactions as of Nov 12, 2026 (success metrics).
+4. More escrows funded **and released** between outside wallets: 40 of the 50 targeted transactions as of Nov 14, 2026, without duplicate locks (success metrics).
 5. Screenshots or a screen recording of proof submission, a dispute freeze and its resolution (SOW section 6.1, D3).
 6. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.

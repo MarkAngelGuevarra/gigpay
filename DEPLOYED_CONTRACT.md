@@ -20,4 +20,4 @@ Where the **GigPay Soroban escrow contract** is deployed on Stellar Testnet (not
 
 ## Contract lifetime and capacity
 - **Storage lifetime (TTL):** the contract's instance and Wasm code were extended on Nov 5, 2026 to the network maximum (~180 days, until about **May 4, 2027**), [tx b408effa…](https://stellar.expert/explorer/testnet/tx/b408effa5a8a02e99a810a95f6b2311039ba740343e8fa96cb9b8dfc8d71bc7f). Check or renew with `node scripts/extend_contract_ttl.mjs` (dry run by default; `--submit` to extend).
-- **Capacity:** all escrows live in one instance-storage entry (14,676 bytes for 46 escrows on Nov 6, 2026; the network limit is 65,536 bytes), leaving room for roughly 160 more escrows.
+- **Capacity:** all escrows live in one instance-storage entry (14,676 bytes for 46 escrows on Nov 6, 2026; the network limit is 65,536 bytes), leaving room for roughly 205 escrows in total. With 71 escrows on Nov 14, 2026, that is roughly 130 more.

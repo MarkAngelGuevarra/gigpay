@@ -1,6 +1,6 @@
 # GigPay Pilot — Privacy Notice
 
-_Last updated: November 5, 2026_
+_Last updated: November 10, 2026_
 
 GigPay is a pilot running on **Stellar Testnet** as part of the Stellar Philippines Instawards program. Testnet XLM is practice money with no cash value. This notice explains what the pilot collects and why, in line with the Philippine Data Privacy Act of 2012 (RA 10173).
 

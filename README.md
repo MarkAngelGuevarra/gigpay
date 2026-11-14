@@ -17,7 +17,7 @@
 - **The contract has no refund, cancel or dispute state.** It can only pay the freelancer address named at funding, when the client approves. The dispute freeze and the check that client and freelancer are different wallets are enforced by the GigPay app, not by the contract.
 - **Practice-wallet keys live in the browser** that created them. Clearing browser data or using private mode loses the wallet.
 - **Numbers are wallets, not verified people.** One person can create several wallets. Counting rules: [METRICS.md](METRICS.md).
-- **Clean installs:** verified on Windows 11 (Nov 4, 2026) and Ubuntu 24.04 (Nov 5, 2026, in a cloud container); the third environment is pending. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+- **Clean installs:** verified on Windows 11 (Nov 4, 2026), Ubuntu 24.04 (Nov 5, 2026, in a cloud container) and macOS 26 (Nov 12, 2026, on a GitHub-hosted virtual machine). See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 - **Walkthrough video:** pending; it will be linked here once published.
 
 More detail is under "Known limitations" below.
@@ -42,10 +42,10 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 
 ## ✅ Verify in 2 minutes (for reviewers)
 1. **Contract:** [`CAUU2O5Z…7RD3` on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3). Live until about May 2027 (see [DEPLOYED_CONTRACT.md](DEPLOYED_CONTRACT.md)).
-2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 6, 2026: **46 escrows, 1 from outside wallets (#15, not yet released)**. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
+2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 14, 2026: **71 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released end to end**, mostly from the BCC 2026 event. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every user number (onboarded, activated, repeat), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
-5. **Tests:** `npm ci && npm test` runs 90 offline tests in 7 suites.
+5. **Tests:** `npm ci && npm test` runs 100 offline tests in 7 suites.
 6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
 7. **Sprint 2 evidence map:** [docs/SPRINT2_EVIDENCE.md](docs/SPRINT2_EVIDENCE.md) maps each D1–D4 acceptance criterion to what exists and what evidence is still missing.
 8. **Dispute workflow:** [docs/DISPUTE_RESOLUTION.md](docs/DISPUTE_RESOLUTION.md) describes the app-level dispute freeze and how a dispute is resolved on Testnet (not arbitration).
@@ -53,7 +53,7 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 ## ⚠️ Known limitations (pilot, Testnet only)
 - **No refund or cancel.** Once funded, an escrow can only be released to the named freelancer by the client. If the client never approves, the funds stay locked.
 - **Dispute freeze and self-dealing checks are app-level.** The contract has no dispute state; GigPay's app and signing layer refuse a release while a dispute is open.
-- **Contract capacity.** Escrows are stored in the contract's instance storage, which has room for roughly 160 more escrows in total. A v2 contract (per-escrow storage, refund/cancel) would need a new contract ID.
+- **Contract capacity.** Escrows are stored in the contract's instance storage, which has room for roughly 130 more escrows (estimated from its size on Nov 6, 2026). A v2 contract (per-escrow storage, refund/cancel) would need a new contract ID.
 - **Practice wallets live in the browser.** Each signed-in account gets its own Testnet practice wallet stored in that browser; releasing must be done from the browser that funded. Incognito mode or clearing browser data loses it.
 - **One server-side key:** the team's Testnet funding-pool key (used when Friendbot rate-limits) is stored encrypted in Supabase Vault.
 
@@ -80,7 +80,7 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 
 ### 4. Automated Tests, Clean-Install Logs & Walkthrough Video (Deliverable 4 — $1,000)
 * **Automated Tests:** `npm test` runs 100 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 23 onboarding-safety, 18 chain-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
-* **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC and in a Linux (Ubuntu 24.04) cloud container; the third environment is still pending. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+* **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC, in a Linux (Ubuntu 24.04) cloud container and on a GitHub-hosted macOS virtual machine. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 * **Walkthrough video:** not yet published. The recording script is [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md).
 
 ---

@@ -24,57 +24,67 @@ The Supabase `tasks` table still holds test and demo rows from before Sprint 2 (
 
 These are test/demo rows, not user activity. They are not counted in any escrow, release or earnings number: this file, the public ledger and its CSV, and the dashboards count only escrows confirmed on-chain, and placeholder hashes are ignored. The rows were left in place rather than deleted so the history stays visible.
 
-### Note on duplicate locks at BCC 2026 day 1 (November 12, 2026)
+### Note on duplicate locks and wallet checks at BCC 2026 (updated November 14, 2026)
 
-On Nov 12, 2026 (Blockchain Campus Conference, University of Makati), 11 escrows (#49–#59) were funded by outside wallets, but the app recorded 10 tasks that day. Two escrows look like the same client tapping **Lock Funds** twice for one task:
+At the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026), outside wallets funded escrows #49–#70. Three of them look like a client tapping **Lock Funds** twice for one task (same client, freelancer and amount, minutes apart; the duplicate was never released):
 
-- **#52** has the same client, freelancer and amount (5 XLM) as #51, funded about 2 minutes later. #51 was released; #52 was not.
-- **#53** has the same client, freelancer and amount (2 XLM) as #55, funded 50 seconds earlier. #55 was released; #53 was not.
+- **#52** repeats #51 (5 XLM), funded about 2 minutes later. #51 was released.
+- **#53** repeats #55 (2 XLM), funded 50 seconds earlier. #55 was released.
+- **#66** repeats #67 (10 XLM), funded about 95 seconds earlier. #67 was released.
 
-Both are real transactions signed by outside wallets, so the generated tables below still include them. Read the numbers with this in mind:
+They are real transactions signed by outside wallets, so the generated tables below still include them. Read the numbers with this in mind:
 
-- **"Escrows funded between outside wallets" includes these 2 duplicates.** Without them, it is 10 escrows for distinct tasks.
-- **"Repeat wallets" is inflated by them.** The two clients and two freelancers behind #51/#52 and #53/#55 count as repeat wallets only because of the duplicate lock, so we make no repeat-use claim from this data.
-- **"Released end to end" (8) is not affected.**
+- **"Escrows funded between outside wallets" includes the 3 duplicates.** Without them it is **21 escrows for distinct tasks**.
+- **"Repeat wallets" comes entirely from the duplicates.** Without them, no outside wallet has used GigPay twice, so we make **no repeat-use claim**.
+- **"Released end to end" (19) is not affected.**
+- **Outside-wallet transactions (funds + releases) for the SOW target of 50:** 43 as indexed, **40 without the duplicates**.
 
-Funding check (Nov 12, 2026): 19 of the 20 outside wallets were created and funded by Stellar's public Testnet Friendbot, not by a team wallet or the GigPay funding pool. Horizon returned no funding operation for the remaining one. Counts are wallets, not verified people. A fix that blocks a second Lock tap while the first is still processing is planned after the event.
+Other things a reviewer should know (checked on Horizon, Nov 14, 2026):
+
+- **Funding:** all 41 outside wallets that exist on-chain were created and funded by the public Testnet Friendbot. None was funded by a team wallet, the GigPay funding pool or another outside wallet.
+- **#15:** its freelancer wallet (GCAM2RUA…) was never activated on Testnet, so it is counted in "42 outside wallets" but does not exist on-chain. #15 has not been released.
+- **Outside event hours:** #60 was funded on Nov 12 at 9:41 PM PH time and #71 on Nov 14 (not an event day).
+- **Amounts:** most escrows are 2 XLM, but students also typed 50, 100 and 1,000 XLM (#64, #70, #69). It is free Testnet XLM, so we do not use XLM volume as a metric.
+- **Counts are wallets, not verified people.** Each outside pair is two fresh wallets that did one escrow together, which fits booth onboarding but cannot by itself prove two different people.
+
+The app now asks for confirmation before a second lock for the same freelancer and amount (commit `0b7cc18`, Nov 14, 2026).
 
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
-_Generated 2026-11-12 11:20 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
+_Generated 2026-11-14 11:34 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
 
 | SOW metric | On-chain count |
 |:---|:---:|
-| Outside wallets with escrow activity (onboarded) | 20 |
-| Escrows funded between outside wallets | 12 |
-| End-to-end workflows released on-chain (activated) | 8 |
-| Repeat wallets (2+ escrows) | 4 (clients: 2, freelancers: 2) |
+| Outside wallets with escrow activity (onboarded) | 42 |
+| Escrows funded between outside wallets | 24 |
+| End-to-end workflows released on-chain (activated) | 19 |
+| Repeat wallets (2+ escrows) | 6 (clients: 3, freelancers: 3) |
 
 | Week of (Mon, UTC) | New outside wallets | Escrows funded | Released | Cumulative wallets |
 |:---|:---:|:---:|:---:|:---:|
 | 2026-10-26 | 2 | 1 | 0 | 2 |
-| 2026-11-09 | 18 | 11 | 8 | 20 |
+| 2026-11-09 | 40 | 23 | 19 | 42 |
 <!-- END GENERATED TRACTION -->
 
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-12 11:20 UTC from Stellar Testnet. 59 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 13 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-14 11:34 UTC from Stellar Testnet. 71 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 25 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|
 | Team test (team QA client wallet → team default freelancer wallet) | 11 | 22 XLM |
 | Team test (founder's wallet → team default freelancer wallet) | 3 | 450 XLM |
-| Outside wallet | 12 | 41 XLM |
+| Outside wallet | 24 | 1225 XLM |
 | Scripted test (Nov 3, 2026) | 20 | 1166 XLM |
 | Pays team wallet (test) | 5 | 1750 XLM |
 | Team test (team device practice wallet (client) → team default freelancer wallet) | 1 | 0.1 XLM |
 | Team test (team device practice wallet (client) → team device practice wallet (freelancer)) | 5 | 2.5 XLM |
 | Team test (team dry-run phone (client) → team dry-run phone (freelancer)) | 1 | 2 XLM |
 | Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer)) | 1 | 2 XLM |
-| **Released on-chain** | **47** | **2613.3 XLM** |
-| **Escrows from outside wallets** | **12** | 41 XLM |
+| **Released on-chain** | **58** | **3787.3 XLM** |
+| **Escrows from outside wallets** | **24** | 1225 XLM |
 
 | # | Funded (UTC) | Client | Freelancer | Amount | Fund tx | Release tx | Released | Wallets |
 |:---:|:---|:---|:---|:---:|:---|:---|:---:|:---|
@@ -137,6 +147,18 @@ _Generated 2026-11-12 11:20 UTC from Stellar Testnet. 59 escrows. Every funding 
 | 57 | 2026-11-12 07:24:28 | [`GCZ6XL6X…`](https://stellar.expert/explorer/testnet/account/GCZ6XL6XYORF7B7K6O5OI7PGO6IKZF5G3OMXNVSSOMDNN2KD4776LAEM) | [`GD5JBREN…`](https://stellar.expert/explorer/testnet/account/GD5JBRENYMLJN6WIFEIL2NO3NBOP7MGA6XNSXLZ4T4CWRTBV6G47OBM6) | 10 XLM | [`7901cd3d7f…`](https://stellar.expert/explorer/testnet/tx/7901cd3d7ff1e0ed58567603853f0354919383fa4a6c5af5824a1729c5ba166e) | — | No | Outside wallet |
 | 58 | 2026-11-12 07:27:08 | [`GBCCKIHL…`](https://stellar.expert/explorer/testnet/account/GBCCKIHLSR7K5I7DYDVTUPQYL5HBQXHTEINMKC2A37JJJDROBXCW2ZDY) | [`GCDHWLIR…`](https://stellar.expert/explorer/testnet/account/GCDHWLIRBIX7JPHH2RLY3UXJWMIH7DDZOAPRHSREFTLKJK52T2ELSDKI) | 5 XLM | [`5d12464ff0…`](https://stellar.expert/explorer/testnet/tx/5d12464ff063789c36226fdd430f2990ed0e564160b8535a302fb78d66ad8486) | [`811aa36986…`](https://stellar.expert/explorer/testnet/tx/811aa369867a187f67c0eb82d52f3982830afeb01745a985f2757b531983af2c) | Yes | Outside wallet |
 | 59 | 2026-11-12 08:16:13 | [`GDWINYOP…`](https://stellar.expert/explorer/testnet/account/GDWINYOPBGINJJCQT46AA7VL2KPAW47BILTYYVRTQ43ZFI6X2FZTQG3P) | [`GACFUIX5…`](https://stellar.expert/explorer/testnet/account/GACFUIX5VUPHJEJQCDCE4UZZP23A3LKZSVGQS6ZS3H3OZSOE5MX2V2SK) | 2 XLM | [`d094c2ffce…`](https://stellar.expert/explorer/testnet/tx/d094c2ffcea9c23e0cca04dcb9813411b81fc672827df298b906bac272f7d076) | [`6dbbe287f6…`](https://stellar.expert/explorer/testnet/tx/6dbbe287f64ceb91a06c5e7712e5b30b32294f378fc98c25daf4640be8c08052) | Yes | Outside wallet |
+| 60 | 2026-11-12 13:41:13 | [`GB555F6I…`](https://stellar.expert/explorer/testnet/account/GB555F6I2AS63TJW4BNALNHUBUJBKG2W2Z7VH2EX2VFGWIPVKOV35SLK) | [`GD3AJJYB…`](https://stellar.expert/explorer/testnet/account/GD3AJJYBD73WGFXWU26WTKEKRX7I7PJIDSTHRDHFMT5R6UM4BEH65EQU) | 2 XLM | [`8b25c25d01…`](https://stellar.expert/explorer/testnet/tx/8b25c25d01e00a07a9b4ad432defc3d883e0a4d6f28ce2c32348b72bd8e39f27) | [`2e681e0b95…`](https://stellar.expert/explorer/testnet/tx/2e681e0b95edf220225add1671ed31e1d53ddb197c9f9e3aa56dfb493947821b) | Yes | Outside wallet |
+| 61 | 2026-11-13 03:28:34 | [`GDGKY4SH…`](https://stellar.expert/explorer/testnet/account/GDGKY4SHNQS3LR45DFWGFRXYRITLES6GXDCRDGG4YI5LTWVCLASJMEWX) | [`GCYRERYN…`](https://stellar.expert/explorer/testnet/account/GCYRERYNNVUWYPUOQVXVU4RJ55YQUEAQEKAV34QENR76RCSHXLL5KCN7) | 2 XLM | [`0e52a71311…`](https://stellar.expert/explorer/testnet/tx/0e52a7131133f24deabb0621ba7d2af3cda14c65f25330b16a252b037cbad94d) | [`f8b04e3926…`](https://stellar.expert/explorer/testnet/tx/f8b04e3926f1c8878838583dcac613da12b649b4549a1820136a1dca8c10e272) | Yes | Outside wallet |
+| 62 | 2026-11-13 03:37:39 | [`GDPMEJI7…`](https://stellar.expert/explorer/testnet/account/GDPMEJI75YFYUTXS2J75SGRD4HHCOSJGFWM6LXO5E4QO6OXC4P33FRXI) | [`GA26QU4B…`](https://stellar.expert/explorer/testnet/account/GA26QU4B2UHLSARR2ODPWTJKDJDKR2GHLITSQTXYDKHSXLRRPFCKDDJQ) | 2 XLM | [`0b8eb61c28…`](https://stellar.expert/explorer/testnet/tx/0b8eb61c289fb5e319c39a43c3ab53fb152f5a9ca4addd939071cd8efe8f2eec) | [`9e17dd834f…`](https://stellar.expert/explorer/testnet/tx/9e17dd834fe55609b9eae8ee967da58657ce012ad01f607651a71a972445a34f) | Yes | Outside wallet |
+| 63 | 2026-11-13 03:43:34 | [`GCUDAAPC…`](https://stellar.expert/explorer/testnet/account/GCUDAAPCGLH3AOCZTMFD56TEXIFJRJ52PBS4IZYLSWRLPZUV4EI73IO7) | [`GBXT3INR…`](https://stellar.expert/explorer/testnet/account/GBXT3INRLDZJ6VQEJ7RDPPZLQWOJRKFQYF6QF55PT4VPUEV2IGE25D6X) | 2 XLM | [`cc823848d2…`](https://stellar.expert/explorer/testnet/tx/cc823848d2e9c6e28c3b584d0a61f227f6c8d30af5dade289d7b287cfa243bde) | [`0b422867c3…`](https://stellar.expert/explorer/testnet/tx/0b422867c329b4ed3bc9c73e82218653ff9f9aa6a454e0912c206251d19ac787) | Yes | Outside wallet |
+| 64 | 2026-11-13 04:02:59 | [`GCHKMICK…`](https://stellar.expert/explorer/testnet/account/GCHKMICKTWIAVFSQK2TADSHGFE5QVVTQYON53U3SE7PO25HGYFODPQY4) | [`GAZ7IZAU…`](https://stellar.expert/explorer/testnet/account/GAZ7IZAUSKWQGJWX542QOHJ6PJFWPDVIORFXOSBNQBPE6ZWCKWGKTGMO) | 50 XLM | [`1bc48ed12d…`](https://stellar.expert/explorer/testnet/tx/1bc48ed12df0a03d2cab7ac11c58a8ac79b87ee37d020ff8f58e8b6894a76eaf) | [`bc20607538…`](https://stellar.expert/explorer/testnet/tx/bc206075384b15b2ffaebb34e2a590b8c054576e26d3c8659c4ef08d5a1d9b2e) | Yes | Outside wallet |
+| 65 | 2026-11-13 04:10:49 | [`GBQJWJGU…`](https://stellar.expert/explorer/testnet/account/GBQJWJGUV2W5AMSP2DI5O5P6ZR4TE2MUE6KYDOCVVTMSMN7BQGYPHP5Z) | [`GBFMKBL4…`](https://stellar.expert/explorer/testnet/account/GBFMKBL4W2WAAK5PX4TOCMCP4PWRKJNXYOSXXFQMZDQE3VNOBJD35TEA) | 2 XLM | [`60cc1bfb02…`](https://stellar.expert/explorer/testnet/tx/60cc1bfb02f486cab70699cc6a51f103102034460b3b3d979d11c2151bfa63db) | [`46a0a6372a…`](https://stellar.expert/explorer/testnet/tx/46a0a6372aaf9cc6b50e74f721364d2a1990110ecb08c50a11cbb0ce9cd4fd01) | Yes | Outside wallet |
+| 66 | 2026-11-13 05:34:34 | [`GA4UTTUQ…`](https://stellar.expert/explorer/testnet/account/GA4UTTUQVFYAMVMFNESNQFWCHOGXTNDHK74I5UTQRYHZNWXSPW2B7GWB) | [`GAGCJHFN…`](https://stellar.expert/explorer/testnet/account/GAGCJHFNVZWJOLTM2VC3ITYNXRPUVFLWQSDSYYO6EYY3RVP4Z7NTTBVM) | 10 XLM | [`9691188bc5…`](https://stellar.expert/explorer/testnet/tx/9691188bc52eb756d8ce5019409e424b06d9272c6f4b95b338ad2ec6646a282f) | — | No | Outside wallet |
+| 67 | 2026-11-13 05:36:09 | [`GA4UTTUQ…`](https://stellar.expert/explorer/testnet/account/GA4UTTUQVFYAMVMFNESNQFWCHOGXTNDHK74I5UTQRYHZNWXSPW2B7GWB) | [`GAGCJHFN…`](https://stellar.expert/explorer/testnet/account/GAGCJHFNVZWJOLTM2VC3ITYNXRPUVFLWQSDSYYO6EYY3RVP4Z7NTTBVM) | 10 XLM | [`e3929a6746…`](https://stellar.expert/explorer/testnet/tx/e3929a674643cecc21cf04289951cd8b23a05d1166a6f5e5fe6e891a278adfa3) | [`5ced83f416…`](https://stellar.expert/explorer/testnet/tx/5ced83f416fab5d8666bde388218f5ebe6cb63aed833fa1f8ec036734f09b074) | Yes | Outside wallet |
+| 68 | 2026-11-13 05:59:34 | [`GCLFY4A5…`](https://stellar.expert/explorer/testnet/account/GCLFY4A5X7SVPDEWRUTD5DVKGJFDJRULJVRM2PMFHPQZWAPGBWASXYMG) | [`GDSUFWKI…`](https://stellar.expert/explorer/testnet/account/GDSUFWKIAEUA4QLBR6QX5W5N5BFQ3TWFBVR7EZ6P2UR3FUU72RD7EMC7) | 2 XLM | [`c4a95dc579…`](https://stellar.expert/explorer/testnet/tx/c4a95dc579f7108c884e6fba81e35e7e04d5ad7191be102d64ef1569da37f491) | [`6e8c5038cd…`](https://stellar.expert/explorer/testnet/tx/6e8c5038cdf8bd011476e684eebcd7aad6b60a7f9087427b5c8c7c6bc5e5d5cb) | Yes | Outside wallet |
+| 69 | 2026-11-13 06:16:44 | [`GBQWSWX7…`](https://stellar.expert/explorer/testnet/account/GBQWSWX77R3BUN3WY7FNUA5CGGTKX62LP4IRS72XFSOUBADGJFZACER3) | [`GCMGZKZ3…`](https://stellar.expert/explorer/testnet/account/GCMGZKZ3RYLIBXRYZWJLOGBFMNXN25OKCA7RKU6ZQFEBB462S2VO6KKI) | 1000 XLM | [`347c6a9eed…`](https://stellar.expert/explorer/testnet/tx/347c6a9eed5f391979c6d6b99f755c85a08a66c5162b5b1f2ac77ba50a18c988) | [`bb5e9ae9ca…`](https://stellar.expert/explorer/testnet/tx/bb5e9ae9ca479eb303f254e6b63dcb6494a40f2dd7102d18b4d99cf8f65eb80e) | Yes | Outside wallet |
+| 70 | 2026-11-13 07:17:34 | [`GBNHPWDF…`](https://stellar.expert/explorer/testnet/account/GBNHPWDFEIJ5A75OYBSQLNOR3JKEPSCHZIN53NXVSR4PH4FNGOK5AZ6T) | [`GDOW25PQ…`](https://stellar.expert/explorer/testnet/account/GDOW25PQHPGVM4EEYBZZUZ7LTWGLMWUS75BWBHYW7EQE62UZSKNR5MWE) | 100 XLM | [`6548f9f7f6…`](https://stellar.expert/explorer/testnet/tx/6548f9f7f65dccf50f9c5d841ad78bfd5bac20d9975e020036707b35d625775a) | [`49285356de…`](https://stellar.expert/explorer/testnet/tx/49285356dec0fae53ac3ba6f76185961a8303ee3257398a4386ae1ee284ec0af) | Yes | Outside wallet |
+| 71 | 2026-11-14 02:39:39 | [`GDGZ2XG3…`](https://stellar.expert/explorer/testnet/account/GDGZ2XG3ZOOQWXNWITOWRNQG3LOGBNA5D5G73ONETQK3DP5US5QNI556) | [`GB3NHDMN…`](https://stellar.expert/explorer/testnet/account/GB3NHDMNDRQEEEJUKXK7KHKIX4VDTRRIDXFXRYPEY2GDWZMIBJOL24BJ) | 2 XLM | [`24ddfd72c7…`](https://stellar.expert/explorer/testnet/tx/24ddfd72c77ae4f192a45f495cb3222f85097d667da7255129f75ef0da9e35a3) | [`b9f71f6d16…`](https://stellar.expert/explorer/testnet/tx/b9f71f6d169f31fcc3c7618226e6ba8df7566a79efd2dd4081a69a9bf59da6a5) | Yes | Outside wallet |
 <!-- END GENERATED ESCROW TABLE -->
 
 ## User adoption: verified numbers
@@ -147,9 +169,9 @@ _Generated 2026-11-12 11:20 UTC from Stellar Testnet. 59 escrows. Every funding 
 | Platform sign-ups, Oct 12 – Nov 3, 2026 (personal emails; excludes the founder, the shared reviewer demo account and the July team accounts) | **23** (16 by Oct 18) | Supabase Auth, counted Nov 5 |
 | Sign-ups who created at least one task | **7** | Supabase `tasks` |
 | Recorded onboarding sessions and demos (Oct 16–17, 2026) | **5** | Loom |
-| Outside wallets that have funded an escrow on-chain | **1** (escrow #15, not yet released) | Table above |
+| Outside wallets with escrow activity on-chain (Nov 14, 2026) | **42** (41 exist on-chain); **21** distinct escrows funded, **19** released | Generated tables above |
 
-Real people have tried GigPay, but almost none have completed an on-chain escrow yet. Getting testers through a full fund → accept → submit → release cycle with their own practice wallets is the focus of the current sprint.
+The form, sign-up and session rows above are from Oct 12 – Nov 5, 2026, before the BCC 2026 event. Most on-chain activity came from students at BCC on Nov 12–13, 2026, using practice wallets on their own phones (see the note on duplicate locks above).
 
 ## Sprint 1 deliverables (merged pull requests)
 
