@@ -279,5 +279,19 @@ await test('Phone layout: pop-ups centre on the screen, messages are readable an
   assert.ok(nav.includes("height: '100dvh'") && nav.includes("overflowY: 'auto', padding: '1rem'"), 'the Connect Wallet pop-up can scroll on phones');
 });
 
+await test('A second lock for the same freelancer and amount needs a deliberate second tap', async () => {
+  const { findRecentDuplicateLock, duplicateKey } = await import('../src/lib/duplicateLock.js');
+  const now = Date.parse('2026-11-13T05:37:00Z');
+  const w = 'GAGCJHFNVZWJOLTM2VC3ITYNXRPUVFLWQSDSYYO6EYY3RVP4Z7NTTBVM';
+  const first = { on_chain_task_id: 66, freelancer_wallet: w, amount: '10', status: 'Available', created_at: '2026-11-13T05:34:56Z' };
+  assert.strictEqual(findRecentDuplicateLock([first], { freelancerWallet: w, amount: '10', now }), first, 'the #66/#67 case is caught');
+  assert.strictEqual(findRecentDuplicateLock([first], { freelancerWallet: w, amount: '2', now }), null, 'a different amount is a new task');
+  assert.strictEqual(findRecentDuplicateLock([{ ...first, status: 'Completed' }], { freelancerWallet: w, amount: '10', now }), null, 'released escrows are not duplicates');
+  assert.strictEqual(findRecentDuplicateLock([first], { freelancerWallet: w, amount: '10', now: now + 20 * 60 * 1000 }), null, 'older than 15 minutes is a new task');
+  assert.strictEqual(duplicateKey(` ${w} `, '10'), duplicateKey(w, 10), 'the confirm key ignores spaces and number format');
+  const client = fs.readFileSync(new URL('../src/pages/ClientDashboard.jsx', import.meta.url), 'utf8');
+  assert.ok(client.includes('if (lockInFlight.current) return;') && client.includes('lockInFlight.current = false;'), 'a double tap while locking is ignored');
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);

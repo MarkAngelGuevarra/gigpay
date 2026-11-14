@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -8,6 +8,7 @@ import { requestWalletSignature, formatStellarError, isSimulatedTxHash } from '.
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { takeInvitePayout } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
+import { findRecentDuplicateLock, duplicateKey } from '../lib/duplicateLock';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
@@ -60,6 +61,9 @@ const ClientDashboard = () => {
     : 0;
   
   const [isTransacting, setIsTransacting] = useState(false);
+  // A ref blocks a second Lock tap before React re-renders the disabled button.
+  const lockInFlight = useRef(false);
+  const duplicateConfirm = useRef({ key: '', until: 0 });
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskAmount, setNewTaskAmount] = useState('');
   const [freelancerWallet, setFreelancerWallet] = useState('');
@@ -212,6 +216,23 @@ const ClientDashboard = () => {
       return;
     }
 
+    if (lockInFlight.current) return;
+
+    // Same freelancer and amount, still unreleased, locked in the last 15 minutes: ask for a second tap.
+    if (!isDemoAccount) {
+      const recent = findRecentDuplicateLock(ownTasks, { freelancerWallet, amount: newTaskAmount });
+      const key = duplicateKey(freelancerWallet, newTaskAmount);
+      const confirmed = duplicateConfirm.current.key === key && Date.now() < duplicateConfirm.current.until;
+      if (recent && !confirmed) {
+        duplicateConfirm.current = { key, until: Date.now() + 60 * 1000 };
+        const ref = recent.on_chain_task_id ? ` (escrow #${recent.on_chain_task_id})` : '';
+        addToast(`You already locked ${recent.amount} XLM for this freelancer a few minutes ago${ref}; it is in your task list. Only if you want a second escrow, tap Lock Funds in Escrow again.`, "warning");
+        return;
+      }
+      duplicateConfirm.current = { key: '', until: 0 };
+    }
+
+    lockInFlight.current = true;
     setIsTransacting(true);
     
     try {
@@ -233,6 +254,7 @@ const ClientDashboard = () => {
       const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
       addToast(formatted, isWarning ? "warning" : "error");
     } finally {
+      lockInFlight.current = false;
       setIsTransacting(false);
     }
   };
