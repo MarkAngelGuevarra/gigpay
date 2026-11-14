@@ -61,13 +61,13 @@ Notes:
 | Criterion | Status | Files | Commits | Evidence |
 |:---|:---|:---|:---|:---|
 | (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 100 tests in 7 suites pass as of Nov 14, 2026 |
-| (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Partly | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe` | 2 of 3 runs |
+| (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Done (see note b) | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe`, `a65ddbf` | 3 runs: Windows 11, a Linux cloud container, and a macOS GitHub-hosted VM ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222)) |
 | (c) 3–5 minute walkthrough video published | Not yet | `DEMO_WALKTHROUGH_SCRIPT.md` (script only) | none | none |
 
 Notes:
 
 - (a) The 22 tests in `test/gigpay_regression.test.js` (the baseline "18 tests", since extended) mostly check values defined inside the test file and import no app code. The 48 tests in the other five suites call the app's own modules, or check its source files directly (some tests in `test/onboarding_safety.test.js`).
-- (b) The two runs are Windows 11 (Nov 4) and Linux in a fresh cloud container (Nov 5), which is not a separate physical computer. The third run is pending.
+- (b) The three runs are Windows 11 on a personal computer (Nov 4), Linux in a fresh cloud container (Nov 5) and macOS on a fresh GitHub-hosted virtual machine (Nov 12). Only the first is a personal physical computer; the other two are separate, freshly created machines.
 
 ## Success metric: on-chain transactions
 
@@ -93,7 +93,7 @@ As of 2026-11-12 11:13 UTC the contract has 59 escrows: 106 contract transaction
 ## Evidence still missing
 
 1. The 3–5 minute walkthrough video (D4c).
-2. The third clean install on a separate computer (D4b).
+2. Optional: a clean install on a second personal computer, since two of the three D4b runs are virtual machines.
 3. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
 4. More escrows funded **and released** between outside wallets: 20 of the 50 targeted transactions as of Nov 12, 2026 (success metrics).
 5. Screenshots or a screen recording of proof submission, a dispute freeze and its resolution (SOW section 6.1, D3).

@@ -8,7 +8,7 @@ The SOW requires the project to run from a clean installation on three separate 
 |:---:|:---|:---|
 | 1 | Windows 11 (build 10.0.22621), Node v24.15.0, npm 11.12.1 | ✅ **Passed**, 2026-11-04 (log below) |
 | 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, not a separate physical computer; kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
-| 3 | A third separate computer (for example a Mac) | ⏳ **Pending** (see "How to add environment 3") |
+| 3 | macOS 26.7.2 (arm64) on a fresh GitHub-hosted virtual machine (not a personal computer), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-12 22:25 UTC ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222); log below) |
 
 Two real runs so far. `npm test` today runs 90 offline tests in 7 suites; each log below shows the counts that existed at the commit it ran, so they are lower than today's.
 
@@ -17,7 +17,7 @@ Two real runs so far. `npm test` today runs 90 offline tests in 7 suites; each l
 > - They reported 248 installed packages; a real clean install of this lockfile installs 125.
 > - A fresh clone was in fact **failing** on Windows, because committed Rust build files had paths too long for Windows. That was fixed in commit `e0c7ec3`.
 >
-> The earlier logs have been removed. Environment 2 was run and added on Nov 5, 2026; environment 3 will be added only after it is actually run.
+> The earlier logs have been removed. Environment 2 was run and added on Nov 5, 2026; environment 3 was run on Nov 12, 2026 (22:25 UTC) by the `Clean install (macOS)` GitHub Actions workflow and added on Nov 14.
 
 ## How to reproduce (any environment)
 
@@ -76,6 +76,33 @@ $ npm run build
 
 transforming...✓ 2431 modules transformed.
 ✓ built in 893ms
+```
+
+## Environment 3: macOS 26.7.2 (GitHub-hosted virtual machine), 2026-11-12 22:25 UTC (real output)
+
+Run by `.github/workflows/clean-install.yml` on a fresh GitHub-hosted macOS VM (image `macos-26-arm64`), following "How to add environment 3": a plain `git clone` of the public repo with no cache, then `npm ci`, `npm test` and `npm run build`. It is a separate, freshly created machine but not a personal computer. Full public log: https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222 (job 131537224261). Lines below are copied from that log; timestamps and unrelated lines are trimmed.
+
+```
+Thu Nov 12 22:25:58 UTC 2026
+ProductName:		macOS
+ProductVersion:		26.7.2
+BuildVersion:		25G332
+arm64
+v22.23.4
+10.9.9
+git version 2.56.0
+a65ddbf
+added 156 packages, and audited 157 packages in 6s
+   REGRESSION SUITE RESULTS: 22/22 TESTS PASSED
+   STATUS: all GigPay SOW self-checks passed
+  Escrow integrity: 10/10 passed
+  Ledger integrity: 12/12 passed
+  Onboarding at scale: 7/7 passed
+  Dispute sync: 8/8 passed
+  Onboarding safety: 22/22 passed
+  Chain safety: 18/18 passed
+npm test exit code: 0
+✓ built in 903ms
 ```
 
 ## How to add environment 3
