@@ -55,6 +55,23 @@ export const hasPendingInvite = () => {
   }
 };
 
+/**
+ * Returns the remembered invite address WITHOUT forgetting it, or null if none or expired.
+ * The client form uses this, so a reload or a failed lock doesn't lose the address; call
+ * clearInvitePayout() once the lock succeeds.
+ */
+export const peekInvitePayout = () => {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const { address, at } = JSON.parse(raw);
+    if (!address || Date.now() - at > MAX_AGE_MS || !isInvitable(address)) return null;
+    return address;
+  } catch {
+    return null;
+  }
+};
+
 /** Returns the remembered invite address once (then forgets it), or null if none or expired. */
 export const takeInvitePayout = () => {
   try {

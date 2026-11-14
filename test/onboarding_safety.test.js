@@ -101,7 +101,7 @@ await test('Failed actions roll back exactly and database rejections are reporte
 
 await test('Roles are confirmed in the database before money moves or a task is claimed', () => {
   const ctx = read('src/context/TaskContext.jsx');
-  const fundAt = ctx.indexOf('const fundResult = await submitFundTask(');
+  const fundAt = ctx.indexOf('fundResult = await submitFundTask(');
   assert.ok(ctx.lastIndexOf("ensureDbRole('client')", fundAt) > 0, 'client role checked before funding');
   assert.ok(ctx.includes("ensureDbRole('freelancer')"), 'freelancer role checked before accepting');
   assert.ok(ctx.includes("status: isPending ? 'Confirming' : 'Available'"), 'pending funding is saved as Confirming');
@@ -291,6 +291,59 @@ await test('A second lock for the same freelancer and amount needs a deliberate 
   assert.strictEqual(duplicateKey(` ${w} `, '10'), duplicateKey(w, 10), 'the confirm key ignores spaces and number format');
   const client = fs.readFileSync(new URL('../src/pages/ClientDashboard.jsx', import.meta.url), 'utf8');
   assert.ok(client.includes('if (lockInFlight.current) return;') && client.includes('lockInFlight.current = false;'), 'a double tap while locking is ignored');
+});
+
+await test('Lock: the task is saved before sending, and a refused send is marked as never sent (Nov 14, 2026)', async () => {
+  // The network refusing a transaction means it can never land, so the saved "Confirming" card can be dropped.
+  for (const status of ['TRY_AGAIN_LATER', 'ERROR']) {
+    const server = { sendTransaction: async () => ({ status, errorResultXdr: 'AAAA' }) };
+    await assert.rejects(() => stellar.sendAndConfirm(signedTx(), { server, poll: async () => ({ status: 'SUCCESS' }) }),
+      (e) => e.notSent === true, `${status} is reported as not sent`);
+  }
+  // A dropped connection is NOT marked as not sent: it may still have landed.
+  const dropped = { sendTransaction: async () => { throw new Error('Failed to fetch'); } };
+  await assert.rejects(() => stellar.sendAndConfirm(signedTx(), { server: dropped, poll: async () => ({ status: 'SUCCESS' }) }),
+    (e) => !e.notSent, 'a dropped connection stays unknown');
+
+  const src = read('src/lib/stellar.js');
+  const signedAt = src.indexOf('await onSigned({ hash: signedTx.hash()');
+  assert.ok(signedAt > 0 && signedAt < src.indexOf('const outcome = await sendAndConfirm(signedTx);', signedAt), 'onSigned runs after signing and before sending');
+  const ctx = read('src/context/TaskContext.jsx');
+  assert.ok(ctx.includes('{ onSigned: saveBeforeSend }'), 'addTask saves the task before the escrow is sent');
+  assert.ok(ctx.includes("status: 'Confirming',") && ctx.includes("throw new Error(\"GigPay couldn't save this task, so nothing was sent"), 'saved as Confirming; if saving fails nothing is sent');
+  assert.ok(ctx.includes('if (fundErr?.notSent)') && ctx.includes("return { pending: true };"), 'refused sends drop the card; unclear sends keep it Confirming');
+  assert.ok(ctx.includes('if (fundInFlightRef.current)'), 'only one lock at a time per page');
+});
+
+await test('Release: Completed is shown only after Stellar confirms it', () => {
+  const ctx = read('src/context/TaskContext.jsx');
+  const fn = ctx.slice(ctx.indexOf('const updateTaskStatus = async'), ctx.indexOf('const approveMilestone'));
+  assert.ok(fn.includes("if (newStatus !== 'Completed') {\n      updateTasksAndCache") || fn.includes("if (newStatus !== 'Completed') {\r\n      updateTasksAndCache"), 'no optimistic Completed before the release');
+  assert.ok(fn.indexOf('updateTasksAndCache((prev)', fn.indexOf('updatedFields.release_tx_hash = relHash;')) > 0, 'Completed is applied after the release hash comes back');
+});
+
+await test('Invite address survives a reload or failed lock; accept signs once; real release hash; own tasks first; lab PCs cleared', async () => {
+  const S = await import('@stellar/stellar-sdk');
+  const invite = await import('../src/lib/invite.js');
+  invite.clearInvitePayout();
+  const addr = S.Keypair.random().publicKey();
+  invite.captureInviteFromUrl(`?pay=${addr}`);
+  assert.strictEqual(invite.peekInvitePayout(), addr, 'the form reads the invite');
+  assert.strictEqual(invite.peekInvitePayout(), addr, 'reading it again (reload, failed lock) still has it');
+  invite.clearInvitePayout();
+  assert.strictEqual(invite.peekInvitePayout(), null, 'cleared after a successful lock');
+  const client = read('src/pages/ClientDashboard.jsx');
+  assert.ok(client.includes('const invited = peekInvitePayout();') && !client.includes('takeInvitePayout()'), 'the client form no longer consumes the invite on page load');
+  assert.ok(client.indexOf('clearInvitePayout();') > client.indexOf('await addTask(newTask);'), 'the invite is cleared only after the lock succeeds');
+  assert.ok(client.includes("result?.alreadyReleased ? '' : (result?.hash || '')") && !client.includes('result?.txHash'), 'the Sheet gets the real release hash');
+  const free = read('src/pages/FreelancerDashboard.jsx');
+  const accept = free.slice(free.indexOf('const handleAcceptWork'), free.indexOf('const handleAcceptTask'));
+  assert.ok(!accept.includes('requestWalletSignature'), 'accept asks for one confirmation, not two');
+  assert.ok(free.includes('.sort((a, b) => Number(isMine(b)) - Number(isMine(a)))'), "the freelancer's own tasks are listed first");
+  const auth = read('src/context/AuthContext.jsx');
+  assert.ok(auth.includes("localStorage.removeItem('gigpay_tasks_cache_v2');") && auth.includes("localStorage.removeItem('gigpay_verification_ledger_v1');"), 'sign-out clears every task and ledger cache');
+  const ctx = read('src/context/TaskContext.jsx');
+  assert.ok(ctx.includes('if (previousId && currentId !== previousId) {'), "leaving an account clears its tasks from memory");
 });
 
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);

@@ -311,6 +311,21 @@ export const TaskProvider = ({ children }) => {
   const fetchTasksRef = useRef(null);
   const refreshTasks = () => (fetchTasksRef.current ? fetchTasksRef.current() : Promise.resolve(false));
 
+  // Signed out (or switching accounts on a shared PC): drop the previous account's tasks from memory, so
+  // they never show for the next student. The fetch below loads the new account's tasks.
+  const lastUserIdRef = useRef(user?.id || null);
+  useEffect(() => {
+    const currentId = user?.id || null;
+    const previousId = lastUserIdRef.current;
+    lastUserIdRef.current = currentId;
+    // Only when leaving an account (sign-out or a different account): a first page load, where the user
+    // arrives a moment after render, keeps its own cached tasks instead of flashing an empty list.
+    if (previousId && currentId !== previousId) {
+      setTasks([]);
+      setStoredLedgerRecords([]);
+    }
+  }, [user]);
+
   useEffect(() => {
     let inFlight = null;
     const fetchTasks = () => {
@@ -381,7 +396,22 @@ export const TaskProvider = ({ children }) => {
   }, [user]);
 
   // 4. Add Task with Optimistic Local Cache & Background DB Sync
+  // One lock at a time per page: a second tap (or a second form submit) while a lock is in flight would
+  // fund a second escrow for the same task.
+  const fundInFlightRef = useRef(false);
   const addTask = async (task) => {
+    if (fundInFlightRef.current) {
+      throw new Error("A payment is already being locked. Please wait for it to finish; don't lock again.");
+    }
+    fundInFlightRef.current = true;
+    try {
+      return await addTaskOnce(task);
+    } finally {
+      fundInFlightRef.current = false;
+    }
+  };
+
+  const addTaskOnce = async (task) => {
     const activeKey = publicKey || 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P';
     // The contract fixes the payout recipient at fund time, so the freelancer's own wallet must be
     // passed here. A missing address is never replaced by a team wallet: submitFundTask requires a real,
@@ -397,12 +427,59 @@ export const TaskProvider = ({ children }) => {
       throw new Error("GigPay couldn't confirm your Client role, so no money was locked. Sign out, sign back in, then try again.");
     }
 
+    const generatedId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : ('task-' + Date.now());
+    // Saved as "Confirming" after signing and before sending (see onSigned in submitFundTask), so a reload,
+    // app switch or closed in-app browser during the wait still shows the task and never invites a second lock.
+    let savedBeforeSend = null;
+    const saveBeforeSend = async ({ hash, clientAddress, freelancerAddress }) => {
+      if (!isUuid(user?.id) || !isUuid(generatedId)) return;
+      const confirmingTask = {
+        id: generatedId,
+        title: task.title,
+        amount: String(task.amount),
+        status: 'Confirming',
+        client_id: user.id,
+        client_wallet: isRealStellarAddress(clientAddress) ? clientAddress : null,
+        freelancer_wallet: isRealStellarAddress(freelancerAddress) ? freelancerAddress : null,
+        on_chain_task_id: null,
+        contract_id: GIGPAY_ESCROW_CONTRACT_ID,
+        tx_hash: hash,
+        explorer_url: null,
+        is_simulated: false,
+        created_at: new Date().toISOString()
+      };
+      const { is_simulated: _local, created_at: _localTime, ...dbRow } = confirmingTask;
+      const { error } = await supabase.from('tasks').insert([{ ...dbRow, amount: task.amount }]);
+      if (error) {
+        console.warn("Supabase pre-send insert notice:", error);
+        throw new Error("GigPay couldn't save this task, so nothing was sent and no money was locked. Check your connection and try again.");
+      }
+      savedBeforeSend = confirmingTask;
+      updateTasksAndCache((prev) => [confirmingTask, ...prev.filter((t) => t.id !== generatedId)]);
+    };
+
     try {
-      const fundResult = await submitFundTask({
-        clientAddress: activeKey,
-        freelancerAddress: requestedFreelancer || undefined,
-        amount: task.amount
-      });
+      let fundResult;
+      try {
+        fundResult = await submitFundTask({
+          clientAddress: activeKey,
+          freelancerAddress: requestedFreelancer || undefined,
+          amount: task.amount
+        }, { onSigned: saveBeforeSend });
+      } catch (fundErr) {
+        if (savedBeforeSend) {
+          if (fundErr?.notSent) {
+            // The network refused it, so no escrow exists: drop the saved card.
+            await writeTask(generatedId, { status: 'Failed' });
+            updateTasksAndCache((prev) => prev.filter((t) => t.id !== generatedId));
+            throw fundErr;
+          }
+          // Unclear whether it landed: keep "Confirming"; the chain check (2b) opens or fails it.
+          addToast("The connection dropped while sending, so GigPay is checking Stellar for this payment. Please don't lock funds again; the task will update by itself.", "warning");
+          return { pending: true };
+        }
+        throw fundErr;
+      }
       const recipientWallet = fundResult?.freelancerAddress || requestedFreelancer || null;
 
       const txHash = fundResult?.hash || ('sim-tx-' + Date.now());
@@ -413,7 +490,6 @@ export const TaskProvider = ({ children }) => {
       const explorerUrl = isEvidence ? (fundResult?.explorerUrl || `https://stellar.expert/explorer/testnet/tx/${txHash}`) : null;
       const resolvedClientWallet = fundResult?.clientAddress || (typeof activeKey === 'string' ? activeKey : 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P');
 
-      const generatedId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : ('task-' + Date.now());
       const newTask = {
         id: generatedId,
         title: task.title,
@@ -430,7 +506,7 @@ export const TaskProvider = ({ children }) => {
         created_at: new Date().toISOString()
       };
 
-      updateTasksAndCache((prev) => [newTask, ...prev]);
+      updateTasksAndCache((prev) => [newTask, ...prev.filter((t) => t.id !== generatedId)]);
 
       // Only confirmed on-chain transactions go into the public verification ledger.
       if (isEvidence) {
@@ -449,7 +525,20 @@ export const TaskProvider = ({ children }) => {
         }));
       }
 
-      if (isUuid(user?.id)) {
+      if (savedBeforeSend) {
+        // Already saved before sending: fill in the confirmed escrow details.
+        // tx_hash and the wallets were written before sending and are write-once in the database (guard
+        // trigger), so only fields that are new here are sent.
+        const fields = { status: newTask.status, explorer_url: explorerUrl };
+        if (newTask.on_chain_task_id) fields.on_chain_task_id = newTask.on_chain_task_id;
+        if (!savedBeforeSend.client_wallet && isRealStellarAddress(resolvedClientWallet)) fields.client_wallet = resolvedClientWallet;
+        if (!savedBeforeSend.freelancer_wallet && isRealStellarAddress(recipientWallet)) fields.freelancer_wallet = recipientWallet;
+        const updateError = await writeTask(generatedId, fields);
+        if (updateError) {
+          console.warn("Supabase update notice (escrow confirmed):", updateError);
+          addToast(`Your payment is locked on Stellar. GigPay will finish updating this task by itself; please don't lock funds again. Tx: ${txHash.slice(0, 12)}…`, "warning");
+        }
+      } else if (isUuid(user?.id)) {
         try {
           const { error: insertError } = await supabase
             .from('tasks')
@@ -606,8 +695,13 @@ export const TaskProvider = ({ children }) => {
       updatedFields.freelancer_id = user.id;
     }
 
-    // Optimistic Update: instantly update UI & broadcast across all open tabs/windows
-    updateTasksAndCache((prev) => prev.map((t) => (t.id === id || t.title === id) ? { ...t, ...updatedFields } : t));
+    // Optimistic Update: instantly update UI & broadcast across all open tabs/windows. Not for a release:
+    // "Completed" saved before the chain confirmed survived a reload mid-release (statuses never move
+    // backwards on merge), which hid the Release button while the money was still locked. A release is
+    // shown as Completed only after Stellar confirms it (below).
+    if (newStatus !== 'Completed') {
+      updateTasksAndCache((prev) => prev.map((t) => (t.id === id || t.title === id) ? { ...t, ...updatedFields } : t));
+    }
 
     // The contract reports this escrow as already paid out (an earlier, slow release went through):
     // record it as Completed without sending a second release or inventing a release hash.
@@ -640,6 +734,8 @@ export const TaskProvider = ({ children }) => {
         const releaseIsEvidence = !releaseResult?.isDemo && !isNonEvidenceHash(relHash);
         updatedFields.release_tx_hash = relHash;
         updatedFields.completed_at = new Date().toISOString();
+        // Confirmed on Stellar: now show it as Completed everywhere.
+        updateTasksAndCache((prev) => prev.map((t) => (t.id === id || t.title === id) ? { ...t, ...updatedFields } : t));
 
         // Record the wallets the escrow actually used (not the viewer's key or a default address),
         // and only when the release is a confirmed on-chain transaction.

@@ -764,9 +764,10 @@ export const sendAndConfirm = async (signedTx, { server = sorobanServer, poll = 
     if (!String(sendErr?.message || '').includes('TIMEOUT')) throw sendErr;
     console.warn('[sendAndConfirm] send timed out; checking whether the network accepted it:', localHash);
   }
-  if (sendResult?.status === 'TRY_AGAIN_LATER') throw new Error(NETWORK_BUSY_MESSAGE);
+  // Both mean the network refused the transaction, so it can never land: notSent.
+  if (sendResult?.status === 'TRY_AGAIN_LATER') throw Object.assign(new Error(NETWORK_BUSY_MESSAGE), { notSent: true });
   if (sendResult?.status === 'ERROR') {
-    throw new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`);
+    throw Object.assign(new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`), { notSent: true });
   }
   const txHash = sendResult?.hash || localHash;
   const pollResult = await poll(txHash);
@@ -830,7 +831,11 @@ export const submitFundTask = async ({
   freelancerAddress,
   amount,
   tokenAddress = NATIVE_SAC_CONTRACT_ID
-}, { checkPayout = checkFreelancerPayoutAccount } = {}) => {
+}, { checkPayout = checkFreelancerPayoutAccount, onSigned = null } = {}) => {
+  // onSigned({ hash, clientAddress, freelancerAddress }) runs after signing and BEFORE sending, so the caller
+  // can save the task as "Confirming" first. If it throws, nothing is sent and no money moves. (At BCC 2026,
+  // tasks were saved only after confirmation, up to ~35s later; a reload in that window left an escrow with
+  // no task card, and the client locked again: duplicate escrows #52, #53, #66.)
   const requestedPayout = typeof freelancerAddress === 'string' ? freelancerAddress.trim() : '';
   // 1. Enforce multi-wallet separation and anti-self-dealing check
   if (!clientAddress) throw new Error("Client wallet address is required.");
@@ -919,6 +924,14 @@ export const submitFundTask = async ({
       signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
     }
 
+    if (typeof onSigned === 'function') {
+      try {
+        await onSigned({ hash: signedTx.hash().toString('hex'), clientAddress: effectiveClientAddress, freelancerAddress: payoutAddress });
+      } catch (saveErr) {
+        throw Object.assign(new Error(saveErr?.message || "GigPay couldn't save this task, so nothing was sent and no money was locked. Please try again."), { notSent: true, passThrough: true });
+      }
+    }
+
     // 5-6. Submit and wait for confirmation. Not confirmed yet is reported as pending, never as success.
     const outcome = await sendAndConfirm(signedTx);
     if (outcome.status === 'PENDING') {
@@ -949,7 +962,10 @@ export const submitFundTask = async ({
     // A real signer attempted a real transaction. Never convert that failure into a success:
     // the caller must roll back its optimistic card and show the user that no funds moved.
     console.error("[submitFundTask] Error:", error);
-    throw new Error(formatStellarError(error));
+    if (error?.passThrough) throw error;
+    // notSent: the network definitely did not take the transaction (rejected or busy). Without it, an error
+    // after signing may still have landed, so a task saved by onSigned stays "Confirming" and is checked on-chain.
+    throw Object.assign(new Error(formatStellarError(error)), { notSent: !!error?.notSent });
   }
 };
 

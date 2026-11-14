@@ -5,7 +5,7 @@ import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileTe
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature, isDemoWallet, isSimulatorWallet } from '../lib/stellar';
+import { isDemoWallet, isSimulatorWallet } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
 import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
@@ -35,7 +35,12 @@ const FreelancerDashboard = () => {
     markCompleted: markPilotCompleted
   } = usePilotFeedbackState();
 
-  const availableTasks = tasks.filter(t => t.status === 'Available');
+  // Tasks that pay this freelancer's own wallet come first: in a busy session the open list holds everyone's
+  // tasks, and students kept accepting (or searching for) the wrong one.
+  const isMine = (t) => !!publicKey && t.freelancer_wallet === publicKey;
+  const availableTasks = tasks
+    .filter(t => t.status === 'Available')
+    .sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
   const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   
   // Only escrows the contract actually released to this payout address (see onChainEarnings).
@@ -57,9 +62,7 @@ const FreelancerDashboard = () => {
     setIsAccepting(true);
     setAcceptingTaskId(id);
     try {
-      if (publicKey) {
-        await requestWalletSignature(publicKey, `Accept Escrow Contract for ${amount || ''} XLM`);
-      }
+      // updateTaskStatus asks for the one wallet confirmation itself; asking here too made students sign twice.
       await updateTaskStatus(id, 'In Progress', true);
       const isSimUser = !!(user?.is_simulation_mode || String(user?.id || '').startsWith('demo-'));
       addToast(isSimUser

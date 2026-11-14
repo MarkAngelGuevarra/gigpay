@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { requestWalletSignature, formatStellarError, isSimulatedTxHash } from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
-import { takeInvitePayout } from '../lib/invite';
+import { peekInvitePayout, clearInvitePayout } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
 import { findRecentDuplicateLock, duplicateKey } from '../lib/duplicateLock';
 import TaskProgress from '../components/TaskProgress';
@@ -68,8 +68,9 @@ const ClientDashboard = () => {
   const [newTaskAmount, setNewTaskAmount] = useState('');
   const [freelancerWallet, setFreelancerWallet] = useState('');
   // Freelancer invite link (/client?pay=G...): pre-fill the payout address so nobody retypes 56 characters.
+  // Kept (not consumed) until a lock succeeds, so a reload or a failed lock doesn't lose the address.
   useEffect(() => {
-    const invited = takeInvitePayout();
+    const invited = peekInvitePayout();
     if (invited) {
       setFreelancerWallet(invited);
       addToast("Payout address filled in from your freelancer's invite link. Check it matches what they sent you.", 'success');
@@ -163,7 +164,9 @@ const ClientDashboard = () => {
     setIsTransacting(true);
     try {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
-      const releaseHash = result?.txHash || (typeof result === 'string' ? result : 'Confirmed on Testnet');
+      // submitApproveTask returns the release transaction as `hash` (there is no `txHash`), so the Sheet
+      // used to get the text "Confirmed on Testnet" instead of the hash. Already-released escrows have none.
+      const releaseHash = result?.alreadyReleased ? '' : (result?.hash || '');
       const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
       await recordStudentToGoogleSheet({
         emailForSourceDetection: user?.email || '',
@@ -242,6 +245,7 @@ const ClientDashboard = () => {
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
       await addTask(newTask);
+      clearInvitePayout();
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');

@@ -211,6 +211,10 @@ export const AuthProvider = ({ children }) => {
       // The next person on this device must not inherit this account's task cache. (The account's own
       // practice wallet stays stored under its user id, so signing back in restores it.)
       localStorage.removeItem('gigpay_shared_tasks');
+      // Older cache keys the task list still falls back to; left behind, the next student on a lab PC
+      // loaded the previous student's tasks and ledger rows.
+      localStorage.removeItem('gigpay_tasks_cache_v2');
+      localStorage.removeItem('gigpay_verification_ledger_v1');
     } catch (e) {
       console.warn("Storage cleanup notice:", e);
     }
