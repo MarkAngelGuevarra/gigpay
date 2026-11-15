@@ -66,7 +66,7 @@ Notes:
 
 Notes:
 
-- (a) The 22 tests in `test/gigpay_regression.test.js` (the baseline "18 tests", since extended) mostly check values defined inside the test file and import no app code. The 48 tests in the other five suites call the app's own modules, or check its source files directly (some tests in `test/onboarding_safety.test.js`).
+- (a) The 22 tests in `test/gigpay_regression.test.js` (the baseline "18 tests", since extended) mostly check values defined inside the test file and import no app code. The 82 tests in the other six suites call the app's own modules, or check its source files directly (some tests in `test/onboarding_safety.test.js`).
 - (b) The three runs are Windows 11 on a personal computer (Nov 4), Linux in a fresh cloud container (Nov 5) and macOS on a fresh GitHub-hosted virtual machine (Nov 12). Only the first is a personal physical computer; the other two are separate, freshly created machines.
 
 ## Success metric: on-chain transactions

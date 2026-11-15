@@ -174,7 +174,7 @@ _Generated 2026-11-15 16:21 UTC from Stellar Testnet. 74 escrows. Every funding 
 | Platform sign-ups, Oct 12 – Nov 3, 2026 (personal emails; excludes the founder, the shared reviewer demo account and the July team accounts) | **23** (16 by Oct 18) | Supabase Auth, counted Nov 5 |
 | Sign-ups who created at least one task | **7** | Supabase `tasks` |
 | Recorded onboarding sessions and demos (Oct 16–17, 2026) | **5** | Loom |
-| Outside wallets with escrow activity on-chain (Nov 14, 2026) | **42** (41 exist on-chain); **21** distinct escrows funded, **19** released | Generated tables above |
+| Outside wallets with escrow activity on-chain (Nov 14, 2026) | **42** (41 exist on-chain); **24** escrows funded (**21** without the 3 duplicate locks #52, #53, #66), **19** released | Generated tables above |
 
 The form, sign-up and session rows above are from Oct 12 – Nov 5, 2026, before the BCC 2026 event. Most on-chain activity came from students at BCC on Nov 12–13, 2026, using practice wallets on their own phones (see the note on duplicate locks above).
 

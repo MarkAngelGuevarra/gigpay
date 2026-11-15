@@ -22,7 +22,7 @@ The script reads every escrow on contract `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5
 | Onboarded | An outside wallet appears in an escrow where **both** client and freelancer are outside wallets | On-chain |
 | Funded | `fund_task` succeeded between two outside wallets | On-chain |
 | Activated | That escrow was also released with `approve_task` | On-chain |
-| Repeat wallet | An outside wallet in two or more counted escrows | On-chain |
+| Repeat wallet | An outside wallet in two or more counted escrows. Duplicate locks (same client, freelancer and amount within minutes) are not counted; at BCC 2026 they made up all 6 repeat wallets, so we claim 0. | On-chain |
 | Feedback response | A submitted tester feedback form | Google Form (team records; not public) |
 
 Counts are wallets, not verified people. One person with two browsers can hold two practice wallets, so wallet counts are an upper bound on people.

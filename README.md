@@ -4,7 +4,7 @@
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
-![Tests](https://img.shields.io/badge/npm%20test-100%2F100%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/npm%20test-104%2F104%20passing-brightgreen)
 
 **Stellar Philippines Instawards — Month 2 (Sprint 2)**  
 **Track:** Decentralized Milestone Escrow for Filipino Freelancers  
@@ -136,6 +136,6 @@ For clean installation logs on other operating systems, inspect [CLEAN_INSTALL_L
 
 ## 📬 Builder Contact
 * **Primary Contact:** Mark Angel Guevarra ([marcangelguevarra@gmail.com](mailto:marcangelguevarra@gmail.com))
-* **Stellar Ambassador Chapter:** Stellar Philippines (Leads: Nelson Lumbres & Armielyn Obinguar)
+* **Stellar Ambassador Chapter:** Stellar Philippines (Chapter Lead: Nelson Lumbres; program contact: Armielyn Obinguar)
 * **Live App:** [https://gigpay.tech](https://gigpay.tech)
 * **Twitter / X:** [@GigPayPH](https://x.com/GigPayPH)

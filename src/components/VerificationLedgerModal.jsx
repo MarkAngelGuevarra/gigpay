@@ -208,7 +208,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Funded outside ↔ outside</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideFunded}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Client and freelancer both outside</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Client and freelancer both outside (3 look like duplicate locks: #52, #53, #66)</div>
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Released outside ↔ outside</div>

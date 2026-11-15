@@ -45,7 +45,7 @@ Then fill in the 2-minute tester form: **https://forms.gle/oLGjJRcxg5LZ5bC96** â
 
 ## Part 2 â€” For the GigPay team (how traction is tracked)
 
-**What counts** (Customer Development Plan + Instawards rules): real people, with on-chain activity, where **both** the client and the freelancer are outside wallets. Team, QA, founder and scripted wallets never count. Simulated or offline demo activity never counts.
+**What counts** (Customer Development Plan + Instawards rules): outside wallets with on-chain activity (counted as wallets, not verified people), where **both** the client and the freelancer are outside wallets. Team, QA, founder and scripted wallets never count. Simulated or offline demo activity never counts.
 
 ### Weekly routine (every Friday)
 1. Rebuild the evidence from the chain:
