@@ -173,6 +173,9 @@ test('Dispute metadata (time, initiator role, reason, resolution) is shown witho
   assert.strictEqual(open, 'Disputed 2026-11-06 10:12 UTC by client: Logo missing, write me at [address removed] (open: release frozen in GigPay)');
   const resolved = describeDispute({ ...base, status: 'In Progress', disputed_at: '2026-11-06T10:12:00Z', dispute_resolved_at: '2026-11-06T11:30:00Z' });
   assert.match(resolved, /^Disputed 2026-11-06 10:12 UTC by client: .*\. Resolved 2026-11-06 11:30 UTC$/);
+  // A reason that already ends in a full stop gets no second one (escrows #73, #74: "specification.. Resolved").
+  const dotted = describeDispute({ ...base, dispute_reason: 'Does not match the spec.', status: 'In Progress', disputed_at: '2026-11-06T10:12:00Z', dispute_resolved_at: '2026-11-06T11:30:00Z' });
+  assert.ok(dotted.endsWith('Does not match the spec. Resolved 2026-11-06 11:30 UTC'), dotted);
   assert.doesNotMatch(describeDispute({ ...base, disputed_by: 'someone-else', disputed_at: '2026-11-06T10:12:00Z' }), /by client/);
   assert.strictEqual(describeDispute({ status: 'Completed' }), '');
   assert.strictEqual(describeDispute(null), '');

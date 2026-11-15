@@ -346,12 +346,20 @@ await test('Invite address survives a reload or failed lock; accept signs once; 
   assert.ok(ctx.includes('if (previousId && currentId !== previousId) {'), "leaving an account clears its tasks from memory");
 });
 
-await test('Proof of work needs at least one link; a note alone is refused (SOW D3a, Nov 15, 2026)', () => {
+await test('Proof of work needs at least one link and pauses while disputed; release does not wait on the Sheet (SOW D3, Nov 15-16, 2026)', () => {
   const free = read('src/pages/FreelancerDashboard.jsx');
   const fn = free.slice(free.indexOf('const handleSubmitProof'), free.indexOf('setIsSubmittingPoW(true);'));
   assert.ok(fn.includes('if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {'), 'no link at all is refused, even with a note');
   assert.ok(!/!finalLoomUrl && !finalNotes\)/.test(fn), 'a note no longer counts as proof');
   assert.ok(fn.includes("!/^https:\\/\\//i.test(u)"), 'links must still start with https://');
+  // Nov 16, 2026: proof is paused on a Disputed task with a clear message; release does not wait on the Sheet.
+  assert.ok(free.includes('{isDisputed ? (') && free.includes('Proof of work is paused while this dispute is open.'), 'the proof button is replaced by a note while disputed');
+  assert.ok(free.includes('{isExpanded && !isDisputed && ('), 'the proof form cannot open on a disputed task');
+  const ctx = read('src/context/TaskContext.jsx');
+  const submitFn = ctx.slice(ctx.indexOf('const submitProofOfWork'), ctx.indexOf('const proofData = {'));
+  assert.ok(submitFn.includes("if (currentStatus === 'Disputed') {") && submitFn.includes('proof of work is paused'), 'submitting proof on a disputed task explains the freeze instead of a sign-in error');
+  const client = read('src/pages/ClientDashboard.jsx');
+  assert.ok(client.includes('await Promise.race([recordStudentToGoogleSheet({') && client.includes('setTimeout(resolve, 4000)'), 'the release window waits at most 4 seconds for the Sheet log');
 });
 
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);

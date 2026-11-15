@@ -31,6 +31,6 @@ Real clean-install runs, with unedited output, are recorded in [CLEAN_INSTALL_LO
 | Linux (Ubuntu 24.04.5 LTS) in a fresh cloud container (not a separate physical computer), Node 22 | ✅ Passed, 2026-11-05 |
 | macOS 26.7.2 (arm64) on a fresh GitHub-hosted virtual machine (not a personal computer), Node 22 | ✅ Passed, 2026-11-12 ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222)) |
 
-To add another run (for example on a personal Mac), follow "How to add environment 3" in [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
+To add another run (for example on a personal Mac), follow "How to add another environment" in [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 
 > **Correction, Nov 4, 2026.** An earlier version of this file reported passing runs on three environments that cannot be matched to real runs. For example, it listed Node v18.20.4, which cannot run this project's Vite 8 build. Only real runs are listed now.

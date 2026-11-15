@@ -168,7 +168,9 @@ const ClientDashboard = () => {
       // used to get the text "Confirmed on Testnet" instead of the hash. Already-released escrows have none.
       const releaseHash = result?.alreadyReleased ? '' : (result?.hash || '');
       const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
-      await recordStudentToGoogleSheet({
+      // The payment is already released on-chain; the Sheet log is best effort and never throws, so do not
+      // keep the release window open on slow Wi-Fi waiting for it (wait at most 4 seconds).
+      await Promise.race([recordStudentToGoogleSheet({
         emailForSourceDetection: user?.email || '',
         programSection: 'Client (Milestone Payout Released)',
         walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
@@ -176,7 +178,7 @@ const ClientDashboard = () => {
         amount: String(taskObj?.amount || '2.0'),
         releaseTxHash: releaseHash,
         feedbackSubmitted: false,
-      });
+      }), new Promise((resolve) => setTimeout(resolve, 4000))]);
       setTaskToApprove(null);
       setConfirmText('');
       // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an

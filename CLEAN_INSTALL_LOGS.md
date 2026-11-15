@@ -80,7 +80,7 @@ transforming...✓ 2431 modules transformed.
 
 ## Environment 3: macOS 26.7.2 (GitHub-hosted virtual machine), 2026-11-12 22:25 UTC (real output)
 
-Run by `.github/workflows/clean-install.yml` on a fresh GitHub-hosted macOS VM (image `macos-26-arm64`), following "How to add environment 3": a plain `git clone` of the public repo with no cache, then `npm ci`, `npm test` and `npm run build`. It is a separate, freshly created machine but not a personal computer. Full public log: https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222 (job 131537224261). Lines below are copied from that log; timestamps and unrelated lines are trimmed.
+Run by `.github/workflows/clean-install.yml` on a fresh GitHub-hosted macOS VM (image `macos-26-arm64`), following "How to add another environment": a plain `git clone` of the public repo with no cache, then `npm ci`, `npm test` and `npm run build`. It is a separate, freshly created machine but not a personal computer. Full public log: https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222 (job 131537224261). Lines below are copied from that log; timestamps and unrelated lines are trimmed.
 
 ```
 Thu Nov 12 22:25:58 UTC 2026
@@ -105,9 +105,9 @@ npm test exit code: 0
 ✓ built in 903ms
 ```
 
-## How to add environment 3
+## How to add another environment
 
-Use a computer that is not one of the two above (a different physical machine is best). Node.js 20.19 or newer is required.
+Use a computer that is not one of the three above (a different physical machine is best). Node.js 20.19 or newer is required.
 
 1. In an empty folder, run these and keep the terminal output:
    ```bash

@@ -599,6 +599,10 @@ export const TaskProvider = ({ children }) => {
       }
     }
     const alreadyReleased = currentStatus === 'Completed' || currentStatus === 'Paid';
+    // The database guard rejects proof on a Disputed task; say why instead of a misleading sign-in error.
+    if (currentStatus === 'Disputed') {
+      throw new Error("This task is disputed, so proof of work is paused. Talk with your client; once they resolve the dispute you can submit proof again.");
+    }
 
     const proofData = {
       status: alreadyReleased ? currentStatus : 'Under Review',

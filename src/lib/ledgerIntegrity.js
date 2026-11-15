@@ -162,7 +162,7 @@ export const describeDispute = (task) => {
   const when = minuteUtc(task.disputed_at);
   let text = `Disputed${when ? ' ' + when : ''}${by}${reason ? ': ' + reason : ''}`;
   if (isDisputeActive(task)) text += ' (open: release frozen in GigPay)';
-  else if (task.dispute_resolved_at) text += `. Resolved ${minuteUtc(task.dispute_resolved_at)}`;
+  else if (task.dispute_resolved_at) text += `${/[.!?]$/.test(text) ? '' : '.'} Resolved ${minuteUtc(task.dispute_resolved_at)}`;
   return text;
 };
 const DB_ONLY_SOURCE = 'Database only';

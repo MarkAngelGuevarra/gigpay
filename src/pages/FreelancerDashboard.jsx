@@ -494,7 +494,12 @@ const FreelancerDashboard = () => {
                     </div>
                   )}
 
-                  {/* Expandable Submission Form Button */}
+                  {/* Expandable Submission Form Button (hidden while a dispute freezes the task) */}
+                  {isDisputed ? (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingTop: '0.25rem' }}>
+                      Proof of work is paused while this dispute is open. Once your client resolves it, you can submit proof again.
+                    </div>
+                  ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.25rem' }}>
                     <button
                       type="button"
@@ -510,9 +515,10 @@ const FreelancerDashboard = () => {
                       Required before client milestone release
                     </span>
                   </div>
+                  )}
 
                   {/* Expandable PoW Form */}
-                  {isExpanded && (
+                  {isExpanded && !isDisputed && (
                     <div style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(99, 102, 241, 0.3)',
