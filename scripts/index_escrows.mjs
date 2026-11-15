@@ -33,6 +33,10 @@ const TEAM = {
   GDPGUVRSXTSZDIZRYEKGN6DHLB2JUPJ7G5DQ6J6DIDSGUZL5UCPHBM5W: 'team dry-run phone (freelancer)',
   // Same founder test, second run after the UX fixes (escrow #48, Nov 11, 2026): new browser on the client phone.
   GDTCEGKHNCF22RJX5RMCCCD34P2EZ7VQNFQXWNAKLE5RQUFJPXGHF6SG: 'team dry-run phone (client, 2nd browser)',
+  // Founder's walkthrough video recording (escrow #72, Nov 15, 2026): team demo, not users.
+  GBZQSBHIP5ZTG4VIJ4JY7ZMTW5NAD47BKB5ZE7OQ3OY5KHKF7OAWV6ET: 'team walkthrough video (client)',
+  GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN: 'team walkthrough video (freelancer)',
+  GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT: 'team walkthrough video part 2 (client)',
   // Testnet funding pool (fund-practice-wallet Edge Function). It only creates practice wallets.
   GAG74N2WUFBRSUP5JXQGGNZYO7VH73C72CZ3JTNEJDPICLWM7MNODYPZ: 'team Testnet funding pool'
 };

@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-14 11:34 UTC",
+  "generatedAt": "2026-11-15 16:21 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -853,6 +853,42 @@
       "releaseTxHash": "b9f71f6d169f31fcc3c7618226e6ba8df7566a79efd2dd4081a69a9bf59da6a5",
       "releasedAt": "2026-11-14T03:23:19Z",
       "walletKind": "Outside wallet"
+    },
+    {
+      "onChainTaskId": 72,
+      "amount": 2,
+      "clientWallet": "GBZQSBHIP5ZTG4VIJ4JY7ZMTW5NAD47BKB5ZE7OQ3OY5KHKF7OAWV6ET",
+      "freelancerWallet": "GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN",
+      "released": true,
+      "fundTxHash": "3b4158707d76fd09048e9ed45ab6e5f2f4c1b6e244fef26bc47f32f5c4301abb",
+      "fundedAt": "2026-11-15T14:01:30Z",
+      "releaseTxHash": "51f525930fca82665ff0804efca6261bab3737b7368dbd64fd83c6a17ce6a82f",
+      "releasedAt": "2026-11-15T14:02:55Z",
+      "walletKind": "Team test (team walkthrough video (client) → team walkthrough video (freelancer))"
+    },
+    {
+      "onChainTaskId": 73,
+      "amount": 2,
+      "clientWallet": "GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT",
+      "freelancerWallet": "GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN",
+      "released": true,
+      "fundTxHash": "3e2145e9d59d2f40baa88f3250e4a2080560522da72e654022d917c60932a4d5",
+      "fundedAt": "2026-11-15T15:25:25Z",
+      "releaseTxHash": "0fc66ae79c8716ed8be75a9385e67e405ec52b1cbfb56a08757ab1ca01df5bc1",
+      "releasedAt": "2026-11-15T15:27:05Z",
+      "walletKind": "Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer))"
+    },
+    {
+      "onChainTaskId": 74,
+      "amount": 2,
+      "clientWallet": "GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT",
+      "freelancerWallet": "GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN",
+      "released": true,
+      "fundTxHash": "e300e4389f719401bb6e2ae66cf26e3b3391652b9b4dfee899d74dcfb1e26735",
+      "fundedAt": "2026-11-15T16:09:55Z",
+      "releaseTxHash": "62ad76aea05c97e0bed98966af84746c7a60bb31c3886da7623c7d40cf66c5ef",
+      "releasedAt": "2026-11-15T16:11:50Z",
+      "walletKind": "Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer))"
     }
   ]
 }

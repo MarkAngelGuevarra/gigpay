@@ -346,5 +346,13 @@ await test('Invite address survives a reload or failed lock; accept signs once; 
   assert.ok(ctx.includes('if (previousId && currentId !== previousId) {'), "leaving an account clears its tasks from memory");
 });
 
+await test('Proof of work needs at least one link; a note alone is refused (SOW D3a, Nov 15, 2026)', () => {
+  const free = read('src/pages/FreelancerDashboard.jsx');
+  const fn = free.slice(free.indexOf('const handleSubmitProof'), free.indexOf('setIsSubmittingPoW(true);'));
+  assert.ok(fn.includes('if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {'), 'no link at all is refused, even with a note');
+  assert.ok(!/!finalLoomUrl && !finalNotes\)/.test(fn), 'a note no longer counts as proof');
+  assert.ok(fn.includes("!/^https:\\/\\//i.test(u)"), 'links must still start with https://');
+});
+
 console.log(`\n  Onboarding safety: ${passed}/${passed + failed} passed\n`);
 if (failed > 0) process.exit(1);

@@ -84,8 +84,10 @@ const FreelancerDashboard = () => {
     let finalLoomUrl = loomUrl ? loomUrl.trim() : '';
     const finalNotes = submissionNotes ? submissionNotes.trim() : '';
 
-    if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl && !finalNotes) {
-      addToast("Add a link to your work or a short note about what you delivered.", "warning");
+    // SOW D3(a): proof of work is at least one link (GitHub PR, document or Loom). A note alone isn't proof;
+    // the walkthrough recording on Nov 15, 2026 (escrow #73) showed a note-only submission was accepted.
+    if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {
+      addToast("Add at least one link to your work: a GitHub PR, a document, or a Loom video. The note is optional.", "warning");
       return;
     }
     // Only real web links are saved as proof; nothing is filled in on the freelancer's behalf.

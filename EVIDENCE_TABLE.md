@@ -52,7 +52,7 @@ The app now asks for confirmation before a second lock for the same freelancer a
 ## Sprint 2 on-chain traction
 
 <!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
-_Generated 2026-11-14 11:34 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
+_Generated 2026-11-15 16:21 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
 
 | SOW metric | On-chain count |
 |:---|:---:|
@@ -70,7 +70,7 @@ _Generated 2026-11-14 11:34 UTC from the same on-chain data. Only escrows where 
 ## On-chain escrows
 
 <!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->
-_Generated 2026-11-14 11:34 UTC from Stellar Testnet. 71 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 25 are also confirmed by the contract's return value on Soroban RPC._
+_Generated 2026-11-15 16:21 UTC from Stellar Testnet. 74 escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; 28 are also confirmed by the contract's return value on Soroban RPC._
 
 | | Count | Amount |
 |:---|:---:|:---:|
@@ -83,7 +83,9 @@ _Generated 2026-11-14 11:34 UTC from Stellar Testnet. 71 escrows. Every funding 
 | Team test (team device practice wallet (client) → team device practice wallet (freelancer)) | 5 | 2.5 XLM |
 | Team test (team dry-run phone (client) → team dry-run phone (freelancer)) | 1 | 2 XLM |
 | Team test (team dry-run phone (client, 2nd browser) → team dry-run phone (freelancer)) | 1 | 2 XLM |
-| **Released on-chain** | **58** | **3787.3 XLM** |
+| Team test (team walkthrough video (client) → team walkthrough video (freelancer)) | 1 | 2 XLM |
+| Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer)) | 2 | 4 XLM |
+| **Released on-chain** | **61** | **3793.3 XLM** |
 | **Escrows from outside wallets** | **24** | 1225 XLM |
 
 | # | Funded (UTC) | Client | Freelancer | Amount | Fund tx | Release tx | Released | Wallets |
@@ -159,6 +161,9 @@ _Generated 2026-11-14 11:34 UTC from Stellar Testnet. 71 escrows. Every funding 
 | 69 | 2026-11-13 06:16:44 | [`GBQWSWX7…`](https://stellar.expert/explorer/testnet/account/GBQWSWX77R3BUN3WY7FNUA5CGGTKX62LP4IRS72XFSOUBADGJFZACER3) | [`GCMGZKZ3…`](https://stellar.expert/explorer/testnet/account/GCMGZKZ3RYLIBXRYZWJLOGBFMNXN25OKCA7RKU6ZQFEBB462S2VO6KKI) | 1000 XLM | [`347c6a9eed…`](https://stellar.expert/explorer/testnet/tx/347c6a9eed5f391979c6d6b99f755c85a08a66c5162b5b1f2ac77ba50a18c988) | [`bb5e9ae9ca…`](https://stellar.expert/explorer/testnet/tx/bb5e9ae9ca479eb303f254e6b63dcb6494a40f2dd7102d18b4d99cf8f65eb80e) | Yes | Outside wallet |
 | 70 | 2026-11-13 07:17:34 | [`GBNHPWDF…`](https://stellar.expert/explorer/testnet/account/GBNHPWDFEIJ5A75OYBSQLNOR3JKEPSCHZIN53NXVSR4PH4FNGOK5AZ6T) | [`GDOW25PQ…`](https://stellar.expert/explorer/testnet/account/GDOW25PQHPGVM4EEYBZZUZ7LTWGLMWUS75BWBHYW7EQE62UZSKNR5MWE) | 100 XLM | [`6548f9f7f6…`](https://stellar.expert/explorer/testnet/tx/6548f9f7f65dccf50f9c5d841ad78bfd5bac20d9975e020036707b35d625775a) | [`49285356de…`](https://stellar.expert/explorer/testnet/tx/49285356dec0fae53ac3ba6f76185961a8303ee3257398a4386ae1ee284ec0af) | Yes | Outside wallet |
 | 71 | 2026-11-14 02:39:39 | [`GDGZ2XG3…`](https://stellar.expert/explorer/testnet/account/GDGZ2XG3ZOOQWXNWITOWRNQG3LOGBNA5D5G73ONETQK3DP5US5QNI556) | [`GB3NHDMN…`](https://stellar.expert/explorer/testnet/account/GB3NHDMNDRQEEEJUKXK7KHKIX4VDTRRIDXFXRYPEY2GDWZMIBJOL24BJ) | 2 XLM | [`24ddfd72c7…`](https://stellar.expert/explorer/testnet/tx/24ddfd72c77ae4f192a45f495cb3222f85097d667da7255129f75ef0da9e35a3) | [`b9f71f6d16…`](https://stellar.expert/explorer/testnet/tx/b9f71f6d169f31fcc3c7618226e6ba8df7566a79efd2dd4081a69a9bf59da6a5) | Yes | Outside wallet |
+| 72 | 2026-11-15 14:01:30 | [`GBZQSBHI…`](https://stellar.expert/explorer/testnet/account/GBZQSBHIP5ZTG4VIJ4JY7ZMTW5NAD47BKB5ZE7OQ3OY5KHKF7OAWV6ET) | [`GC7XXZPG…`](https://stellar.expert/explorer/testnet/account/GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN) | 2 XLM | [`3b4158707d…`](https://stellar.expert/explorer/testnet/tx/3b4158707d76fd09048e9ed45ab6e5f2f4c1b6e244fef26bc47f32f5c4301abb) | [`51f525930f…`](https://stellar.expert/explorer/testnet/tx/51f525930fca82665ff0804efca6261bab3737b7368dbd64fd83c6a17ce6a82f) | Yes | Team test (team walkthrough video (client) → team walkthrough video (freelancer)) |
+| 73 | 2026-11-15 15:25:25 | [`GD55LPUA…`](https://stellar.expert/explorer/testnet/account/GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT) | [`GC7XXZPG…`](https://stellar.expert/explorer/testnet/account/GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN) | 2 XLM | [`3e2145e9d5…`](https://stellar.expert/explorer/testnet/tx/3e2145e9d59d2f40baa88f3250e4a2080560522da72e654022d917c60932a4d5) | [`0fc66ae79c…`](https://stellar.expert/explorer/testnet/tx/0fc66ae79c8716ed8be75a9385e67e405ec52b1cbfb56a08757ab1ca01df5bc1) | Yes | Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer)) |
+| 74 | 2026-11-15 16:09:55 | [`GD55LPUA…`](https://stellar.expert/explorer/testnet/account/GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT) | [`GC7XXZPG…`](https://stellar.expert/explorer/testnet/account/GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN) | 2 XLM | [`e300e4389f…`](https://stellar.expert/explorer/testnet/tx/e300e4389f719401bb6e2ae66cf26e3b3391652b9b4dfee899d74dcfb1e26735) | [`62ad76aea0…`](https://stellar.expert/explorer/testnet/tx/62ad76aea05c97e0bed98966af84746c7a60bb31c3886da7623c7d40cf66c5ef) | Yes | Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer)) |
 <!-- END GENERATED ESCROW TABLE -->
 
 ## User adoption: verified numbers

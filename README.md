@@ -18,7 +18,7 @@
 - **Practice-wallet keys live in the browser** that created them. Clearing browser data or using private mode loses the wallet.
 - **Numbers are wallets, not verified people.** One person can create several wallets. Counting rules: [METRICS.md](METRICS.md).
 - **Clean installs:** verified on Windows 11 (Nov 4, 2026), Ubuntu 24.04 (Nov 5, 2026, in a cloud container) and macOS 26 (Nov 12, 2026, on a GitHub-hosted virtual machine). See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
-- **Walkthrough video:** pending; it will be linked here once published.
+- **Walkthrough video (Nov 15, 2026):** [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (Loom, 5:00: wallets, invite, lock, accept, CONFIRM release, public ledger) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Loom, 4:25: proof of work, dispute freeze and resolve, release, public ledger and CSV); recorded in two parts because Loom's free plan stops at 5 minutes.
 
 More detail is under "Known limitations" below.
 
@@ -42,10 +42,10 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 
 ## ✅ Verify in 2 minutes (for reviewers)
 1. **Contract:** [`CAUU2O5Z…7RD3` on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3). Live until about May 2027 (see [DEPLOYED_CONTRACT.md](DEPLOYED_CONTRACT.md)).
-2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 14, 2026: **71 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released end to end**, mostly from the BCC 2026 event. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
+2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 15, 2026: **74 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released end to end**, mostly from the BCC 2026 event. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every user number (onboarded, activated, repeat), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
-5. **Tests:** `npm ci && npm test` runs 100 offline tests in 7 suites.
+5. **Tests:** `npm ci && npm test` runs 104 offline tests in 7 suites.
 6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
 7. **Sprint 2 evidence map:** [docs/SPRINT2_EVIDENCE.md](docs/SPRINT2_EVIDENCE.md) maps each D1–D4 acceptance criterion to what exists and what evidence is still missing.
 8. **Dispute workflow:** [docs/DISPUTE_RESOLUTION.md](docs/DISPUTE_RESOLUTION.md) describes the app-level dispute freeze and how a dispute is resolved on Testnet (not arbitration).
@@ -79,9 +79,9 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 * **Accidental Release Guard:** AWS-style confirmation modal requiring users to type `"CONFIRM"` before escrow funds can be unlocked.
 
 ### 4. Automated Tests, Clean-Install Logs & Walkthrough Video (Deliverable 4 — $1,000)
-* **Automated Tests:** `npm test` runs 100 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 23 onboarding-safety, 18 chain-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
+* **Automated Tests:** `npm test` runs 104 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 27 onboarding-safety, 18 chain-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
 * **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC, in a Linux (Ubuntu 24.04) cloud container and on a GitHub-hosted macOS virtual machine. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
-* **Walkthrough video:** not yet published. The recording script is [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md).
+* **Walkthrough video:** [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (Loom, 5:00: wallets, invite, lock, accept, CONFIRM release, public ledger) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Loom, 4:25: proof of work, dispute freeze and resolve, release, public ledger and CSV); recorded in two parts because Loom's free plan stops at 5 minutes. Script: [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md). Its demo escrows (#72–#74) use team wallets and are not counted as outside use.
 
 ---
 
@@ -93,7 +93,7 @@ npm test
 ```
 
 ### Test Suites
-`npm test` runs 100 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (12), onboarding-at-scale (7), dispute-sync (8), onboarding-safety (23) and chain-safety (18) suites. The older suites below are not part of `npm test`; run them individually with `node <file>`. `soroban_sim` and `live_headless_e2e` need Stellar Testnet access and were not re-run for this README.
+`npm test` runs 104 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (12), onboarding-at-scale (7), dispute-sync (8), onboarding-safety (27) and chain-safety (18) suites. The older suites below are not part of `npm test`; run them individually with `node <file>`. `soroban_sim` and `live_headless_e2e` need Stellar Testnet access and were not re-run for this README.
 * `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9 checks).
 * `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
 * `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).

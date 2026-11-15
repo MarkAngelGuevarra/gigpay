@@ -1,6 +1,6 @@
 # Sprint 2 evidence map (D1–D4)
 
-Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 14, 2026 after BCC 2026 (Nov 12–13). Statuses are GigPay's own reading, not a program sign-off.
+Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 14, 2026 after BCC 2026 (Nov 12–13); D4(c) video (two parts) and D3 recording added November 15, 2026. Statuses are GigPay's own reading, not a program sign-off.
 
 - **Done:** the behaviour is in `main` and has a test or a public record.
 - **Partly:** some of it is in place, or it works but the required evidence is not there yet.
@@ -38,7 +38,7 @@ Notes:
 Notes:
 
 - (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. Outside users did so at BCC 2026 (see Success metric).
-- (b) The ledger reads a snapshot of the chain (71 escrows on Nov 14, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
+- (b) The ledger reads a snapshot of the chain (74 escrows on Nov 15, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
 - Before `b5e36eb` the CSV listed some escrows twice and left out #42, #43 and #45 as on-chain rows.
 
 ## Deliverable 3: proof of work, dispute freeze, CONFIRM
@@ -60,9 +60,9 @@ Notes:
 
 | Criterion | Status | Files | Commits | Evidence |
 |:---|:---|:---|:---|:---|
-| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 100 tests in 7 suites pass as of Nov 14, 2026 |
+| (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 104 tests in 7 suites pass as of Nov 15, 2026 |
 | (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Done (see note b) | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe`, `a65ddbf` | 3 runs: Windows 11, a Linux cloud container, and a macOS GitHub-hosted VM ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222)) |
-| (c) 3–5 minute walkthrough video published | Not yet | `DEMO_WALKTHROUGH_SCRIPT.md` (script only) | none | none |
+| (c) 3–5 minute walkthrough video published | Done (two parts) | [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00): practice wallets, invite, lock, accept, CONFIRM release, public ledger and CSV. [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25): proof of work, dispute freeze and resolve, CONFIRM release, public ledger and CSV. `npm test` is shown by CI on every push, not in the video. Two parts because Loom's free plan stops at 5:00; Part 1 describes but does not perform the proof and dispute steps | demo escrows #72–#74 (team wallets) | none |
 
 Notes:
 
@@ -73,9 +73,9 @@ Notes:
 
 SOW section 6.3 targets **at least 50 verifiable transactions between outside (non-team) wallets**; team, QA and scripted escrows are excluded.
 
-As of 2026-11-14 11:34 UTC the contract has 71 escrows. Most early ones are testing:
+As of 2026-11-15 the contract has 74 escrows. Most early ones are testing:
 
-- #1–#14, #36–#48 (27 escrows): team, QA or dry-run wallets.
+- #1–#14, #36–#48, #72–#74 (30 escrows): team, QA, dry-run or walkthrough-video wallets.
 - #16–#35 (20 escrows): created by a script on Nov 3, 2026.
 - #15 and #49–#71 (24 escrows): **between outside wallets**. #49–#70 were funded at the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026).
 
@@ -93,9 +93,7 @@ As of 2026-11-14 11:34 UTC the contract has 71 escrows. Most early ones are test
 
 ## Evidence still missing
 
-1. The 3–5 minute walkthrough video (D4c).
-2. Optional: a clean install on a second personal computer, since two of the three D4b runs are virtual machines.
-3. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
-4. More escrows funded **and released** between outside wallets: 40 of the 50 targeted transactions as of Nov 14, 2026, without duplicate locks (success metrics).
-5. Screenshots or a screen recording of proof submission, a dispute freeze and its resolution (SOW section 6.1, D3).
-6. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
+1. Optional: a clean install on a second personal computer, since two of the three D4b runs are virtual machines.
+2. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
+3. More escrows funded **and released** between outside wallets: 40 of the 50 targeted transactions as of Nov 14, 2026, without duplicate locks (success metrics).
+4. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
