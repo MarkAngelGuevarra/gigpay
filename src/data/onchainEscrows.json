@@ -1,6 +1,6 @@
 {
   "contractId": "CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3",
-  "generatedAt": "2026-11-15 16:21 UTC",
+  "generatedAt": "2026-11-17 01:53 UTC",
   "escrows": [
     {
       "onChainTaskId": 1,
@@ -888,6 +888,18 @@
       "fundedAt": "2026-11-15T16:09:55Z",
       "releaseTxHash": "62ad76aea05c97e0bed98966af84746c7a60bb31c3886da7623c7d40cf66c5ef",
       "releasedAt": "2026-11-15T16:11:50Z",
+      "walletKind": "Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer))"
+    },
+    {
+      "onChainTaskId": 75,
+      "amount": 2,
+      "clientWallet": "GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT",
+      "freelancerWallet": "GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN",
+      "released": true,
+      "fundTxHash": "927f9aa92dbce789d4922c23520f2b65d36cc38351f21b667d8fde6b8d19b3be",
+      "fundedAt": "2026-11-16T14:13:10Z",
+      "releaseTxHash": "cc98a0ecfd4bc1ae639903071e6e6976c1d05b56b1509d6f415706f16016bb2b",
+      "releasedAt": "2026-11-16T14:17:45Z",
       "walletKind": "Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer))"
     }
   ]
