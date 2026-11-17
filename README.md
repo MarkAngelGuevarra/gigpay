@@ -42,7 +42,7 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 
 ## ✅ Verify in 2 minutes (for reviewers)
 1. **Contract:** [`CAUU2O5Z…7RD3` on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3). Live until about May 2027 (see [DEPLOYED_CONTRACT.md](DEPLOYED_CONTRACT.md)).
-2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 15, 2026: **74 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released end to end**, mostly from the BCC 2026 event. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
+2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 17, 2026: **75 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released end to end**, mostly from the BCC 2026 event. Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every user number (onboarded, activated, repeat), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 5. **Tests:** `npm ci && npm test` runs 104 offline tests in 7 suites.
@@ -81,7 +81,7 @@ What GigPay has built against the 4 deliverables in the Month 2 Statement of Wor
 ### 4. Automated Tests, Clean-Install Logs & Walkthrough Video (Deliverable 4 — $1,000)
 * **Automated Tests:** `npm test` runs 104 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 27 onboarding-safety, 18 chain-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
 * **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC, in a Linux (Ubuntu 24.04) cloud container and on a GitHub-hosted macOS virtual machine. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
-* **Walkthrough video:** [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (Loom, 5:00: wallets, invite, lock, accept, CONFIRM release, public ledger) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Loom, 4:25: proof of work, dispute freeze and resolve, release, public ledger and CSV); recorded in two parts because Loom's free plan stops at 5 minutes. Script: [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md). Its demo escrows (#72–#74) use team wallets and are not counted as outside use.
+* **Walkthrough video:** [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (Loom, 5:00: wallets, invite, lock, accept, CONFIRM release, public ledger) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Loom, 4:25: proof of work, dispute freeze and resolve, release, public ledger and CSV); recorded in two parts because Loom's free plan stops at 5 minutes. Script: [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md). Its demo escrows (#72–#75) use team wallets and are not counted as outside use.
 
 ---
 

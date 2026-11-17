@@ -38,7 +38,7 @@ Notes:
 Notes:
 
 - (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. Outside users did so at BCC 2026 (see Success metric).
-- (b) The ledger reads a snapshot of the chain (74 escrows on Nov 15, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
+- (b) The ledger reads a snapshot of the chain (75 escrows on Nov 17, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
 - Before `b5e36eb` the CSV listed some escrows twice and left out #42, #43 and #45 as on-chain rows.
 
 ## Deliverable 3: proof of work, dispute freeze, CONFIRM
@@ -62,7 +62,7 @@ Notes:
 |:---|:---|:---|:---|:---|
 | (a) Automated suite (target 18 tests) passes with `npm test` | Done | `package.json`, `test/*.test.js` | baseline `222526d`, `28d36cd`; later suites listed above | `npm test`: 104 tests in 7 suites pass as of Nov 15, 2026 |
 | (b) Clean install on three separate computers, documented in `SETUP_VERIFICATION.md` | Done (see note b) | `SETUP_VERIFICATION.md`, `CLEAN_INSTALL_LOGS.md` | `ab47c2b`, `6f57ebe`, `a65ddbf` | 3 runs: Windows 11, a Linux cloud container, and a macOS GitHub-hosted VM ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222)) |
-| (c) 3–5 minute walkthrough video published | Done (two parts) | [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00): practice wallets, invite, lock, accept, CONFIRM release, public ledger and CSV. [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25): proof of work, dispute freeze and resolve, CONFIRM release, public ledger and CSV. `npm test` is shown by CI on every push, not in the video. Two parts because Loom's free plan stops at 5:00; Part 1 describes but does not perform the proof and dispute steps | demo escrows #72–#74 (team wallets) | none |
+| (c) 3–5 minute walkthrough video published | Done (two parts) | [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00): practice wallets, invite, lock, accept, CONFIRM release, public ledger and CSV. [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25): proof of work, dispute freeze and resolve, CONFIRM release, public ledger and CSV. `npm test` is shown by CI on every push, not in the video. Two parts because Loom's free plan stops at 5:00; Part 1 describes but does not perform the proof and dispute steps | demo escrows #72–#75 (team wallets) | none |
 
 Notes:
 
@@ -73,9 +73,9 @@ Notes:
 
 SOW section 6.3 targets **at least 50 verifiable transactions between outside (non-team) wallets**; team, QA and scripted escrows are excluded.
 
-As of 2026-11-15 the contract has 74 escrows. Most early ones are testing:
+As of 2026-11-17 the contract has 75 escrows. Most early ones are testing:
 
-- #1–#14, #36–#48, #72–#74 (30 escrows): team, QA, dry-run or walkthrough-video wallets.
+- #1–#14, #36–#48, #72–#75 (31 escrows): team, QA, dry-run or walkthrough-video wallets.
 - #16–#35 (20 escrows): created by a script on Nov 3, 2026.
 - #15 and #49–#71 (24 escrows): **between outside wallets**. #49–#70 were funded at the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026).
 

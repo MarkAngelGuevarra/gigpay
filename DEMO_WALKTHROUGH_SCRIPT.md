@@ -1,7 +1,7 @@
 # GigPay Walkthrough Video Script (3 to 5 minutes)
 **Stellar Philippines Instawards Sprint 2 &bull; SOW Deliverable 4 (c)**
 
-Script for recording the walkthrough on today's app at https://gigpay.tech (Stellar Testnet). Button names below are copied from the app; if the app changes, update this file before recording. Status: **recorded and published on Nov 15, 2026 in two parts: [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25: proof, dispute freeze, release, ledger).** Loom's free plan stops at 5 minutes. The demo escrows (#72–#74) used team wallets, which are on the team list.
+Script for recording the walkthrough on today's app at https://gigpay.tech (Stellar Testnet). Button names below are copied from the app; if the app changes, update this file before recording. Status: **recorded and published on Nov 15, 2026 in two parts: [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25: proof, dispute freeze, release, ledger).** Loom's free plan stops at 5 minutes. The demo escrows (#72–#75) used team wallets, which are on the team list.
 
 ---
 
