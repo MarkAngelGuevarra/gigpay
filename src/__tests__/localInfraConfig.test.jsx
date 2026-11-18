@@ -266,6 +266,7 @@ describe('Phase 1B local Supabase schema and Stellar parameterization', () => {
     const baselineSql = fs.readFileSync(path.join(migrationsDir, files[0]), 'utf8');
     const guardSql = fs.readFileSync(path.join(migrationsDir, '20261105023600_guard_task_updates_and_harden_auth_functions.sql'), 'utf8');
     const poolSql = fs.readFileSync(path.join(migrationsDir, '20261105120000_practice_wallet_funding_pool.sql'), 'utf8');
+    const hardeningSql = fs.readFileSync(path.join(migrationsDir, '20261119000000_harden_task_guards_and_constraints.sql'), 'utf8');
     const edgeFn = fs.readFileSync(path.join(repoRoot, 'supabase/functions/fund-practice-wallet/index.ts'), 'utf8');
 
     expect(baselineSql).toContain('create table if not exists public.profiles');
@@ -278,6 +279,12 @@ describe('Phase 1B local Supabase schema and Stellar parameterization', () => {
     expect(guardSql).toContain("to_regprocedure('public.handle_user_update()')");
     expect(guardSql).toContain('add column if not exists completed_at');
     expect(poolSql).toContain('gigpay_testnet_pool_secret');
+    expect(hardeningSql).toContain('not valid');
+    expect(hardeningSql).toContain('enforce_profile_update');
+    expect(hardeningSql).toContain('enforce_task_insert');
+    expect(hardeningSql).toContain('enforce_task_update');
+    expect(hardeningSql).toContain('^https://');
+    expect(hardeningSql).toContain("p.role = 'client'");
     expect(edgeFn).toContain('STELLAR_HORIZON_URL');
     expect(edgeFn).toContain('STELLAR_NETWORK_PASSPHRASE');
     expect(edgeFn).toContain('STELLAR_NETWORK');
