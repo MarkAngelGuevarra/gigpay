@@ -11,13 +11,15 @@ import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
+import { isPilotToolsEnabled } from '../lib/env';
 
 const FreelancerDashboard = () => {
-  const { user, publicKey, switchRole } = useAuth();
+  const { user, publicKey, switchRole, isSimulationMode } = useAuth();
   const { tasks, isLoading, refreshTasks, updateTaskStatus, submitProofOfWork } = useTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const pilotToolsEnabled = isPilotToolsEnabled();
   // Invite QR: the partner scans it with the camera app, so the link opens in the phone's real browser
   // (never a chat app's in-app browser) and the client signs up, locks and releases in that one browser.
   const [inviteQr, setInviteQr] = useState(null);
@@ -41,7 +43,7 @@ const FreelancerDashboard = () => {
   const availableTasks = tasks
     .filter(t => t.status === 'Available')
     .sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (user?.is_simulation_mode && t.freelancer_id === 'demo-freelancer-uuid-002')));
+  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (isSimulationMode && t.freelancer_id === 'demo-freelancer-uuid-002')));
   
   // Only escrows the contract actually released to this payout address (see onChainEarnings).
   const earnings = onChainEarnings(tasks, publicKey);
@@ -301,7 +303,7 @@ const FreelancerDashboard = () => {
       </div>
 
       {/* Pilot Tester Notice Card */}
-      {!isPilotCompleted && (
+      {pilotToolsEnabled && !isPilotCompleted && (
         <div 
           className="glass-panel" 
           style={{ 

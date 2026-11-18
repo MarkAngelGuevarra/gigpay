@@ -11,14 +11,16 @@ import { getDisputeMetadata } from '../lib/disputeMetadata';
 import { findRecentDuplicateLock, duplicateKey } from '../lib/duplicateLock';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
-import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
+import { recordStudentToGoogleSheet, isGoogleSheetsSyncEnabled } from '../lib/sheetsSync';
+import { isPilotToolsEnabled } from '../lib/env';
 
 const ClientDashboard = () => {
-  const { user, publicKey, connectTesterWallet, switchRole } = useAuth();
+  const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
   const { tasks, isLoading, refreshTasks, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const pilotToolsEnabled = isPilotToolsEnabled();
 
   const {
     isCompleted: isPilotCompleted,
@@ -39,8 +41,11 @@ const ClientDashboard = () => {
 
   // A task is yours only when its client_id is your account id. The offline demo account (no database)
   // also owns local tasks saved without a client_id; a real account never claims those or demo tasks.
-  const isDemoAccount = user?.id === 'demo-client-uuid-001';
-  const isOwnTask = (t) => !!user?.id && (t.client_id === user.id || (isDemoAccount && !t.client_id));
+  const isDemoAccount = isSimulationMode || user?.id === 'demo-client-uuid-001';
+  const isOwnTask = (t) => !!user?.id && (
+    t.client_id === user.id ||
+    (isDemoAccount && (!t.client_id || String(t.client_id).startsWith('demo-')))
+  );
   const ownTasks = tasks.filter(isOwnTask);
   const clientTasks = viewAllEscrows ? tasks : ownTasks;
 
@@ -170,15 +175,17 @@ const ClientDashboard = () => {
       const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
       // The payment is already released on-chain; the Sheet log is best effort and never throws, so do not
       // keep the release window open on slow Wi-Fi waiting for it (wait at most 4 seconds).
-      await Promise.race([recordStudentToGoogleSheet({
-        emailForSourceDetection: user?.email || '',
-        programSection: 'Client (Milestone Payout Released)',
-        walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
-        taskTitle: taskObj?.title || 'Milestone Escrow Release',
-        amount: String(taskObj?.amount || '2.0'),
-        releaseTxHash: releaseHash,
-        feedbackSubmitted: false,
-      }), new Promise((resolve) => setTimeout(resolve, 4000))]);
+      if (!isDemoAccount && isGoogleSheetsSyncEnabled()) {
+        await Promise.race([recordStudentToGoogleSheet({
+          emailForSourceDetection: user?.email || '',
+          programSection: 'Client (Milestone Payout Released)',
+          walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
+          taskTitle: taskObj?.title || 'Milestone Escrow Release',
+          amount: String(taskObj?.amount || '2.0'),
+          releaseTxHash: releaseHash,
+          feedbackSubmitted: false,
+        }), new Promise((resolve) => setTimeout(resolve, 4000))]);
+      }
       setTaskToApprove(null);
       setConfirmText('');
       // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an
@@ -405,7 +412,7 @@ const ClientDashboard = () => {
                 >
                   ⚡ Fill Sample Task (2 XLM)
                 </button>
-                {isPilotCompleted ? (
+                {pilotToolsEnabled && (isPilotCompleted ? (
                   <div
                     style={{
                       display: 'flex',
@@ -465,7 +472,7 @@ const ClientDashboard = () => {
                       <CheckCircle2 size={14} /> I've Completed It
                     </button>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           ) : null}
@@ -476,8 +483,8 @@ const ClientDashboard = () => {
             const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
             // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
             const isMine = isOwnTask(task);
-            // Link a transaction only when it really exists on Stellar Testnet (demo tasks have none).
-            const hasRealFundTx = !task.is_simulated && !isSimulatedTxHash(task.tx_hash) && !isNonEvidenceHash(task.tx_hash);
+            // Link a transaction only when it really exists on Stellar Testnet (demo/failed tasks have none).
+            const hasRealFundTx = !task.is_simulated && task.status !== 'Failed' && !isSimulatedTxHash(task.tx_hash) && !isNonEvidenceHash(task.tx_hash);
 
             return (
               <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderLeft: isDisputed ? '4px solid #ef4444' : '4px solid var(--accent)' }}>

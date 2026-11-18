@@ -4,14 +4,16 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { getAccountBalance, isSimulatorWallet, ensureEphemeralAccountFunded } from '../lib/stellar';
+import { getAccountBalance, isDemoWallet, isSimulatorWallet, ensureEphemeralAccountFunded, STELLAR_NETWORK_NAME } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
+import { isPilotToolsEnabled } from '../lib/env';
 
 const Navbar = () => {
-  const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, activeRole } = useAuth();
+  const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, activeRole, isSimulationMode } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const pilotToolsEnabled = isPilotToolsEnabled();
   const [error, setError] = useState('');
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
@@ -33,43 +35,48 @@ const Navbar = () => {
 
   useEffect(() => {
     let isMounted = true;
-    if (publicKey) {
-      setIsLoadingBalance(true);
-      const showBalance = (res) => {
-        if (!isMounted) return;
-        // Horizon unreachable: say so instead of showing a placeholder number.
-        if (res.unknown || (res.isDemo && isSimulatorWallet(publicKey))) setBalance('unavailable');
-        else setBalance(res.balance);
-        setIsLoadingBalance(false);
+    if (!user || !publicKey) {
+      setBalance(null);
+      setIsLoadingBalance(false);
+      return () => {
+        isMounted = false;
       };
-      getAccountBalance(publicKey)
-        .then(async (res) => {
-          // A new practice wallet is still waiting on Friendbot: show that, retry, then refresh.
-          if (!res.active && !res.unknown && isSimulatorWallet(publicKey)) {
-            if (isMounted) setBalance('Funding… (up to 30s)');
-            const funded = await ensureEphemeralAccountFunded(publicKey);
-            const after = await getAccountBalance(publicKey);
-            if (!funded && !after.active) {
-              if (isMounted) { setBalance('Not funded yet, refresh in a minute'); setIsLoadingBalance(false); }
-              return;
-            }
-            showBalance(after);
+    }
+
+    setIsLoadingBalance(true);
+    const showBalance = (res) => {
+      if (!isMounted) return;
+      // Horizon unreachable: say so instead of showing a placeholder number.
+      if (res.unknown || (res.isDemo && isSimulatorWallet(publicKey))) setBalance('unavailable');
+      else setBalance(res.balance);
+      setIsLoadingBalance(false);
+    };
+    getAccountBalance(publicKey)
+      .then(async (res) => {
+        // A new practice wallet is still waiting on Friendbot: only fund real signed-in non-simulation accounts.
+        if (!isSimulationMode && !isDemoWallet(publicKey) && !res.active && !res.unknown && isSimulatorWallet(publicKey)) {
+          if (isMounted) setBalance('Funding… (up to 30s)');
+          const funded = await ensureEphemeralAccountFunded(publicKey);
+          const after = await getAccountBalance(publicKey);
+          if (!funded && !after.active) {
+            if (isMounted) { setBalance('Not funded yet, refresh in a minute'); setIsLoadingBalance(false); }
             return;
           }
-          showBalance(res);
-        })
-        .catch(() => {
-          if (isMounted) setIsLoadingBalance(false);
-        });
-    } else {
-      setBalance(null);
-    }
+          showBalance(after);
+          return;
+        }
+        showBalance(res);
+      })
+      .catch(() => {
+        if (isMounted) setIsLoadingBalance(false);
+      });
+
     return () => {
       isMounted = false;
     };
   // Re-run after sign-in too: the GigPay pool only funds signed-in testers, so a wallet created before
   // sign-in (when Friendbot refused and the pool said 401) gets funded as soon as the tester signs in.
-  }, [publicKey, user?.id]);
+  }, [publicKey, user, user?.id, isSimulationMode]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -125,7 +132,7 @@ const Navbar = () => {
       <div className="navbar-actions">
         <div id="navbar-menu" className={`navbar-secondary${menuOpen ? ' is-open' : ''}`} onClick={(e) => { if (e.target.closest('a, button')) setMenuOpen(false); }}>
         {/* Dynamic Pilot Feedback Status Pill */}
-        {isPilotCompleted ? (
+        {pilotToolsEnabled && (isPilotCompleted ? (
           <button
             type="button"
             onClick={() => addToast('✓ Feedback received. Thank you for shaping GigPay.', 'info')}
@@ -222,7 +229,7 @@ const Navbar = () => {
           >
             🚀 Tester Feedback Form <ExternalLink size={13} />
           </a>
-        )}
+        ))}
         <button
           type="button"
           onClick={() => setShowLedgerModal(true)}
@@ -425,8 +432,8 @@ const Navbar = () => {
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Globe size={20} /></div>
                 <div>
-                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>3. Switch to {import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET'}</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Open the wallet settings and switch your network to "{import.meta.env.VITE_STELLAR_NETWORK || 'TESTNET'}".</p>
+                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>3. Switch to {STELLAR_NETWORK_NAME}</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Open the wallet settings and switch your network to "{STELLAR_NETWORK_NAME}".</p>
                 </div>
               </div>
             </div>

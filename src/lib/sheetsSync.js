@@ -1,4 +1,9 @@
-export const GOOGLE_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwA95Fxsf-PoPK1f95qvVZ3fLnGoGLZg7hW7iNy0EWh2WqE1pR6qO_QaK38Az2G5FNTPg/exec';
+import { getGoogleSheetsWebhookUrl, isOfflineDemoEnabled, isPilotToolsEnabled } from './env.js';
+
+export const GOOGLE_SHEETS_WEBHOOK_URL = getGoogleSheetsWebhookUrl();
+
+export const isGoogleSheetsSyncEnabled = () =>
+  !isOfflineDemoEnabled() && isPilotToolsEnabled() && Boolean(getGoogleSheetsWebhookUrl());
 
 /**
  * Detect event / campus source from:
@@ -65,8 +70,9 @@ export async function recordStudentToGoogleSheet({
   amount,
   releaseTxHash,
   feedbackSubmitted = false,
+  webhookUrl = getGoogleSheetsWebhookUrl(),
 }) {
-  if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
+  if (!webhookUrl || isOfflineDemoEnabled()) return;
 
   try {
     const detectedSource = detectEventSource(emailForSourceDetection);
@@ -84,7 +90,7 @@ export async function recordStudentToGoogleSheet({
       timestamp: new Date().toISOString(),
     };
 
-    await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+    await fetch(webhookUrl, {
       method: 'POST',
       mode: 'no-cors',
       keepalive: true,

@@ -191,11 +191,17 @@ await test('UI wording: Stellar Testnet, no personas, no X-Frame-Options meta', 
 await test('Activity log never sends a name or email', async () => {
   const sent = [];
   const realFetch = globalThis.fetch;
+  const previousWebhookUrl = process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+  process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL = 'https://example.invalid/webhook';
   globalThis.fetch = async (url, init) => { sent.push(String(init?.body || '')); return new Response('{}'); };
   try {
     const { recordStudentToGoogleSheet } = await import('../src/lib/sheetsSync.js');
     await recordStudentToGoogleSheet({ emailForSourceDetection: 'tester01@umak.edu.ph', programSection: 'Client', walletAddress: 'GTEST' });
-  } finally { globalThis.fetch = realFetch; }
+  } finally {
+    globalThis.fetch = realFetch;
+    if (previousWebhookUrl === undefined) delete process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+    else process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL = previousWebhookUrl;
+  }
   assert.strictEqual(sent.length, 1);
   assert.ok(!sent[0].includes('@') && !sent[0].includes('tester01'), 'no email or name in the payload');
   for (const f of ['src/pages/AuthPage.jsx', 'src/pages/ClientDashboard.jsx']) {

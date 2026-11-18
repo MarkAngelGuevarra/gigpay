@@ -13,6 +13,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PilotGuideWidget from './components/PilotGuideWidget';
 import PilotIntakeBanner from './components/PilotIntakeBanner';
 import { Analytics } from '@vercel/analytics/react';
+import { isLocalhostHostname, isOfflineDemoEnabled, isPilotToolsEnabled, isProdMode } from './lib/env';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -29,13 +30,16 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const pilotToolsEnabled = isPilotToolsEnabled();
+  const analyticsEnabled = isProdMode() && !isOfflineDemoEnabled() && !isLocalhostHostname();
+
   return (
     <ErrorBoundary>
       <AuthProvider>
         <ToastProvider>
           <TaskProvider>
             <Router>
-              <PilotIntakeBanner />
+              {pilotToolsEnabled && <PilotIntakeBanner />}
               <div className="container">
                 <Navbar />
                 <Routes>
@@ -69,8 +73,8 @@ function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </div>
-              <PilotGuideWidget />
-              <Analytics />
+              {pilotToolsEnabled && <PilotGuideWidget />}
+              {analyticsEnabled && <Analytics />}
             </Router>
           </TaskProvider>
         </ToastProvider>

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff } from 'lucide-react';
-import { recordStudentToGoogleSheet } from '../lib/sheetsSync';
+import { recordStudentToGoogleSheet, isGoogleSheetsSyncEnabled } from '../lib/sheetsSync';
 import { hasPendingInvite } from '../lib/invite';
 
 const AuthPage = () => {
@@ -77,18 +77,25 @@ const AuthPage = () => {
       } else {
         const data = await signUp(cleanEmail, cleanPassword, { role });
         const activeWallet = (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_wallet_public_key')) || 'Practice Keypair Pending';
-        await recordStudentToGoogleSheet({
-          emailForSourceDetection: cleanEmail,
-          programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',
-          walletAddress: activeWallet,
-          taskTitle: 'Awaiting Escrow Milestone',
-          amount: '2.0',
-          releaseTxHash: 'Registered',
-          feedbackSubmitted: false,
-        });
-        if (data?.session || data?.user) {
+        if (isGoogleSheetsSyncEnabled()) {
+          await recordStudentToGoogleSheet({
+            emailForSourceDetection: cleanEmail,
+            programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',
+            walletAddress: activeWallet,
+            taskTitle: 'Awaiting Escrow Milestone',
+            amount: '2.0',
+            releaseTxHash: 'Registered',
+            feedbackSubmitted: false,
+          });
+        }
+        if (data?.session) {
           addToast("Pilot account created! Redirecting to your dashboard...", "success");
           navigate(role === 'client' ? '/client' : '/freelancer');
+        } else if (data?.user) {
+          addToast("Account created! Please check your email and click the confirmation link before signing in.", "info");
+          setIsLogin(true);
+          setPassword('');
+          setConfirmPassword('');
         } else {
           addToast("Account created successfully! You can now sign in.", "success");
           setIsLogin(true);
