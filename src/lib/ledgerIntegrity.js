@@ -131,7 +131,7 @@ export const describePayout = (task, myAddress) => {
 // counting them showed 464 XLM "earned" on an account the contract had paid nothing.
 export const onChainEarnings = (tasks, payoutAddress) => {
   const paid = (tasks || []).filter((t) =>
-    t && t.status === 'Completed' && !t.is_simulated &&
+    t && (t.status === 'Completed' || t.status === 'Paid') && !t.is_simulated &&
     payoutAddress && t.freelancer_wallet === payoutAddress &&
     /^[0-9a-f]{64}$/.test(t.release_tx_hash || '') && !isNonEvidenceHash(t.release_tx_hash)
   );
@@ -149,6 +149,14 @@ const minuteUtc = (iso) => {
   return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : '';
 };
 
+export const redactPublicText = (text) =>
+  String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[address removed]')
+    .replace(/(?<![A-Za-z0-9])[GSC][A-Z2-7]{55}(?![A-Za-z0-9])/gi, '[address removed]')
+    .replace(/(?<![A-Za-z0-9])M[A-Z2-7]{68}(?![A-Za-z0-9])/gi, '[address removed]');
+
 /**
  * Dispute metadata for the public verification view (Sprint 2 draft D3c): when, who (as a role, never a name or
  * account) and why, plus the resolution time. Address-like text in the reason is removed, and the
@@ -157,8 +165,7 @@ const minuteUtc = (iso) => {
 export const describeDispute = (task) => {
   if (!task || (!task.disputed_at && task.status !== 'Disputed')) return '';
   const by = task.disputed_by && task.client_id && String(task.disputed_by) === String(task.client_id) ? ' by client' : '';
-  let reason = String(task.dispute_reason || '').replace(/\s+/g, ' ').trim()
-    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[address removed]');
+  let reason = redactPublicText(task.dispute_reason);
   if (reason.length > 160) reason = reason.slice(0, 157) + '...';
   const when = minuteUtc(task.disputed_at);
   let text = `Disputed${when ? ' ' + when : ''}${by}${reason ? ': ' + reason : ''}`;
@@ -182,10 +189,11 @@ const findTaskForHash = (hash, tasks) =>
 /** Ledger row for one escrow from src/data/onchainEscrows.json, with the linked task's title if any. */
 export const buildOnChainLedgerRow = (e, task = null) => {
   const hash = e.releaseTxHash || e.fundTxHash;
+  const safeTitle = task?.title ? redactPublicText(task.title) : '';
   return labelLedgerRecord({
     id: `onchain-${e.onChainTaskId}`,
     escrowId: e.onChainTaskId,
-    taskId: `Escrow #${e.onChainTaskId}` + (task?.title ? ` — ${task.title}` : '') + ` (${e.walletKind})`,
+    taskId: `Escrow #${e.onChainTaskId}` + (safeTitle ? ` — ${safeTitle}` : '') + ` (${e.walletKind})`,
     method: e.released ? 'fund_task & approve_task' : 'fund_task',
     amount: `${e.amount} XLM`,
     contractId: GIGPAY_ESCROW_CONTRACT_ID,
