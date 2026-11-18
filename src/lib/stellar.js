@@ -1,6 +1,7 @@
 import freighterApi from '@stellar/freighter-api';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { isDisputeActive } from './taskLifecycle.js';
+import { getEnvVar, isOfflineDemoEnabled } from './env.js';
 
 const {
   isAllowed,
@@ -20,10 +21,13 @@ export const NETWORK_LOAD_TIMEOUT_MS = 15000;
 export const NETWORK_RPC_TIMEOUT_MS = 20000;
 
 const withTimeout = (promise, ms) => {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
-  ]);
+  let timerId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timerId = setTimeout(() => reject(new Error('TIMEOUT')), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timerId);
+  });
 };
 
 // A simulated public key used exclusively if the real wallet fails to load
@@ -62,8 +66,12 @@ export const isSimulatedTxHash = (hash) => {
  * The auto-signing simulator wallet exists for Testnet pilots only. It keeps its secret key in
  * browser storage, so it must never sign on Mainnet, where that key would control real funds.
  */
+export const isOfflineMode = () =>
+  isOfflineDemoEnabled() ||
+  (typeof globalThis !== 'undefined' && globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER === true);
+
 export const isEphemeralSignerAllowed = (network = NETWORK) =>
-  network === 'TESTNET' && !(typeof globalThis !== 'undefined' && globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER === true);
+  network === 'TESTNET' && !isOfflineMode();
 // GIGPAY_DISABLE_SIMULATOR_SIGNER lets test suites run the full flow in offline demo mode, so routine test
 // runs do not create escrows on the shared production contract (and pollute its evidence).
 
@@ -270,14 +278,16 @@ export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
   return null;
 };
 
-const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 // GigPay is a Stellar Testnet pilot only (mainnet is out of scope), so the network is fixed.
 const NETWORK = 'TESTNET';
-const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
+const HORIZON_URL = getEnvVar(
+  'VITE_HORIZON_URL',
+  NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org"
+);
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
 
 export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
-export const SOROBAN_RPC_URL = env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+export const SOROBAN_RPC_URL = getEnvVar('VITE_SOROBAN_RPC_URL', "https://soroban-testnet.stellar.org");
 export const STELLAR_NETWORK_PASSPHRASE = PASSPHRASE;
 export const STELLAR_NETWORK_NAME = NETWORK;
 export const NATIVE_SAC_CONTRACT_ID = StellarSdk.Asset.native().contractId(PASSPHRASE);
@@ -291,6 +301,9 @@ export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
  * Returns healthy status or graceful fallback details if RPC is slow.
  */
 export const checkSorobanRpcHealth = async () => {
+  if (isOfflineDemoEnabled()) {
+    return { status: 'OFFLINE_DEMO', rpcUrl: SOROBAN_RPC_URL };
+  }
   try {
     const health = await withTimeout(sorobanServer.getHealth(), 10000);
     return { status: health.status || 'HEALTHY', rpcUrl: SOROBAN_RPC_URL };
@@ -370,7 +383,7 @@ export const connectWallet = async () => {
  * @returns {Promise<{ balance: string, raw: number, active: boolean, isDemo: boolean }>}
  */
 export const getAccountBalance = async (publicKey) => {
-  if (!publicKey || isDemoWallet(publicKey)) {
+  if (isOfflineDemoEnabled() || !publicKey || isDemoWallet(publicKey)) {
     const isFreelancer = (typeof publicKey === 'string' ? publicKey.trim() : '') === DEMO_FREELANCER_KEY;
     const amount = isFreelancer ? "500.00" : "10,000.00";
     const rawVal = isFreelancer ? 500 : 10000;
@@ -404,10 +417,10 @@ export const getAccountBalance = async (publicKey) => {
  * Triggers a Freighter popup asking the user to sign a transaction.
  * If in Demo Mode, automatically simulates a successful signature after a 1.5s delay.
  */
-export const requestWalletSignature = async (publicKey, description) => {
+export const requestWalletSignature = async (publicKey, description, { offlineDemo = false } = {}) => {
   try {
-    // If we are using the fallback demo wallet, simulate a successful transaction instantly
-    if (isDemoWallet(publicKey)) {
+    // Offline/simulation sessions and demo keys simulate signatures locally without Horizon or Freighter.
+    if (offlineDemo || isOfflineDemoEnabled() || isDemoWallet(publicKey)) {
       console.log(`[DEMO MODE] Simulating signature for: ${description}`);
       await new Promise(resolve => setTimeout(resolve, 1500)); // Fake loading delay
       return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
@@ -472,11 +485,6 @@ export const requestWalletSignature = async (publicKey, description) => {
     return { success: true, signedXdr: signedTx };
   } catch (error) {
     console.error("Wallet Signature Error or Timeout.", error);
-    // Only simulate success in local development — production must surface real errors
-    if (import.meta.env.DEV) {
-      console.warn("[DEV ONLY] Simulating success for Demo.");
-      return { success: true, signedXdr: "DEMO_SIGNED_XDR_PAYLOAD" };
-    }
     throw error;
   }
 };
@@ -496,9 +504,15 @@ export const simulateFundTask = async ({
   clientAddress,
   freelancerAddress = DEFAULT_FREELANCER_TESTNET_ADDRESS,
   amount,
-  tokenAddress = NATIVE_SAC_CONTRACT_ID
+  tokenAddress = NATIVE_SAC_CONTRACT_ID,
+  offlineDemo = false
 }) => {
-  if (!clientAddress || isDemoWallet(clientAddress)) {
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error('Enter a valid positive amount in XLM.');
+  }
+
+  if (offlineDemo || isOfflineDemoEnabled() || !clientAddress || isDemoWallet(clientAddress)) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
       preparedTx: null,
@@ -512,7 +526,7 @@ export const simulateFundTask = async ({
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
 
   // Convert decimal amount to 7-decimal Stroops (i128 BigInt)
-  const stroops = BigInt(Math.round(parseFloat(amount) * 10_000_000));
+  const stroops = BigInt(Math.round(numericAmount * 10_000_000));
 
   const tx = new StellarSdk.TransactionBuilder(account, {
     fee: StellarSdk.BASE_FEE,
@@ -782,6 +796,9 @@ export const sendAndConfirm = async (signedTx, { server = sorobanServer, poll = 
  * Returns { status: 'SUCCESS', onChainTaskId } | { status: 'FAILED' } | { status: 'NOT_FOUND' }.
  */
 export const getFundTaskOutcome = async (txHash, { server = sorobanServer } = {}) => {
+  if (isOfflineDemoEnabled() && server === sorobanServer) {
+    return { status: 'NOT_FOUND' };
+  }
   const tx = await server.getTransaction(txHash);
   if (tx.status === 'SUCCESS') {
     let onChainTaskId = null;
@@ -830,7 +847,8 @@ export const submitFundTask = async ({
   clientAddress,
   freelancerAddress,
   amount,
-  tokenAddress = NATIVE_SAC_CONTRACT_ID
+  tokenAddress = NATIVE_SAC_CONTRACT_ID,
+  offlineDemo = false
 }, { checkPayout = checkFreelancerPayoutAccount, onSigned = null } = {}) => {
   // onSigned({ hash, clientAddress, freelancerAddress }) runs after signing and BEFORE sending, so the caller
   // can save the task as "Confirming" first. If it throws, nothing is sent and no money moves. (At BCC 2026,
@@ -847,10 +865,11 @@ export const submitFundTask = async ({
   }
 
   // 2. Resolve the signer: Ephemeral / Simulator / Extensionless mode signs on-chain automatically,
-  //    once its Testnet account is confirmed to exist.
-  const ephemeralSigner = await getOrProvisionEphemeralSigner(clientAddress);
+  //    once its Testnet account is confirmed to exist. Offline/sandbox sessions never provision Testnet keys.
+  const simulationOnly = offlineDemo || isOfflineDemoEnabled();
+  const ephemeralSigner = simulationOnly ? null : await getOrProvisionEphemeralSigner(clientAddress);
   const effectiveClientAddress = ephemeralSigner ? ephemeralSigner.publicKey : clientAddress;
-  const isOfflineDemo = !effectiveClientAddress || isDemoWallet(effectiveClientAddress);
+  const isOfflineDemo = simulationOnly || !effectiveClientAddress || isDemoWallet(effectiveClientAddress);
 
   // 2b. The payout address is fixed at fund time. Only the offline demo (nothing on-chain) may fall back to
   //     the demo freelancer key; a real escrow never silently pays a team wallet instead of the freelancer.
@@ -870,14 +889,7 @@ export const submitFundTask = async ({
     throw new Error(formatStellarError({ name: 'NotFoundError', message: 'Not Found' }));
   }
 
-  // 3. Pre-flight base reserve and gas fee check against the wallet that will actually pay
-  //    (checking the placeholder demo key here always reported 10,000 XLM).
-  const balanceCheck = await checkBalanceSufficiency(effectiveClientAddress, amount);
-  if (!balanceCheck.sufficient) {
-    throw new Error(balanceCheck.error);
-  }
-
-  if (!effectiveClientAddress || isDemoWallet(effectiveClientAddress)) {
+  if (isOfflineDemo) {
     console.log(`[DEMO MODE] Offline fallback for fund_task (${amount} XLM)`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     return {
@@ -887,6 +899,13 @@ export const submitFundTask = async ({
       freelancerAddress: payoutAddress,
       isDemo: true
     };
+  }
+
+  // 3. Pre-flight base reserve and gas fee check against the wallet that will actually pay
+  //    (checking the placeholder demo key here always reported 10,000 XLM).
+  const balanceCheck = await checkBalanceSufficiency(effectiveClientAddress, amount);
+  if (!balanceCheck.sufficient) {
+    throw new Error(balanceCheck.error);
   }
 
   try {
@@ -1000,6 +1019,7 @@ const isMissingTaskError = (msg) => /UnreachableCodeReached|InvalidAction|Missin
  * contract has no task with that ID. Throws when Soroban RPC can't answer, so "unknown" is never read as "not found".
  */
 export const getOnChainTask = async (onChainTaskId, { server = sorobanServer } = {}) => {
+  if (isOfflineDemoEnabled() && server === sorobanServer) return null;
   const id = toU32TaskId(onChainTaskId);
   if (id === null) return null;
   const tx = new StellarSdk.TransactionBuilder(new StellarSdk.Account(READ_ONLY_SOURCE_ACCOUNT, '0'), {
@@ -1086,10 +1106,10 @@ export const resolveConfirmingFunding = async (task, outcome, { findEscrowId = f
  * @param {number|string} params.taskId - On-chain task ID (u32)
  * @returns {Promise<{ simulation: Object, preparedTx: StellarSdk.Transaction, minResourceFee: string, isDemo: boolean }>}
  */
-export const simulateApproveTask = async ({ clientAddress, taskId }) => {
+export const simulateApproveTask = async ({ clientAddress, taskId, offlineDemo = false }) => {
   const resolvedTaskId = (taskId && typeof taskId === 'object') ? (taskId.id || taskId.taskId) : taskId;
   const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
-  if (!clientAddress || isDemoWallet(clientAddress) || isMockTask) {
+  if (offlineDemo || isOfflineDemoEnabled() || !clientAddress || isDemoWallet(clientAddress) || isMockTask) {
     return {
       simulation: { status: 'SUCCESS_SIMULATED_DEMO', minResourceFee: '100' },
       preparedTx: null,
@@ -1192,7 +1212,7 @@ export const wrongBrowserReleaseMessage = (address) =>
   "Open GigPay in the browser where you locked the funds (usually the one you opened from the invite link) and release it there. Nothing was sent and no money moved.";
 
 export const submitApproveTask = async (
-  { clientAddress, taskId },
+  { clientAddress, taskId, offlineDemo = false },
   { prepare = simulateApproveTask, send = sendAndConfirm, readTask = getOnChainTask, freighterReady = isFreighterReady } = {}
 ) => {
   const taskRecord = (taskId && typeof taskId === 'object') ? taskId : null;
@@ -1206,10 +1226,11 @@ export const submitApproveTask = async (
     throw new Error(DISPUTE_FROZEN_MESSAGE);
   }
 
-  const ephemeralSigner = await getOrProvisionEphemeralSigner(clientAddress);
+  const simulationOnly = offlineDemo || isOfflineDemoEnabled();
+  const ephemeralSigner = simulationOnly ? null : await getOrProvisionEphemeralSigner(clientAddress);
   const effectiveClientAddress = ephemeralSigner ? ephemeralSigner.publicKey : clientAddress;
 
-  if (!effectiveClientAddress || isDemoWallet(effectiveClientAddress) || isMockTask) {
+  if (simulationOnly || !effectiveClientAddress || isDemoWallet(effectiveClientAddress) || isMockTask) {
     return demoReleaseResult(`Task #${resolvedTaskId}`);
   }
 

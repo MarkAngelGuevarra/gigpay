@@ -132,10 +132,20 @@ await test('Failed on-chain release rejects instead of returning a simulated suc
   const signer = seedEphemeralSigner();
   let result;
   await assert.rejects(async () => {
-    result = await quiet(() => submitApproveTask({
-      clientAddress: signer,
-      taskId: { id: '11111111-2222-4333-8444-777777777777', status: 'Under Review', on_chain_task_id: 999999, tx_hash: REAL_LOOKING_FUND_HASH }
-    }));
+    result = await quiet(() => submitApproveTask(
+      {
+        clientAddress: signer,
+        taskId: { id: '11111111-2222-4333-8444-777777777777', status: 'Under Review', on_chain_task_id: 999999, tx_hash: REAL_LOOKING_FUND_HASH }
+      },
+      {
+        prepare: async () => {
+          const err = new Error('Not Found');
+          err.response = { status: 404 };
+          throw err;
+        },
+        readTask: async () => null
+      }
+    ));
   });
   assert.strictEqual(result, undefined);
 });

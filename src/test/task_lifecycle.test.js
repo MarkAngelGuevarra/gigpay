@@ -124,9 +124,12 @@ class TaskContextSimulator {
     const txHash = fundResult?.isDemo ? 'demo_fund_' + Date.now().toString(16) : 'tx_' + Date.now();
     const explorerUrl = `https://stellar.expert/explorer/testnet/tx/${txHash}`;
 
-    // 2. Database attempt with automatic fallback
+    // 2. Database attempt with automatic fallback (skipped by default so local runs stay offline)
     let savedTask = null;
     try {
+      if (process.env.GIGPAY_LIVE_DB !== '1') {
+        throw new Error('Offline task lifecycle test mode');
+      }
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
