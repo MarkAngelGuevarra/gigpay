@@ -84,6 +84,7 @@ Also:
 | On-chain indexer | `scripts/index_escrows.mjs`, `src/data/onchainEscrows.json` |
 | Tests | `test/*.test.js` |
 | Evidence and rules | `docs/SPRINT2_EVIDENCE.md`, `EVIDENCE_TABLE.md`, `METRICS.md`, `docs/DISPUTE_RESOLUTION.md`, `PRIVACY.md` |
+| Proposed v2 contract spec (pending approval) | `docs/CONTRACT_V2_SPEC.md` |
 
 ## 10. Good places to help (ask before starting)
 
