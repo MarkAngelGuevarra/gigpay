@@ -6,36 +6,50 @@ import { Eye, EyeOff } from 'lucide-react';
 import { recordStudentToGoogleSheet, isGoogleSheetsSyncEnabled } from '../lib/sheetsSync';
 import { hasPendingInvite } from '../lib/invite';
 
+const isSignupUrl = (search) => {
+  const params = new URLSearchParams(search);
+  return params.get('mode') === 'signup' || params.get('signup') === '1';
+};
+const startOnSignup = (search) => isSignupUrl(search) || hasPendingInvite();
+
 const AuthPage = () => {
-  const { signIn, signUp, loginSimulationMode } = useAuth();
+  const { signIn, signUp, loginSimulationMode, user, isLoading: authLoading, activeRole } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
   
   const location = useLocation();
-  const isSignupUrl = (search) => {
-    const params = new URLSearchParams(search);
-    return params.get('mode') === 'signup' || params.get('signup') === '1';
-  };
   // A partner who scanned the invite QR (or opened the invite link) is new and will be the Client: start on
   // Sign Up with Client chosen, instead of "Welcome Back" (the redirect to /auth drops ?pay= and the mode).
   const invited = hasPendingInvite();
-  const startOnSignup = (search) => isSignupUrl(search) || hasPendingInvite();
   const [isLogin, setIsLogin] = useState(() => !startOnSignup(location.search));
+  // No silent default: a freelancer who skipped the picker used to become a Client. Invited partners are Clients.
+  const [role, setRole] = useState(() => (hasPendingInvite() ? 'client' : null));
   // The navbar links to /auth?mode=signup and /auth while this page is already open; follow each
   // navigation (a new location key, even to the same URL) instead of reading the mode only once.
   useEffect(() => {
     setIsLogin(!startOnSignup(location.search));
+    setPendingConfirmationEmail('');
+    const requestedRole = new URLSearchParams(location.search).get('role');
+    if (requestedRole === 'client' || requestedRole === 'freelancer') {
+      setRole(requestedRole);
+    }
   }, [location.search, location.key]);
   // Grant reviewers' shared demo accounts and the sandbox only appear on /auth?reviewer=1, so students
   // can't wander into activity that never counts as a tester.
   const showReviewerTools = new URLSearchParams(location.search).get('reviewer') === '1';
+
+  useEffect(() => {
+    if (!authLoading && user && !showReviewerTools) {
+      navigate(activeRole === 'freelancer' ? '/freelancer' : '/client', { replace: true });
+    }
+  }, [authLoading, user, showReviewerTools, activeRole, navigate]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
-  // No silent default: a freelancer who skipped the picker used to become a Client. Invited partners are Clients.
-  const [role, setRole] = useState(() => (hasPendingInvite() ? 'client' : null));
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const processSubmit = async () => {
@@ -71,6 +85,7 @@ const AuthPage = () => {
     try {
       if (isLogin) {
         const data = await signIn(cleanEmail, cleanPassword);
+        setPendingConfirmationEmail('');
         addToast("Logged in successfully!", "success");
         const userRole = data.user?.user_metadata?.role || 'client';
         navigate(userRole === 'client' ? '/client' : '/freelancer');
@@ -78,25 +93,33 @@ const AuthPage = () => {
         const data = await signUp(cleanEmail, cleanPassword, { role });
         const activeWallet = (typeof localStorage !== 'undefined' && localStorage.getItem('gigpay_wallet_public_key')) || 'Practice Keypair Pending';
         if (isGoogleSheetsSyncEnabled()) {
-          await recordStudentToGoogleSheet({
-            emailForSourceDetection: cleanEmail,
-            programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',
-            walletAddress: activeWallet,
-            taskTitle: 'Awaiting Escrow Milestone',
-            amount: '2.0',
-            releaseTxHash: 'Registered',
-            feedbackSubmitted: false,
-          });
+          await Promise.race([
+            recordStudentToGoogleSheet({
+              emailForSourceDetection: cleanEmail,
+              programSection: role === 'client' ? 'Client (Student Tester)' : 'Freelancer (Student Tester)',
+              walletAddress: activeWallet,
+              taskTitle: 'Awaiting Escrow Milestone',
+              amount: '2.0',
+              releaseTxHash: 'Registered',
+              feedbackSubmitted: false,
+            }).catch((sheetErr) => {
+              console.warn('Google Sheets signup sync failed:', sheetErr);
+            }),
+            new Promise((resolve) => setTimeout(resolve, 4000)),
+          ]);
         }
         if (data?.session) {
+          setPendingConfirmationEmail('');
           addToast("Pilot account created! Redirecting to your dashboard...", "success");
           navigate(role === 'client' ? '/client' : '/freelancer');
         } else if (data?.user) {
+          setPendingConfirmationEmail(cleanEmail);
           addToast("Account created! Please check your email and click the confirmation link before signing in.", "info");
           setIsLogin(true);
           setPassword('');
           setConfirmPassword('');
         } else {
+          setPendingConfirmationEmail('');
           addToast("Account created successfully! You can now sign in.", "success");
           setIsLogin(true);
           setPassword('');
@@ -156,7 +179,10 @@ const AuthPage = () => {
         }}>
           <button
             type="button"
-            onClick={() => setIsLogin(false)}
+            onClick={() => {
+              setIsLogin(false);
+              setPendingConfirmationEmail('');
+            }}
             style={{
               flex: 1.2,
               padding: '0.6rem 0.5rem',
@@ -201,6 +227,24 @@ const AuthPage = () => {
             : 'Register with your email to join the GigPay Testnet pilot. Practice money only.'}
         </p>
         
+        {isLogin && pendingConfirmationEmail && (
+          <div
+            role="status"
+            data-testid="email-confirmation-banner"
+            style={{
+              background: 'rgba(0, 242, 254, 0.1)',
+              border: '1px solid rgba(0, 242, 254, 0.45)',
+              borderRadius: '0.5rem',
+              padding: '0.7rem 0.85rem',
+              marginBottom: '1rem',
+              fontSize: '0.88rem',
+              color: 'white'
+            }}
+          >
+            Confirmation link sent to <strong>{pendingConfirmationEmail}</strong>. Click the link in your email before signing in.
+          </div>
+        )}
+
         {!isLogin && invited && (
           <div data-testid="invite-banner" style={{ background: 'rgba(0, 242, 254, 0.1)', border: '1px solid rgba(0, 242, 254, 0.4)', borderRadius: '0.5rem', padding: '0.65rem 0.8rem', marginBottom: '1rem', fontSize: '0.9rem', color: 'white' }}>
             Your partner invited you. Create your <strong>Client</strong> account below, then do everything in this browser.
@@ -210,8 +254,8 @@ const AuthPage = () => {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {!isLogin && (
             <div data-testid="role-picker">
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'white', fontWeight: 600 }}>Your role in this pair</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div id="auth-role-picker-label" style={{ display: 'block', marginBottom: '0.5rem', color: 'white', fontWeight: 600 }}>Your role in this pair</div>
+              <div role="group" aria-labelledby="auth-role-picker-label" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
                   { value: 'freelancer', title: 'Freelancer (Working)', sub: 'I do the work and get paid (sign up first)', color: '#a78bfa' },
                   { value: 'client', title: 'Client (Hiring)', sub: 'I pay for the work (I scanned my partner\'s QR)', color: 'var(--accent)' },
@@ -242,8 +286,9 @@ const AuthPage = () => {
             </div>
           )}
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email</label>
+            <label htmlFor="auth-email" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email</label>
             <input 
+              id="auth-email"
               type="email"
               autoComplete="email" 
               value={email}
@@ -254,9 +299,10 @@ const AuthPage = () => {
             />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Password</label>
+            <label htmlFor="auth-password" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Password</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input 
+                id="auth-password"
                 type={showPassword ? "text" : "password"} 
                 value={password}
                 autoComplete={isLogin ? "current-password" : "new-password"}
@@ -300,9 +346,10 @@ const AuthPage = () => {
 
           {!isLogin && (
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Confirm Password</label>
+              <label htmlFor="auth-confirm-password" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Confirm Password</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input 
+                  id="auth-confirm-password"
                   type={showPassword ? "text" : "password"} 
                   value={confirmPassword}
                   autoComplete="new-password"
