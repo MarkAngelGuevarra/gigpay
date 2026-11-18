@@ -27,7 +27,7 @@ const isNetworkOrOfflineError = (err) => {
 // key, give them this browser's own practice wallet instead (Testnet only; falls back to the demo key).
 const upgradeDemoKey = (key) => (key && isDemoWallet(key) ? (provisionSimulatorWallet() || key) : key);
 
-const clearStoredSessionCaches = () => {
+const clearStoredSessionCaches = ({ preserveInvite = false } = {}) => {
   try {
     localStorage.removeItem('gigpay_demo_user');
     localStorage.removeItem('gigpay_wallet_public_key');
@@ -43,7 +43,9 @@ const clearStoredSessionCaches = () => {
   } catch (e) {
     console.warn("Storage cleanup notice:", e);
   }
-  clearInvitePayout();
+  if (!preserveInvite) {
+    clearInvitePayout();
+  }
 };
 
 const applySessionPublicKey = (setRawPublicKey, key, { upgrade = true } = {}) => {
@@ -71,7 +73,7 @@ const rehydrateSessionWallet = (sessionUser, setRawPublicKey) => {
       !(isSimulationUser({ id: previousOwner }) && sim);
 
     if (ownerMismatch) {
-      clearStoredSessionCaches();
+      clearStoredSessionCaches({ preserveInvite: true });
     }
 
     // Bind the practice-wallet owner namespace before inspecting or provisioning keys.
@@ -251,7 +253,7 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
     sessionOverrideRef.current = true;
-    clearStoredSessionCaches();
+    clearStoredSessionCaches({ preserveInvite: true });
     setPracticeWalletOwner(null);
     if (data?.session && data?.user) {
       await loadDbRole(data.user);
