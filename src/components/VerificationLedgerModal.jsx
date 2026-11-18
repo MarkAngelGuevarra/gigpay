@@ -34,7 +34,7 @@ const WalletLink = ({ address }) => {
   if (!address) return <span style={{ color: 'var(--text-muted)' }}>not recorded</span>;
   const accountUrl = buildExplorerAccountUrl(address);
   return accountUrl
-    ? <a href={accountUrl} target="_blank" rel="noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
+    ? <a href={accountUrl} target="_blank" rel="noopener noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
     : <code title={address} style={{ color: '#cbd5e1' }}>{shortKey(address)}</code>;
 };
 
@@ -86,15 +86,13 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent background scrolling when modal is open
+  // Prevent background scrolling when modal is open without disturbing unrelated scroll state while closed
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen || typeof document === 'undefined') return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = previousOverflow;
     };
   }, [isOpen]);
 
@@ -102,6 +100,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
 
   const modalContent = (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Public On-Chain Verification Ledger"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -139,18 +140,19 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
       >
         {/* Prominent Floating Close Button */}
         <button
+          type="button"
           onClick={onClose}
           aria-label="Close Verification Ledger"
           title="Exit Public Ledger (Esc)"
           style={{
             position: 'absolute',
-            top: '1rem',
-            right: '1rem',
+            top: '0.75rem',
+            right: '0.75rem',
             background: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid rgba(255, 255, 255, 0.18)',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
+            width: '44px',
+            height: '44px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -336,7 +338,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                         <a
                           href={txExplorerUrl}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           style={{ color: '#00f2fe', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', fontWeight: 600 }}
                         >
                           Verify <ExternalLink size={12} />
@@ -358,6 +360,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
             Every escrow on the contract, from {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
           </span>
           <button
+            type="button"
             onClick={onClose}
             className="btn btn-primary"
             style={{ padding: '0.6rem 1.4rem', fontSize: '0.9rem', borderRadius: '8px', cursor: 'pointer' }}
