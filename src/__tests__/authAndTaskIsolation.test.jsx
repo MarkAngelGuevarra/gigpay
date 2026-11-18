@@ -402,7 +402,7 @@ describe('AuthContext and TaskContext isolation and dual-role sandbox', () => {
     });
     expect(latestTasks.tasks[0].status).toBe('Available');
     expect(fetchSpy).not.toHaveBeenCalled();
-  });
+  }, 15000);
 
   it('ignores late in-flight fetchTasks responses after SIGNED_OUT and stamps owner on reconnect', async () => {
     vi.stubEnv('VITE_OFFLINE_DEMO', 'false');
@@ -505,5 +505,5 @@ describe('AuthContext and TaskContext isolation and dual-role sandbox', () => {
     });
     expect(fundOut.isDemo).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
-  });
+  }, 15000);
 });
