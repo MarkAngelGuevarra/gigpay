@@ -1,7 +1,7 @@
 # GigPay Multi-Wallet QA Testing Runbook & Protocol Verification
 
 **SOW Alignment:** Sprint 1 Deliverable 2 (multi-wallet hardening)  
-**Acceptance Metric (SOW Table 7):** $\ge 2$ unique Freighter wallets executed on Testnet  
+**Acceptance Metric (SOW Table 7):** $\ge 2$ unique Varial (formerly Freighter) wallets executed on Testnet  
 **Target Environment:** Stellar Testnet (contract built with soroban-sdk 22)  
 **Contract ID:** `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`  
 **Native XLM SAC ID:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`  
@@ -27,18 +27,18 @@ node src/test/soroban_sim.test.js
 5. **Multi-Wallet Separation Assertion:** Asserts that Client and Freelancer addresses cannot collide.
 6. **Exponential Backoff Schedule:** Validates progressive delay math (`1500ms -> 2250ms -> 3375ms -> 5000ms -> 5000ms`) with hard upper ceiling.
 7. **`validateEscrowParties` Unit Logic:** Validates rejection of empty keys, malformed addresses, and identical self-dealing wallets.
-8. **`formatStellarError` Normalization:** Validates graceful message formatting for Freighter user rejections, signature cancellations, and network timeouts.
+8. **`formatStellarError` Normalization:** Validates graceful message formatting for Varial (formerly Freighter) user rejections, signature cancellations, and network timeouts.
 9. **`u32` Task ID Clamping & `simulateApproveTask`:** Validates numeric clamping within `[1, 4294967295]` and simulated approval state release.
 
 ---
 
 ## 2. Interactive Multi-Wallet QA Procedure (Manual Execution)
 
-To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets on Stellar Testnet:
+To reproduce the multi-wallet lifecycle with $\ge 2$ separate Varial (formerly Freighter) wallets on Stellar Testnet:
 
 ### Prerequisites:
-- Install the **Varial (formerly Freighter)** wallet browser extension ([freighter.app](https://www.freighter.app/) now redirects to Varial). "Freighter" below means this extension.
-- Switch Freighter network to **Testnet** (Settings $\rightarrow$ Network $\rightarrow$ Testnet).
+- Install the **Varial** wallet browser extension ([freighter.app](https://www.freighter.app/) now redirects to Varial).
+- Switch Varial network to **Testnet** (Settings $\rightarrow$ Network $\rightarrow$ Testnet).
 - Prepare two separate keypairs:
   - **Persona A (Client Wallet):** Funds the milestone escrow.
   - **Persona B (Freelancer Wallet):** Receives the payout upon approval.
@@ -47,28 +47,28 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 ---
 
 ### Step 1: Fund Milestone Escrow (Persona A $\rightarrow$ Persona B)
-1. In Freighter, switch to **Persona A (Client)**.
+1. In Varial, switch to **Persona A (Client)**.
 2. Open [https://gigpay.tech/client](https://gigpay.tech/client) (or local dev `http://localhost:5173/client`).
-3. Click **Connect Wallet** in the header and choose Freighter. Verify Persona A's public key appears.
+3. Click **Connect Wallet** in the header and choose Varial. Verify Persona A's public key appears.
 4. In the "Create New Escrow Task" card:
    - **Task Title:** `Fullstack Soroban Escrow Integration`
    - **Amount:** `1.5` XLM (native XLM only; GigPay does not use USDC)
    - **Freelancer Wallet:** Paste Persona B's public key (`G...`).
 5. Click **Lock Funds in Escrow**:
    - Pre-flight check verifies Persona A holds $\ge 3.0$ XLM (1.5 task amount + 1.0 base reserve + 0.5 gas buffer).
-   - Freighter pop-up displays the transaction request with description and Soroban contract invocation.
-   - Click **Approve / Sign** in Freighter.
+   - Varial pop-up displays the transaction request with description and Soroban contract invocation.
+   - Click **Approve / Sign** in Varial.
 6. The app submits the signed transaction to Soroban Testnet RPC and polls with exponential backoff until confirmed.
 7. Toast notification displays: *"Funding sent. It is being confirmed on Stellar Testnet (about 5 seconds); the task card shows its status."*
 
 ---
 
 ### Step 2: Negative Test — Anti-Self-Dealing Prevention
-1. Keep Persona A connected in Freighter.
+1. Keep Persona A connected in Varial.
 2. In the "Create New Escrow Task" card, paste **Persona A's own address** into the Freelancer Wallet field.
 3. Click **Lock Funds in Escrow**.
 4. **Observed Behavior:**
-   - The UI immediately halts execution *before* prompting Freighter or calling Horizon.
+   - The UI immediately halts execution *before* prompting Varial or calling Horizon.
    - Warning toast appears:  
      `"Self-dealing prevented: Client and Freelancer wallets cannot be identical."`
    - No transaction is sent, so no network fee is spent. (This check is in the app; the contract itself does not compare the two addresses.)
@@ -78,7 +78,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 ### Step 3: Negative Test — Graceful User Signature Cancellation
 1. Enter Persona B's valid public key.
 2. Click **Lock Funds in Escrow**.
-3. When the Freighter signature pop-up opens, click **Reject / Decline**.
+3. When the Varial signature pop-up opens, click **Reject / Decline**.
 4. **Observed Behavior:**
    - The application intercepts the decline gracefully.
    - Warning toast appears: `"Transaction signing was rejected in Freighter."`
@@ -90,7 +90,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Freighter wallets 
 1. In the Client Dashboard task list, locate the funded task.
 2. Click **Approve & Release**.
 3. In the confirmation modal, type **CONFIRM** and click **Release Escrow Payout**.
-4. Freighter prompts Persona A to sign the `approve_task` contract call.
+4. Varial prompts Persona A to sign the `approve_task` contract call.
 5. Once confirmed, the contract sends the escrowed XLM to **Persona B (Freelancer)**.
 6. Toast notification confirms: *"Escrow released on Testnet! Tx: …"*.
 
