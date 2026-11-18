@@ -147,6 +147,8 @@ export const TaskProvider = ({ children }) => {
   tasksRef.current = tasks;
   const userRef = useRef(user);
   userRef.current = user;
+  const publicKeyRef = useRef(publicKey);
+  publicKeyRef.current = publicKey;
   const confirmingInFlightRef = useRef(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
@@ -221,6 +223,19 @@ export const TaskProvider = ({ children }) => {
   };
 
   const commitTaskList = (next, broadcastPayload) => {
+    const prevById = new Map((tasksRef.current || []).map((t) => [t.id, t]));
+    const activeUserId = userRef.current?.id || null;
+    const activeWallet = publicKeyRef.current || null;
+    const settledForFreelancer = (next || []).some((t) => {
+      if (!t || t.is_simulated || (t.status !== 'Completed' && t.status !== 'Paid')) return false;
+      const isRecipient =
+        (activeUserId && t.freelancer_id === activeUserId) ||
+        (activeWallet && t.freelancer_wallet === activeWallet);
+      if (!isRecipient) return false;
+      const prev = prevById.get(t.id);
+      return Boolean(prev && prev.status !== 'Completed' && prev.status !== 'Paid');
+    });
+
     tasksRef.current = next;
     setTasks(next);
     setLocalTasks(next);
@@ -230,6 +245,9 @@ export const TaskProvider = ({ children }) => {
       } catch (e) {
         console.warn("BroadcastChannel postMessage error:", e);
       }
+    }
+    if (settledForFreelancer) {
+      emitBalanceRefresh();
     }
     return next;
   };
