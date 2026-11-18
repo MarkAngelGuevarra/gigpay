@@ -317,7 +317,7 @@ await test('Lock: the task is saved before sending, and a refused send is marked
   const ctx = read('src/context/TaskContext.jsx');
   assert.ok(ctx.includes('{ onSigned: saveBeforeSend }'), 'addTask saves the task before the escrow is sent');
   assert.ok(ctx.includes("status: 'Confirming',") && ctx.includes("throw new Error(\"GigPay couldn't save this task, so nothing was sent"), 'saved as Confirming; if saving fails nothing is sent');
-  assert.ok(ctx.includes('if (fundErr?.notSent)') && ctx.includes("return { pending: true };"), 'refused sends drop the card; unclear sends keep it Confirming');
+  assert.ok((ctx.includes('if (fundErr?.notSent)') || ctx.includes('if (fundErr?.notSent || fundErr?.onChainFailed)')) && ctx.includes("return { pending: true };"), 'refused sends drop the card; unclear sends keep it Confirming');
   assert.ok(ctx.includes('if (fundInFlightRef.current)'), 'only one lock at a time per page');
 });
 
