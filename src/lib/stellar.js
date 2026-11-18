@@ -117,22 +117,34 @@ const waitForAccount = async (publicKey, attempts, delayMs) => {
  * if Friendbot can't fund it, falls back to the GigPay Testnet pool.
  * Returns false if the account still is not visible on Horizon after the retries.
  */
+const inflightFundingByKey = new Map();
+
 export const ensureEphemeralAccountFunded = async (publicKey, { attempts = 5, delayMs = 2000 } = {}) => {
-  const first = await getAccountBalance(publicKey);
-  if (first.active) return true;
-  // Horizon can't be reached, so we can't tell whether the wallet is funded. Don't spend the funding pool on a
-  // guess; let the signing step proceed through Soroban RPC, which fails clearly if the account is missing.
-  if (first.unknown) return true;
-  const friendbotAccepted = await requestFriendbotFunding(publicKey);
-  // Friendbot refused: go to the pool right away. Friendbot accepted: give Horizon a moment first.
-  if (friendbotAccepted && (await waitForAccount(publicKey, attempts, delayMs))) return true;
-  if (!practiceWalletFundingFallback) return friendbotAccepted ? false : waitForAccount(publicKey, attempts, delayMs);
-  try {
-    await practiceWalletFundingFallback(publicKey);
-  } catch (err) {
-    console.warn("[GigPay pool] Practice wallet fallback notice:", err?.message || err);
+  if (!publicKey) return false;
+  if (inflightFundingByKey.has(publicKey)) {
+    return inflightFundingByKey.get(publicKey);
   }
-  return waitForAccount(publicKey, attempts, delayMs);
+  const run = (async () => {
+    const first = await getAccountBalance(publicKey);
+    if (first.active) return true;
+    // Horizon can't be reached, so we can't tell whether the wallet is funded. Don't spend the funding pool on a
+    // guess; let the signing step proceed through Soroban RPC, which fails clearly if the account is missing.
+    if (first.unknown) return true;
+    const friendbotAccepted = await requestFriendbotFunding(publicKey);
+    // Friendbot refused: go to the pool right away. Friendbot accepted: give Horizon a moment first.
+    if (friendbotAccepted && (await waitForAccount(publicKey, attempts, delayMs))) return true;
+    if (!practiceWalletFundingFallback) return friendbotAccepted ? false : waitForAccount(publicKey, attempts, delayMs);
+    try {
+      await practiceWalletFundingFallback(publicKey);
+    } catch (err) {
+      console.warn("[GigPay pool] Practice wallet fallback notice:", err?.message || err);
+    }
+    return waitForAccount(publicKey, attempts, delayMs);
+  })().finally(() => {
+    inflightFundingByKey.delete(publicKey);
+  });
+  inflightFundingByKey.set(publicKey, run);
+  return run;
 };
 
 // Practice-wallet keys for extensionless / mobile testers (Testnet only; see isEphemeralSignerAllowed).
@@ -392,6 +404,40 @@ export const checkSorobanRpcHealth = async () => {
   }
 };
 
+const unwrapFreighterError = (error) => {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (typeof error?.message === 'string' && error.message) return error.message;
+  if (error?.code !== undefined) return `Freighter error (${error.code})`;
+  return String(error);
+};
+
+const signXdrWithFreighter = async (xdr, address, { returnEnvelope = false } = {}) => {
+  const signResult = await withTimeout(
+    signTransaction(xdr, {
+      networkPassphrase: PASSPHRASE,
+      ...(address ? { address } : {})
+    }),
+    30000
+  );
+
+  if (signResult?.error) {
+    throw new Error(unwrapFreighterError(signResult.error));
+  }
+
+  const signedXdr = typeof signResult === 'string'
+    ? signResult
+    : (signResult?.signedTxXdr || signResult?.signedTransaction || '');
+
+  if (!signedXdr || typeof signedXdr !== 'string') {
+    throw new Error('Freighter did not return a signed transaction.');
+  }
+
+  return returnEnvelope
+    ? StellarSdk.TransactionBuilder.fromXDR(signedXdr, PASSPHRASE)
+    : signedXdr;
+};
+
 /**
  * Checks if Freighter extension is installed and responds to ping.
  * @returns {Promise<boolean>}
@@ -399,7 +445,9 @@ export const checkSorobanRpcHealth = async () => {
 export const checkFreighterConnection = async () => {
   try {
     if (!isConnected) return false;
-    return await withTimeout(isConnected(), 2000);
+    const res = await withTimeout(isConnected(), 2000);
+    if (res?.error) return false;
+    return res === true || res?.isConnected === true;
   } catch (err) {
     return false;
   }
@@ -407,34 +455,56 @@ export const checkFreighterConnection = async () => {
 
 /**
  * Checks if the user has Freighter installed and connected.
- * If Freighter is broken or blocked, it instantly falls back to a Demo Mode.
+ * Falls back to a simulated key only when explicit offline demo mode is enabled.
  */
 export const connectWallet = async () => {
   try {
     // Try to connect, but give up after 2 seconds if the extension is frozen
-    const connected = await withTimeout(isConnected(), 2000);
-    
+    const connectedResult = await withTimeout(isConnected(), 2000);
+    const connected = connectedResult === true || connectedResult?.isConnected === true;
+
     if (!connected) {
       throw new Error("WALLET_NOT_INSTALLED");
     }
 
-    let allowed = await withTimeout(isAllowed(), 2000);
+    const isFlagTrue = (res, key) => res === true || res?.[key] === true;
+    let allowedResult = await withTimeout(isAllowed(), 2000);
+    if (allowedResult?.error) {
+      throw new Error(unwrapFreighterError(allowedResult.error));
+    }
+    let allowed = isFlagTrue(allowedResult, 'isAllowed');
     if (!allowed) {
-      await withTimeout(setAllowed(), 5000);
-      allowed = await withTimeout(isAllowed(), 2000);
-      if (!allowed) throw new Error("Permission denied");
+      const setAllowedResult = await withTimeout(setAllowed(), 5000);
+      if (setAllowedResult?.error) {
+        throw new Error(unwrapFreighterError(setAllowedResult.error));
+      }
+      allowed = isFlagTrue(setAllowedResult, 'isAllowed');
+      if (!allowed) {
+        allowedResult = await withTimeout(isAllowed(), 2000);
+        allowed = isFlagTrue(allowedResult, 'isAllowed');
+      }
+      if (!allowed) {
+        const deniedErr = new Error("Permission denied in Varial (formerly Freighter).");
+        deniedErr.code = 'WALLET_PERMISSION_DENIED';
+        throw deniedErr;
+      }
     }
 
     const access = await withTimeout(requestAccess(), 5000);
-    if (access?.error) throw new Error(access.error);
+    if (access?.error) throw new Error(unwrapFreighterError(access.error));
 
     const keyResult = await withTimeout(getPublicKey(), 2000);
+    if (keyResult?.error) throw new Error(unwrapFreighterError(keyResult.error));
+
     const networkResult = await withTimeout(getNetwork(), 2000);
-    
-    // Normalize string public key defensively regardless of freighter-api object return shape
+    if (networkResult?.error) throw new Error(unwrapFreighterError(networkResult.error));
+
     const resolvedKey = typeof keyResult === 'string'
       ? keyResult
-      : (keyResult?.address || access?.address || String(keyResult || ''));
+      : (keyResult?.address || access?.address || '');
+    if (!resolvedKey) {
+      throw new Error('Could not read a Stellar public key from Freighter.');
+    }
 
     const resolvedNetwork = typeof networkResult === 'string'
       ? networkResult
@@ -460,11 +530,15 @@ export const connectWallet = async () => {
       networkPassphrase: resolvedPassphrase,
     };
   } catch (error) {
-    if (error.message === 'WALLET_NOT_INSTALLED' || error.code === 'MAINNET_WALLET_BLOCKED') {
-      throw error; // Let the UI handle onboarding for missing wallets or Mainnet refusal
+    if (
+      error.message === 'WALLET_NOT_INSTALLED' ||
+      error.code === 'MAINNET_WALLET_BLOCKED' ||
+      error.code === 'WALLET_PERMISSION_DENIED' ||
+      !isOfflineDemoEnabled()
+    ) {
+      throw error;
     }
     console.error("Freighter Extension blocked/frozen. Activating Demo Fallback Mode.", error);
-    // Silent fallback ensures the presentation NEVER fails, even if the browser breaks
     return { publicKey: DEMO_PUBLIC_KEY, network: NETWORK, networkPassphrase: PASSPHRASE };
   }
 };
@@ -561,26 +635,57 @@ export const requestWalletSignature = async (publicKey, description, { offlineDe
     }
 
     const xdr = transaction.toXDR();
-    
-    // Explicitly pass networkPassphrase so Freighter knows this is on Stellar Testnet
-    const signedTx = await withTimeout(
-      signTransaction(xdr, { 
-        network: NETWORK, 
-        networkPassphrase: PASSPHRASE,
-        accountToSign: publicKey 
-      }), 
-      30000
-    );
-    
-    if (signedTx?.error) {
-      throw new Error(signedTx.error);
-    }
-    
-    return { success: true, signedXdr: signedTx };
+
+    const signedXdr = await signXdrWithFreighter(xdr, publicKey);
+    return { success: true, signedXdr };
   } catch (error) {
     console.error("Wallet Signature Error or Timeout.", error);
     throw error;
   }
+};
+
+const STROOPS_PER_XLM = 10_000_000n;
+const MAX_XLM_STROOPS = 1_000_000_000n * STROOPS_PER_XLM;
+
+/** Parses a positive XLM decimal amount (<= 7 decimals) into non-zero i128 stroops (BigInt). */
+export const parseXlmToStroops = (amount) => {
+  if (amount === null || amount === undefined || typeof amount === 'boolean') {
+    throw new Error('Enter a valid positive amount in XLM.');
+  }
+  let raw;
+  if (typeof amount === 'number') {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Enter a valid positive amount in XLM.');
+    }
+    raw = String(amount);
+    if (/e/i.test(raw)) {
+      throw new Error('XLM amounts support at most 7 decimal places (1 stroop = 0.0000001 XLM).');
+    }
+  } else {
+    raw = String(amount).trim();
+  }
+  if (!/^(?:\d+(?:\.\d{1,7})?|\.\d{1,7})$/.test(raw)) {
+    if (/^\d*\.\d{8,}$/.test(raw)) {
+      throw new Error('XLM amounts support at most 7 decimal places (1 stroop = 0.0000001 XLM).');
+    }
+    throw new Error('Enter a valid positive amount in XLM.');
+  }
+  const normalized = raw.startsWith('.') ? `0${raw}` : raw;
+  const [wholePart, fracPart = ''] = normalized.split('.');
+  const stroops = BigInt(wholePart) * STROOPS_PER_XLM + BigInt(fracPart.padEnd(7, '0'));
+  if (stroops <= 0n || stroops > MAX_XLM_STROOPS) {
+    throw new Error('Enter a valid positive amount in XLM.');
+  }
+  return stroops;
+};
+
+const simulateAndAssemble = async (tx) => {
+  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
+  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
+    throw new Error(`Soroban simulation failed: ${simResult.error}`);
+  }
+  const preparedTx = StellarSdk.rpc.assembleTransaction(tx, simResult).build();
+  return { simResult, preparedTx };
 };
 
 /**
@@ -601,10 +706,7 @@ export const simulateFundTask = async ({
   tokenAddress = NATIVE_SAC_CONTRACT_ID,
   offlineDemo = false
 }) => {
-  const numericAmount = Number(amount);
-  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-    throw new Error('Enter a valid positive amount in XLM.');
-  }
+  const stroops = parseXlmToStroops(amount);
 
   if (offlineDemo || isOfflineDemoEnabled() || !clientAddress || isDemoWallet(clientAddress)) {
     return {
@@ -618,9 +720,6 @@ export const simulateFundTask = async ({
   const horizon = createHorizonServer();
   const account = await withTimeout(horizon.loadAccount(clientAddress), NETWORK_LOAD_TIMEOUT_MS);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
-
-  // Convert decimal amount to 7-decimal Stroops (i128 BigInt)
-  const stroops = BigInt(Math.round(numericAmount * 10_000_000));
 
   const tx = new StellarSdk.TransactionBuilder(account, {
     fee: StellarSdk.BASE_FEE,
@@ -638,13 +737,7 @@ export const simulateFundTask = async ({
     .setTimeout(60)
     .build();
 
-  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
-
-  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
-    throw new Error(`Soroban simulation failed: ${simResult.error}`);
-  }
-
-  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
+  const { simResult, preparedTx } = await simulateAndAssemble(tx);
 
   return {
     simulation: simResult,
@@ -814,7 +907,7 @@ export const pollSorobanTransactionWithBackoff = async (
     await new Promise((resolve) => setTimeout(resolve, currentDelay));
 
     try {
-      const txStatus = await sorobanServer.getTransaction(txHash);
+      const txStatus = await withTimeout(sorobanServer.getTransaction(txHash), NETWORK_RPC_TIMEOUT_MS);
       if (txStatus.status === 'SUCCESS') {
         let returnValue = null;
         try {
@@ -832,7 +925,7 @@ export const pollSorobanTransactionWithBackoff = async (
           attempts
         };
       } else if (txStatus.status === 'FAILED') {
-        throw new Error(`Soroban contract invocation failed on-chain: ${txHash}`);
+        throw Object.assign(new Error(`Soroban contract invocation failed on-chain: ${txHash}`), { onChainFailed: true });
       }
     } catch (queryErr) {
       if (queryErr.message.includes("failed on-chain")) {
@@ -875,7 +968,8 @@ export const sendAndConfirm = async (signedTx, { server = sorobanServer, poll = 
   // Both mean the network refused the transaction, so it can never land: notSent.
   if (sendResult?.status === 'TRY_AGAIN_LATER') throw Object.assign(new Error(NETWORK_BUSY_MESSAGE), { notSent: true });
   if (sendResult?.status === 'ERROR') {
-    throw Object.assign(new Error(`Transaction submission error: ${JSON.stringify(sendResult.errorResultXdr || sendResult)}`), { notSent: true });
+    const errPayload = sendResult.errorResultXdr ?? sendResult.errorResult ?? sendResult;
+    throw Object.assign(new Error(`Transaction submission error: ${JSON.stringify(errPayload)}`), { notSent: true });
   }
   const txHash = sendResult?.hash || localHash;
   const pollResult = await poll(txHash);
@@ -893,7 +987,7 @@ export const getFundTaskOutcome = async (txHash, { server = sorobanServer } = {}
   if (isOfflineDemoEnabled() && server === sorobanServer) {
     return { status: 'NOT_FOUND' };
   }
-  const tx = await server.getTransaction(txHash);
+  const tx = await withTimeout(server.getTransaction(txHash), NETWORK_RPC_TIMEOUT_MS);
   if (tx.status === 'SUCCESS') {
     let onChainTaskId = null;
     try { onChainTaskId = tx.returnValue ? Number(StellarSdk.scValToNative(tx.returnValue)) : null; } catch { /* no return value */ }
@@ -1017,24 +1111,7 @@ export const submitFundTask = async ({
       signedTx = preparedTx;
     } else {
       // Request user signature via Freighter
-      const signResult = await withTimeout(
-        signTransaction(preparedTx.toXDR(), { 
-          network: NETWORK, 
-          networkPassphrase: PASSPHRASE,
-          accountToSign: effectiveClientAddress 
-        }),
-        30000
-      );
-
-      if (signResult?.error) {
-        throw new Error(signResult.error);
-      }
-
-      const rawXdr = typeof signResult === 'string'
-        ? signResult
-        : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
-
-      signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
+      signedTx = await signXdrWithFreighter(preparedTx.toXDR(), effectiveClientAddress, { returnEnvelope: true });
     }
 
     if (typeof onSigned === 'function') {
@@ -1078,7 +1155,7 @@ export const submitFundTask = async ({
     if (error?.passThrough) throw error;
     // notSent: the network definitely did not take the transaction (rejected or busy). Without it, an error
     // after signing may still have landed, so a task saved by onSigned stays "Confirming" and is checked on-chain.
-    throw Object.assign(new Error(formatStellarError(error)), { notSent: !!error?.notSent });
+    throw Object.assign(new Error(formatStellarError(error)), { notSent: !!error?.notSent, onChainFailed: !!error?.onChainFailed });
   }
 };
 
@@ -1151,7 +1228,12 @@ export const findFundedEscrowId = async (
   { clientWallet, freelancerWallet, amount, tokenAddress = NATIVE_SAC_CONTRACT_ID },
   { readTask = getOnChainTask, maxId = 1000 } = {}
 ) => {
-  const stroops = Number.isFinite(parseFloat(amount)) ? BigInt(Math.round(parseFloat(amount) * 10_000_000)) : null;
+  let stroops = null;
+  try {
+    stroops = parseXlmToStroops(amount);
+  } catch {
+    stroops = null;
+  }
   if (!clientWallet || !freelancerWallet || stroops === null) return null;
   const matches = [];
   for (let id = 1; id <= maxId; id++) {
@@ -1184,8 +1266,9 @@ export const resolveConfirmingFunding = async (task, outcome, { findEscrowId = f
       ? { status: 'Available', on_chain_task_id: onChainTaskId, is_simulated: false }
       : { status: 'Available', is_simulated: false, escrowIdUnknown: true };
   }
-  const ageMs = now - Date.parse(task.created_at || 0);
-  if (outcome?.status === 'FAILED' || (outcome?.status === 'NOT_FOUND' && ageMs > 5 * 60 * 1000)) {
+  const createdMs = Date.parse(task?.created_at || '');
+  const staleOrInvalidTimestamp = !Number.isFinite(createdMs) || (now - createdMs > 5 * 60 * 1000);
+  if (outcome?.status === 'FAILED' || (outcome?.status === 'NOT_FOUND' && staleOrInvalidTimestamp)) {
     return { status: 'Failed' };
   }
   return null;
@@ -1230,15 +1313,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId, offlineDemo =
     .setTimeout(60)
     .build();
 
-  const simResult = await withTimeout(sorobanServer.simulateTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
-
-  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
-    // The contract rejected this release (wrong signer, already released, unknown task...).
-    // Surface it, same as simulateFundTask, instead of reporting a simulated success.
-    throw new Error(`Soroban simulation failed: ${simResult.error}`);
-  }
-
-  const preparedTx = await withTimeout(sorobanServer.prepareTransaction(tx), NETWORK_RPC_TIMEOUT_MS);
+  const { simResult, preparedTx } = await simulateAndAssemble(tx);
 
   return {
     simulation: simResult,
@@ -1371,24 +1446,7 @@ export const submitApproveTask = async (
       signedTx = preparedTx;
     } else {
       // 2. Request user signature via Freighter
-      const signResult = await withTimeout(
-        signTransaction(preparedTx.toXDR(), { 
-          network: NETWORK, 
-          networkPassphrase: PASSPHRASE,
-          accountToSign: effectiveClientAddress 
-        }),
-        30000
-      );
-
-      if (signResult?.error) {
-        throw new Error(signResult.error);
-      }
-
-      const rawXdr = typeof signResult === 'string'
-        ? signResult
-        : (signResult?.signedTxXdr || signResult?.signedTransaction || signResult);
-
-      signedTx = StellarSdk.TransactionBuilder.fromXDR(rawXdr, PASSPHRASE);
+      signedTx = await signXdrWithFreighter(preparedTx.toXDR(), effectiveClientAddress, { returnEnvelope: true });
     }
 
     // 3-4. Submit and wait for confirmation. A release that is not confirmed yet must not mark the task
