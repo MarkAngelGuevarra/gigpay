@@ -22,8 +22,28 @@ const Navbar = () => {
   // Phones: secondary links live in a menu so the header stays one or two rows (CSS shows them inline on
   // wider screens, where this state has no effect).
   const [menuOpen, setMenuOpen] = useState(false);
+  const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
   useEffect(() => { setMenuOpen(false); }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const triggerRefresh = () => setBalanceRefreshTick((n) => n + 1);
+    window.addEventListener('gigpay:balance-refresh', triggerRefresh);
+    return () => {
+      window.removeEventListener('gigpay:balance-refresh', triggerRefresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showOnboardingModal || typeof window === 'undefined') return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowOnboardingModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showOnboardingModal]);
 
   const {
     isCompleted: isPilotCompleted,
@@ -34,18 +54,21 @@ const Navbar = () => {
   } = usePilotFeedbackState();
 
   useEffect(() => {
-    let isMounted = true;
-    if (!user || !publicKey) {
+    const controller = new AbortController();
+    const activeUserId = user?.id || null;
+    if (!activeUserId || !publicKey) {
       setBalance(null);
       setIsLoadingBalance(false);
       return () => {
-        isMounted = false;
+        controller.abort();
       };
     }
 
+    const isStale = () => controller.signal.aborted;
+
     setIsLoadingBalance(true);
     const showBalance = (res) => {
-      if (!isMounted) return;
+      if (isStale()) return;
       // Horizon unreachable: say so instead of showing a placeholder number.
       if (res.unknown || (res.isDemo && isSimulatorWallet(publicKey))) setBalance('unavailable');
       else setBalance(res.balance);
@@ -53,13 +76,17 @@ const Navbar = () => {
     };
     getAccountBalance(publicKey)
       .then(async (res) => {
+        if (isStale()) return;
         // A new practice wallet is still waiting on Friendbot: only fund real signed-in non-simulation accounts.
         if (!isSimulationMode && !isDemoWallet(publicKey) && !res.active && !res.unknown && isSimulatorWallet(publicKey)) {
-          if (isMounted) setBalance('Funding… (up to 30s)');
+          if (!isStale()) setBalance('Funding… (up to 30s)');
           const funded = await ensureEphemeralAccountFunded(publicKey);
+          if (isStale()) return;
           const after = await getAccountBalance(publicKey);
+          if (isStale()) return;
           if (!funded && !after.active) {
-            if (isMounted) { setBalance('Not funded yet, refresh in a minute'); setIsLoadingBalance(false); }
+            setBalance('Not funded yet, refresh in a minute');
+            setIsLoadingBalance(false);
             return;
           }
           showBalance(after);
@@ -68,19 +95,26 @@ const Navbar = () => {
         showBalance(res);
       })
       .catch(() => {
-        if (isMounted) setIsLoadingBalance(false);
+        if (!isStale()) setIsLoadingBalance(false);
       });
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
-  // Re-run after sign-in too: the GigPay pool only funds signed-in testers, so a wallet created before
-  // sign-in (when Friendbot refused and the pool said 401) gets funded as soon as the tester signs in.
-  }, [publicKey, user, user?.id, isSimulationMode]);
+  // Re-run after sign-in or escrow fund/release so the pill stays current.
+  }, [publicKey, user, user?.id, isSimulationMode, balanceRefreshTick]);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    setBalance(null);
+    setIsLoadingBalance(false);
+    try {
+      await signOut();
+      navigate('/');
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const handleConnect = async () => {
@@ -123,10 +157,10 @@ const Navbar = () => {
 
   return (
     <nav className="navbar animate-fade-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-      <a href="/" className="logo">
+      <Link to="/" className="logo">
         <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
         <span className="logo-text">GigPay</span>
-      </a>
+      </Link>
       {/* Phones only (see index.css): opens the feedback form, ledger, portals, role switch, profile and sign out. */}
       <button
         type="button"
@@ -258,69 +292,106 @@ const Navbar = () => {
           <FileSpreadsheet size={13} /> 📜 Public Ledger
         </button>
         {user && (
-          <>
-            <Link 
-              to="/client" 
-              className="btn btn-outline" 
-              style={{ 
-                padding: '0.42rem 0.75rem', 
-                fontSize: '0.8rem', 
-                whiteSpace: 'nowrap',
-                borderColor: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
-                background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : 'var(--text-muted)'
-              }}
-            >
-              Client Portal
-            </Link>
-            <Link 
-              to="/freelancer" 
-              className="btn btn-outline" 
-              style={{ 
-                padding: '0.42rem 0.75rem', 
-                fontSize: '0.8rem', 
-                whiteSpace: 'nowrap',
-                borderColor: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
-                background: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.12)' : 'transparent',
-                color: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? '#a78bfa' : 'var(--text-muted)'
-              }}
-            >
-              Freelancer Portal
-            </Link>
-            
-            {/* Interactive 1-Click Role Switcher Pill */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextRole = switchRole();
-                addToast(`Active role switched to ${nextRole.toUpperCase()}!`, 'success');
-                navigate(nextRole === 'client' ? '/client' : '/freelancer');
-              }}
-              title="Click to toggle active role between Client and Freelancer"
-              style={{
-                background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
-                color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : '#a78bfa',
-                padding: '0.28rem 0.65rem',
-                borderRadius: '999px',
-                fontSize: '0.72rem',
-                fontWeight: 'bold',
-                letterSpacing: '0.8px',
-                textTransform: 'uppercase',
-                border: `1px solid ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                boxShadow: `0 0 10px ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <ArrowLeftRight size={11} />
-              <span>{user.user_metadata?.role || activeRole || 'client'}</span>
-              <span style={{ fontSize: '0.62rem', opacity: 0.75, textTransform: 'none', background: 'rgba(255,255,255,0.12)', padding: '0.08rem 0.3rem', borderRadius: '3px' }}>switch</span>
-            </button>
-          </>
+          (user?.is_simulation_mode || isSimulationMode) ? (
+            <>
+              <Link 
+                to="/client" 
+                className="btn btn-outline" 
+                style={{ 
+                  padding: '0.42rem 0.75rem', 
+                  fontSize: '0.8rem', 
+                  whiteSpace: 'nowrap',
+                  borderColor: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                  background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                  color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : 'var(--text-muted)'
+                }}
+              >
+                Client Portal
+              </Link>
+              <Link 
+                to="/freelancer" 
+                className="btn btn-outline" 
+                style={{ 
+                  padding: '0.42rem 0.75rem', 
+                  fontSize: '0.8rem', 
+                  whiteSpace: 'nowrap',
+                  borderColor: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                  background: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.12)' : 'transparent',
+                  color: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? '#a78bfa' : 'var(--text-muted)'
+                }}
+              >
+                Freelancer Portal
+              </Link>
+              
+              {/* Interactive 1-Click Role Switcher Pill (sandbox accounts only) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextRole = switchRole();
+                  if (!nextRole) return;
+                  addToast(`Active role switched to ${nextRole.toUpperCase()}!`, 'success');
+                  navigate(nextRole === 'client' ? '/client' : '/freelancer');
+                }}
+                title="Click to toggle active role between Client and Freelancer"
+                style={{
+                  background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+                  color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : '#a78bfa',
+                  padding: '0.28rem 0.65rem',
+                  borderRadius: '999px',
+                  fontSize: '0.72rem',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.8px',
+                  textTransform: 'uppercase',
+                  border: `1px solid ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  boxShadow: `0 0 10px ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ArrowLeftRight size={11} />
+                <span>{user.user_metadata?.role || activeRole || 'client'}</span>
+                <span style={{ fontSize: '0.62rem', opacity: 0.75, textTransform: 'none', background: 'rgba(255,255,255,0.12)', padding: '0.08rem 0.3rem', borderRadius: '3px' }}>switch</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to={activeRole === 'freelancer' ? '/freelancer' : '/client'}
+                className="btn btn-outline"
+                style={{
+                  padding: '0.42rem 0.75rem',
+                  fontSize: '0.8rem',
+                  whiteSpace: 'nowrap',
+                  borderColor: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.6)' : 'rgba(59, 130, 246, 0.6)',
+                  background: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                  color: activeRole === 'freelancer' ? '#a78bfa' : '#60a5fa'
+                }}
+              >
+                {activeRole === 'freelancer' ? 'Freelancer Portal' : 'Client Portal'}
+              </Link>
+              <span
+                data-testid="navbar-role-badge"
+                style={{
+                  background: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                  color: activeRole === 'freelancer' ? '#a78bfa' : '#60a5fa',
+                  padding: '0.28rem 0.65rem',
+                  borderRadius: '999px',
+                  fontSize: '0.72rem',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.8px',
+                  textTransform: 'uppercase',
+                  border: `1px solid ${activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.45)' : 'rgba(59, 130, 246, 0.45)'}`,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {activeRole === 'freelancer' ? 'freelancer' : 'client'}
+              </span>
+            </>
+          )
         )}
         </div>
         {user && (
@@ -384,8 +455,25 @@ const Navbar = () => {
               <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
                 <User size={15} /> Profile
               </Link>
-              <button onClick={handleSignOut} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                <LogOut size={15} /> Sign Out
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+                className="btn btn-outline"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.4rem 0.6rem',
+                  fontSize: '0.8rem',
+                  borderColor: 'transparent',
+                  color: 'var(--text-muted)',
+                  whiteSpace: 'nowrap',
+                  opacity: isSigningOut ? 0.6 : 1,
+                  cursor: isSigningOut ? 'wait' : 'pointer'
+                }}
+              >
+                <LogOut size={15} /> {isSigningOut ? 'Signing Out...' : 'Sign Out'}
               </button>
             </div>
           </>
@@ -403,12 +491,23 @@ const Navbar = () => {
       {/* Wallet Onboarding Modal */}
       {showOnboardingModal && typeof document !== 'undefined' && createPortal(
         <div 
+          role="dialog"
+          aria-modal="true"
+          aria-label="Connect Stellar Wallet"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowOnboardingModal(false);
           }}
           style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', backgroundColor: 'rgba(5,10,24,0.92)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', padding: '1rem', boxSizing: 'border-box', zIndex: 99999, backdropFilter: 'blur(10px)' }}
         >
           <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '500px', margin: 'auto 0', backgroundColor: '#0d1527', border: '1px solid rgba(0,242,254,0.3)', padding: 'clamp(1.25rem, 5vw, 2.5rem)', position: 'relative', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowOnboardingModal(false)}
+              style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <X size={20} />
+            </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--accent)' }}>
               <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '0.75rem', borderRadius: '1rem' }}>
                 <Wallet size={32} />
