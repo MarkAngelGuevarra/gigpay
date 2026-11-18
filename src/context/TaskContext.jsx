@@ -6,6 +6,7 @@ import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskO
 import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
+import { isOfflineDemoEnabled } from '../lib/env';
 
 export const TASK_REFRESH_INTERVAL_MS = 10000;
 
@@ -22,6 +23,15 @@ const GIGPAY_LEDGER_CACHE_KEY = 'gigpay_verification_ledger_v1';
 const isRealStellarAddress = (val) => typeof val === 'string' && /^G[A-Z2-7]{55}$/.test(val);
 
 const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+const isOfflineOrSimulationSession = (sessionUser) =>
+  !sessionUser ||
+  isOfflineDemoEnabled() ||
+  Boolean(
+    sessionUser?.is_simulation_mode ||
+    sessionUser?.user_metadata?.is_simulation_mode ||
+    String(sessionUser?.id || '').startsWith('demo-')
+  );
 
 // Sample tasks are no longer seeded. The old seed injected a 'Create a website, 100 XLM, Completed' task
 // (and re-inserted it if removed) into every browser, so every new tester saw a payout that never happened.
@@ -106,8 +116,21 @@ const INITIAL_VERIFICATION_LEDGER = onchainEscrows.escrows.map((e) => ({
 }));
 
 export const TaskProvider = ({ children }) => {
-  const { user, publicKey, ensureDbRole } = useAuth();
+  const { user, isLoading: authLoading, publicKey, ensureDbRole } = useAuth();
   const { addToast } = useToast();
+
+  const clearLocalTaskCaches = () => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(GIGPAY_SHARED_TASKS_KEY);
+        localStorage.removeItem(GIGPAY_LEGACY_CACHE_KEY);
+        localStorage.removeItem(GIGPAY_LEDGER_CACHE_KEY);
+        localStorage.removeItem('gigpay_tasks_owner_id');
+      }
+    } catch (err) {
+      console.warn("[GigPay Sync] Local cache cleanup warning:", err);
+    }
+  };
 
   // 1. Zero-Flash Hydration: initialize immediately from local cache so UI renders in 0ms
   const [tasks, setTasks] = useState(() => getLocalTasks().map(sanitizeTaskRecord));
@@ -205,7 +228,7 @@ export const TaskProvider = ({ children }) => {
   // supabase-js returns errors instead of throwing; every write must check them, or the user is told an
   // action worked when the database (RLS / guard trigger) rejected it.
   const writeTask = async (id, fields) => {
-    if (!isUuid(id)) return null;
+    if (!isUuid(id) || isOfflineOrSimulationSession(user)) return null;
     try {
       const { error } = await supabase.from('tasks').update(fields).eq('id', id);
       return error || null;
@@ -270,7 +293,7 @@ export const TaskProvider = ({ children }) => {
     .map((t) => t.id)
     .join(',');
   useEffect(() => {
-    if (!confirmingKey) return undefined;
+    if (!confirmingKey || isOfflineDemoEnabled()) return undefined;
     let cancelled = false;
     let running = false; // the escrow ID lookup can outlast the 15s interval
     const check = async () => {
@@ -313,22 +336,72 @@ export const TaskProvider = ({ children }) => {
 
   // Signed out (or switching accounts on a shared PC): drop the previous account's tasks from memory, so
   // they never show for the next student. The fetch below loads the new account's tasks.
+  // Switching between client and freelancer inside the single-browser sandbox preserves in-memory tasks.
+  const isDemoAccountId = (id) => typeof id === 'string' && id.startsWith('demo-');
   const lastUserIdRef = useRef(user?.id || null);
+  const mountedTasksOwnerRef = useRef(
+    typeof localStorage !== 'undefined' ? localStorage.getItem('gigpay_tasks_owner_id') : null
+  );
   useEffect(() => {
+    if (authLoading) return;
     const currentId = user?.id || null;
     const previousId = lastUserIdRef.current;
     lastUserIdRef.current = currentId;
+
+    if (!currentId) {
+      setTasks([]);
+      setStoredLedgerRecords([]);
+      clearLocalTaskCaches();
+      mountedTasksOwnerRef.current = null;
+      return;
+    }
+
+    const switchingDemoRole = isDemoAccountId(previousId) && isDemoAccountId(currentId);
+    const savedOwner = typeof localStorage !== 'undefined' ? localStorage.getItem('gigpay_tasks_owner_id') : null;
+    const initialOwner = mountedTasksOwnerRef.current;
+    const ownerChanged =
+      (Boolean(savedOwner) && savedOwner !== currentId && !(isDemoAccountId(savedOwner) && isDemoAccountId(currentId))) ||
+      (Boolean(initialOwner) && initialOwner !== currentId && !(isDemoAccountId(initialOwner) && isDemoAccountId(currentId)));
+
+    if (ownerChanged) {
+      setTasks([]);
+      setStoredLedgerRecords([]);
+      clearLocalTaskCaches();
+    }
+    mountedTasksOwnerRef.current = currentId;
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('gigpay_tasks_owner_id', currentId);
+      }
+    } catch { /* storage unavailable */ }
+
     // Only when leaving an account (sign-out or a different account): a first page load, where the user
     // arrives a moment after render, keeps its own cached tasks instead of flashing an empty list.
     if (previousId && currentId !== previousId) {
-      setTasks([]);
-      setStoredLedgerRecords([]);
+      if (!switchingDemoRole) {
+        setTasks([]);
+        setStoredLedgerRecords([]);
+        clearLocalTaskCaches();
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('gigpay_tasks_owner_id', currentId);
+          }
+        } catch { /* storage unavailable */ }
+      }
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
+    if (isOfflineOrSimulationSession(user)) {
+      fetchTasksRef.current = () => Promise.resolve(true);
+      return undefined;
+    }
+
+    let cancelled = false;
     let inFlight = null;
     const fetchTasks = () => {
+      if (cancelled) return Promise.resolve(false);
       if (inFlight) return inFlight;
       inFlight = (async () => {
         try {
@@ -336,6 +409,7 @@ export const TaskProvider = ({ children }) => {
             .from('tasks')
             .select('*')
             .order('created_at', { ascending: false });
+          if (cancelled) return false;
           if (error) {
             console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", error.message || error);
             return false;
@@ -345,7 +419,9 @@ export const TaskProvider = ({ children }) => {
           }
           return true;
         } catch (err) {
-          console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", err);
+          if (!cancelled) {
+            console.warn("[GigPay Sync] Fetch tasks notice, preserving local state:", err);
+          }
           return false;
         } finally {
           inFlight = null;
@@ -358,8 +434,8 @@ export const TaskProvider = ({ children }) => {
     fetchTasks();
 
     const isVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
-    const onReturn = () => { if (isVisible()) fetchTasks(); };
-    const poll = setInterval(() => { if (isVisible()) fetchTasks(); }, TASK_REFRESH_INTERVAL_MS);
+    const onReturn = () => { if (!cancelled && isVisible()) fetchTasks(); };
+    const poll = setInterval(() => { if (!cancelled && isVisible()) fetchTasks(); }, TASK_REFRESH_INTERVAL_MS);
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onReturn);
     if (typeof window !== 'undefined') {
       window.addEventListener('focus', onReturn);
@@ -373,6 +449,7 @@ export const TaskProvider = ({ children }) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks' },
         (payload) => {
+          if (cancelled) return;
           if (payload.eventType === 'INSERT') {
             updateTasksAndCache((prev) => [payload.new, ...prev.filter(t => t.id !== payload.new.id)]);
           } else if (payload.eventType === 'UPDATE') {
@@ -385,6 +462,7 @@ export const TaskProvider = ({ children }) => {
       .subscribe();
 
     return () => {
+      cancelled = true;
       clearInterval(poll);
       if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onReturn);
       if (typeof window !== 'undefined') {
@@ -464,7 +542,8 @@ export const TaskProvider = ({ children }) => {
         fundResult = await submitFundTask({
           clientAddress: activeKey,
           freelancerAddress: requestedFreelancer || undefined,
-          amount: task.amount
+          amount: task.amount,
+          offlineDemo: isOfflineOrSimulationSession(user)
         }, { onSigned: saveBeforeSend });
       } catch (fundErr) {
         if (savedBeforeSend) {
@@ -590,7 +669,7 @@ export const TaskProvider = ({ children }) => {
     // A client can release while this phone still shows In Progress (BCC Day 1, escrow #55). Check the
     // shared record first: proof sent after a release is attached, but the task stays Completed.
     let currentStatus = task.status;
-    if (isUuid(id)) {
+    if (isUuid(id) && !isOfflineOrSimulationSession(user)) {
       try {
         const { data } = await supabase.from('tasks').select('status').eq('id', id).maybeSingle();
         if (data?.status) currentStatus = data.status;
@@ -728,7 +807,8 @@ export const TaskProvider = ({ children }) => {
       if (newStatus === 'Completed') {
         releaseResult = await submitApproveTask({
           clientAddress: taskToUpdate.client_wallet || activeKey,
-          taskId: taskToUpdate
+          taskId: taskToUpdate,
+          offlineDemo: isOfflineOrSimulationSession(user)
         });
         if (releaseResult?.alreadyReleased) {
           return await markAlreadyReleased(releaseResult.onChainTask);
@@ -759,7 +839,9 @@ export const TaskProvider = ({ children }) => {
           }));
         }
       } else {
-        await requestWalletSignature(activeKey, `Action: Task ${String(id).slice(0, 8)}`);
+        await requestWalletSignature(activeKey, `Action: Task ${String(id).slice(0, 8)}`, {
+          offlineDemo: isOfflineOrSimulationSession(user)
+        });
       }
     } catch (signErr) {
       // Fallback for when the contract's "already approved" text does reach the app.
