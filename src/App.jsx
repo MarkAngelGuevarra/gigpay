@@ -16,8 +16,8 @@ import { Analytics } from '@vercel/analytics/react';
 import { isLocalhostHostname, isOfflineDemoEnabled, isPilotToolsEnabled, isProdMode } from './lib/env';
 import './index.css';
 
-const ProtectedRoute = ({ children }) => {
-  const { user, isLoading } = useAuth();
+export const ProtectedRoute = ({ children, requiredRole }) => {
+  const { user, isLoading, activeRole, isSimulationMode } = useAuth();
   
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading session...</div>;
   
@@ -25,7 +25,15 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/auth" />;
   }
 
-  // Any authenticated user can seamlessly experience both Client and Freelancer flows
+  if (requiredRole && !isSimulationMode) {
+    if (activeRole !== 'client' && activeRole !== 'freelancer') {
+      return <Navigate to="/" replace />;
+    }
+    if (activeRole !== requiredRole) {
+      return <Navigate to={activeRole === 'freelancer' ? '/freelancer' : '/client'} replace />;
+    }
+  }
+
   return children;
 };
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { clearInvitePayout } from '../lib/invite';
 import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet, STELLAR_NETWORK_NAME } from '../lib/stellar';
@@ -15,7 +15,12 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-const isSimulationUser = (u) => Boolean(u?.is_simulation_mode || u?.user_metadata?.is_simulation_mode || String(u?.id || '').startsWith('demo-'));
+const normalizeAppRole = (value) => (value === 'client' || value === 'freelancer' ? value : null);
+const isSimulationUser = (u) => Boolean(u?.is_simulation_mode && String(u?.id || '').startsWith('demo-'));
+const isNetworkOrOfflineError = (err) => {
+  const msg = String(err?.message || err || '').toLowerCase();
+  return !msg.includes('invalid login credentials') && !msg.includes('email not confirmed');
+};
 
 // The shared DEMO keys are placeholders (DEMO_FREELANCER_KEY is the team's own Testnet wallet), so
 // activity under them can never count as a real tester's. Wherever the app would hand a tester a demo
@@ -98,7 +103,32 @@ const rehydrateSessionWallet = (sessionUser, setRawPublicKey) => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [dbRole, setDbRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef(null);
+  const sessionOverrideRef = useRef(false);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const loadDbRole = async (sessionUser) => {
+    if (!sessionUser?.id || isSimulationUser(sessionUser)) {
+      setDbRole(normalizeAppRole(sessionUser?.user_metadata?.role));
+      return;
+    }
+    try {
+      const builder = supabase.from('profiles').select('role').eq('id', sessionUser.id);
+      const res = typeof builder?.maybeSingle === 'function'
+        ? await builder.maybeSingle()
+        : (typeof builder?.single === 'function' ? await builder.single() : null);
+      if (userRef.current && userRef.current.id !== sessionUser.id) return;
+      const fetchedRole = normalizeAppRole(res?.data?.role);
+      setDbRole(fetchedRole || normalizeAppRole(sessionUser?.user_metadata?.role));
+    } catch {
+      setDbRole(normalizeAppRole(sessionUser?.user_metadata?.role));
+    }
+  };
 
   // Restore wallet key only when a local demo session already exists; signed-out visitors stay null
   // until authentication finishes so visiting landing/auth never provisions or funds a Testnet wallet.
@@ -144,10 +174,10 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let mounted = true;
-    // Safety timeout in case network delays Supabase response on Vercel
+    // Safety circuit-breaker if the Supabase network request hangs indefinitely
     const timeoutId = setTimeout(() => {
       if (mounted) setIsLoading(false);
-    }, 2500);
+    }, 8000);
 
     // Check localStorage for demo tester session first
     const savedDemoUser = localStorage.getItem('gigpay_demo_user');
@@ -164,22 +194,30 @@ export const AuthProvider = ({ children }) => {
 
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(timeoutId);
       if (!mounted) return;
-      if (session?.user) {
+      if (session?.user && !sessionOverrideRef.current) {
+        localStorage.removeItem('gigpay_demo_user');
         setUser(session.user);
+        loadDbRole(session.user);
         rehydrateSessionWallet(session.user, setRawPublicKey);
       }
       setIsLoading(false);
     }).catch((err) => {
+      clearTimeout(timeoutId);
       console.warn("Supabase session fetch error (using fallback mode):", err);
       if (mounted) setIsLoading(false);
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      clearTimeout(timeoutId);
       if (!mounted) return;
       if (session?.user) {
+        sessionOverrideRef.current = true;
+        localStorage.removeItem('gigpay_demo_user');
         setUser(session.user);
+        loadDbRole(session.user);
         rehydrateSessionWallet(session.user, setRawPublicKey);
       } else if (event === 'SIGNED_OUT') {
         const hasDemoSession = typeof localStorage !== 'undefined' && !!localStorage.getItem('gigpay_demo_user');
@@ -187,6 +225,7 @@ export const AuthProvider = ({ children }) => {
           clearStoredSessionCaches();
           setPracticeWalletOwner(null);
           setUser(null);
+          setDbRole(null);
           setRawPublicKey(null);
         }
       }
@@ -201,9 +240,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signUp = async (email, password, metadata) => {
-    const previousUser = user;
-    clearStoredSessionCaches();
-    setPracticeWalletOwner(null);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -212,12 +248,13 @@ export const AuthProvider = ({ children }) => {
       }
     });
     if (error) {
-      if (previousUser && !isSimulationUser(previousUser)) {
-        setPracticeWalletOwner(previousUser.id);
-      }
       throw error;
     }
+    sessionOverrideRef.current = true;
+    clearStoredSessionCaches();
+    setPracticeWalletOwner(null);
     if (data?.session && data?.user) {
+      await loadDbRole(data.user);
       rehydrateWalletForSession(data.user);
     }
     return data;
@@ -230,13 +267,15 @@ export const AuthProvider = ({ children }) => {
         password,
       });
       if (error) throw error;
+      sessionOverrideRef.current = true;
       localStorage.removeItem('gigpay_demo_user');
       if (data?.user) {
+        await loadDbRole(data.user);
         rehydrateWalletForSession(data.user);
       }
       return data;
     } catch (supabaseError) {
-      // Resilient tester login: support tester accounts even if Supabase project is paused or offline
+      // Resilient tester login: support tester accounts only when Supabase is unreachable or offline
       const lowerEmail = (email || '').toLowerCase().trim();
       // Only the two shared reviewer accounts may fall back to the offline demo. Any other failed
       // sign-in (a tester's mistyped email or password) must show the error, not open a fake session
@@ -245,7 +284,7 @@ export const AuthProvider = ({ children }) => {
         (lowerEmail === 'client@gigpay.tech' || lowerEmail === 'freelancer@gigpay.tech') &&
         password === 'password123';
 
-      if (isTesterAccount) {
+      if (isTesterAccount && isNetworkOrOfflineError(supabaseError)) {
         const isClient = lowerEmail.includes('client') || !lowerEmail.includes('freelancer');
         const role = isClient ? 'client' : 'freelancer';
         const demoUser = {
@@ -259,9 +298,11 @@ export const AuthProvider = ({ children }) => {
           }
         };
         const demoKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
+        sessionOverrideRef.current = true;
         clearStoredSessionCaches();
         setPracticeWalletOwner(null);
         setUser(demoUser);
+        setDbRole(role);
         setPublicKey(demoKey, { upgrade: false });
         localStorage.setItem('gigpay_demo_user', JSON.stringify(demoUser));
         localStorage.setItem('gigpay_wallet_public_key', demoKey);
@@ -274,27 +315,27 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    sessionOverrideRef.current = true;
+    setUser(null);
+    setDbRole(null);
+    setPublicKey(null);
     try {
       clearStoredSessionCaches();
-      // The next person on this device must not inherit this account's task cache. (The account's own
-      // practice wallet stays stored under its user id, so signing back in restores it.)
-      // Older cache keys the task list still falls back to; left behind, the next student on a lab PC
-      // loaded the previous student's tasks and ledger rows.
       localStorage.removeItem('gigpay_tasks_cache_v2');
       localStorage.removeItem('gigpay_verification_ledger_v1');
     } catch (e) {
       console.warn("Storage cleanup notice:", e);
     }
     setPracticeWalletOwner(null);
-    // A freelancer's invite address must not pre-fill the next student's task form on a shared PC.
     clearInvitePayout();
     try {
-      await supabase.auth.signOut();
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 2500))
+      ]);
     } catch (e) {
       console.warn("Supabase signOut notice:", e);
     }
-    setUser(null);
-    setPublicKey(null);
   };
 
   const disconnectWallet = () => {
@@ -375,68 +416,37 @@ export const AuthProvider = ({ children }) => {
     const currentRole = user?.user_metadata?.role || 'client';
     const targetRole = roleOverride || (currentRole === 'client' ? 'freelancer' : 'client');
     const isClient = targetRole === 'client';
-    const isSimulation = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || user?.id?.startsWith?.('demo-'));
+    const isSimulation = isSimulationUser(user);
 
     // Signed-out visitors used to be turned into a shared offline demo user, whose tasks
     // no partner can see and which can never count. They now have to sign up with their own email.
     if (!user) return null;
+    if (!isSimulation) return null;
 
-    let updatedUser;
-    if (isSimulation) {
-      updatedUser = {
-        id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
-        email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
-        is_simulation_mode: true,
-        user_metadata: {
-          role: targetRole,
-          display_name: isClient ? 'Demo client' : 'Demo freelancer',
-          is_simulation_mode: true
-        }
-      };
-      try {
-        localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
-      } catch (e) {
-        console.warn("Could not cache switched user:", e);
+    const updatedUser = {
+      id: isClient ? 'demo-client-uuid-001' : 'demo-freelancer-uuid-002',
+      email: isClient ? 'client@gigpay.tech' : 'freelancer@gigpay.tech',
+      is_simulation_mode: true,
+      user_metadata: {
+        role: targetRole,
+        display_name: isClient ? 'Demo client' : 'Demo freelancer',
+        is_simulation_mode: true
       }
-    } else {
-      updatedUser = {
-        ...user,
-        user_metadata: {
-          ...(user.user_metadata || {}),
-          role: targetRole
-        }
-      };
-      // Asynchronously sync role to Supabase metadata and profiles table without blocking
-      try {
-        supabase.auth.updateUser({
-          data: { role: targetRole }
-        }).catch(err => console.warn("Supabase background role sync notice:", err));
-
-        if (user.id && !user.id.startsWith?.('demo-')) {
-          // The profiles role is what RLS checks when a client creates or a freelancer accepts a task.
-          // Supabase query builders have no .catch(): calling it threw before the request was sent, so
-          // the role never synced and a switched user's tasks were silently rejected by the database.
-          supabase
-            .from('profiles')
-            .update({ role: targetRole })
-            .eq('id', user.id)
-            .then(({ error }) => {
-              if (error) console.warn("Supabase profiles table role sync notice:", error);
-            });
-        }
-      } catch (e) {
-        console.warn("Supabase updateUser invocation notice:", e);
-      }
+    };
+    try {
+      localStorage.setItem('gigpay_demo_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.warn("Could not cache switched user:", e);
     }
 
     setUser(updatedUser);
-    
+
     // Automatically sync paired simulator wallet so anti-self-dealing assertion always passes
     const cachedKey = typeof localStorage !== 'undefined' ? localStorage.getItem('gigpay_wallet_public_key') : null;
     const isExternalFreighter = isSimulation && cachedKey && !isDemoWallet(cachedKey) && !isSimulatorWallet(cachedKey);
-    if (!isExternalFreighter && (isSimulation || !cachedKey || cachedKey.startsWith('GBDEMO_') || cachedKey === DEMO_PUBLIC_KEY || cachedKey === DEMO_FREELANCER_KEY)) {
+    if (!isExternalFreighter) {
       const nextKey = isClient ? DEMO_PUBLIC_KEY : DEMO_FREELANCER_KEY;
-      const resolved = setPublicKey(nextKey, { upgrade: !isSimulation });
+      const resolved = setPublicKey(nextKey, { upgrade: false });
       try {
         localStorage.setItem('gigpay_wallet_public_key', resolved || nextKey);
         if (updatedUser?.id) localStorage.setItem('gigpay_wallet_owner_id', updatedUser.id);
@@ -462,7 +472,9 @@ export const AuthProvider = ({ children }) => {
     };
     clearStoredSessionCaches();
     setPracticeWalletOwner(null);
+    sessionOverrideRef.current = true;
     setUser(simUser);
+    setDbRole(initialRole === 'freelancer' ? 'freelancer' : 'client');
     try {
       localStorage.setItem('gigpay_demo_user', JSON.stringify(simUser));
       localStorage.setItem('gigpay_wallet_public_key', simKey);
@@ -483,12 +495,23 @@ export const AuthProvider = ({ children }) => {
   const ensureDbRole = async (role) => {
     if (!user?.id) return false;
     if (isSimulationUser(user)) return true;
+    const declaredRole = dbRole || normalizeAppRole(user.user_metadata?.role);
+    if (declaredRole && declaredRole !== role) {
+      return false;
+    }
     try {
-      const { error } = await supabase.from('profiles').update({ role }).eq('id', user.id);
-      if (error) {
-        console.warn("[AuthContext] Role sync before action failed:", error);
+      const updateBuilder = supabase.from('profiles').update({ role }).eq('id', user.id);
+      const res = typeof updateBuilder?.select === 'function'
+        ? await updateBuilder.select('role')
+        : await updateBuilder;
+      if (res?.error) {
+        console.warn("[AuthContext] Role sync before action failed:", res.error);
         return false;
       }
+      if (Array.isArray(res?.data) && res.data.length === 0) {
+        return false;
+      }
+      setDbRole(role);
       if (user.user_metadata?.role !== role) {
         setUser((prev) => (prev ? { ...prev, user_metadata: { ...(prev.user_metadata || {}), role } } : prev));
         supabase.auth.updateUser({ data: { role } }).catch(() => {});
@@ -516,7 +539,9 @@ export const AuthProvider = ({ children }) => {
       ensureDbRole,
       loginSimulationMode,
       isSimulationMode,
-      activeRole: user?.user_metadata?.role || 'client'
+      activeRole: isSimulationMode
+        ? (normalizeAppRole(user?.user_metadata?.role) || 'client')
+        : (dbRole || normalizeAppRole(user?.user_metadata?.role) || 'client')
     }}>
       {children}
     </AuthContext.Provider>

@@ -66,7 +66,7 @@ test('TEST 5: No hardcoded tester list (names, ratings or quotes) ships in the a
 
 test('TEST 5b: Failed sign-in falls back to the offline demo only for the two reviewer accounts', () => {
   const auth = read('src', 'context', 'AuthContext.jsx');
-  const block = auth.slice(auth.indexOf('const isTesterAccount'), auth.indexOf('if (isTesterAccount)'));
+  const block = auth.slice(auth.indexOf('const isTesterAccount'), auth.indexOf('if (isTesterAccount'));
   assert.ok(!/lowerEmail\.includes\(/.test(block), 'fallback must not match any email containing client/freelancer');
   assert.ok(!/\|\|\s*password === 'password123';/.test(block), 'password alone must not open a demo session');
   assert.ok(block.includes("lowerEmail === 'client@gigpay.tech'") && block.includes('&&'), 'fallback limited to exact reviewer emails');
@@ -81,10 +81,16 @@ test("TEST 7: Freelancer must accept before submitting proof; client cannot rele
   assert.ok(read('src', 'pages', 'ClientDashboard.jsx').includes("taskObj.status === 'Available'"));
 });
 
-test('TEST 8: Role switch really syncs profiles.role (RLS checks it for task create/accept)', () => {
+test('TEST 8: Real accounts cannot switch roles via switchRole; ensureDbRole awaits profiles.role update cleanly', () => {
   const auth = read('src', 'context', 'AuthContext.jsx');
-  const block = auth.slice(auth.indexOf(".from('profiles')"), auth.indexOf(".from('profiles')") + 400);
-  assert.ok(block.includes('.then('), 'profiles role update must be executed with .then()');
+  const switchBlock = auth.slice(auth.indexOf('const switchRole ='), auth.indexOf('const loginSimulationMode ='));
+  assert.ok(switchBlock.includes('if (!isSimulation) return null;'), 'real non-simulation accounts must not switch roles');
+  const dbRoleBlock = auth.slice(auth.indexOf('const ensureDbRole ='), auth.indexOf('return (', auth.indexOf('const ensureDbRole =')));
+  assert.ok(
+    /supabase\.from\('profiles'\)\.update\(\{\s*role\s*\}\)\.eq\('id', user\.id\)/.test(dbRoleBlock) &&
+      dbRoleBlock.includes('await '),
+    'ensureDbRole must await the profiles role update'
+  );
   assert.ok(!/\.eq\('id', user\.id\)\s*\.catch\(/.test(auth), 'Supabase query builders have no .catch(); the request would never be sent');
 });
 
