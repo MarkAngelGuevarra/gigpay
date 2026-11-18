@@ -35,9 +35,9 @@ At the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026), o
 They are real transactions signed by outside wallets, so the generated tables below still include them. Read the numbers with this in mind:
 
 - **"Escrows funded between outside wallets" includes the 3 duplicates.** Without them it is **21 escrows for distinct tasks**.
-- **"Repeat wallets" comes entirely from the duplicates.** Without them, no outside wallet has used GigPay twice, so we make **no repeat-use claim**.
+- **"Wallets in 2+ escrows" comes entirely from the duplicates.** Without them, no outside wallet has used GigPay twice, so we make **no repeat-use claim**.
 - **"Released end to end" (19) is not affected.**
-- **Outside-wallet transactions (funds + releases) for the SOW target of 50:** 43 as indexed, **40 without the duplicates**.
+- **Outside-wallet transactions (funds + releases):** 43 as indexed, **40 without the duplicates**.
 
 Other things a reviewer should know (checked on Horizon, Nov 14, 2026):
 
@@ -45,27 +45,27 @@ Other things a reviewer should know (checked on Horizon, Nov 14, 2026):
 - **#15:** its freelancer wallet (GCAM2RUA…) was never activated on Testnet, so it is counted in "42 outside wallets" but does not exist on-chain. #15 has not been released.
 - **Outside event hours:** #60 was funded on Nov 12 at 9:41 PM PH time and #71 on Nov 14 (not an event day).
 - **Amounts:** most escrows are 2 XLM, but students also typed 50, 100 and 1,000 XLM (#64, #70, #69). It is free Testnet XLM, so we do not use XLM volume as a metric.
-- **Counts are wallets, not verified people.** Each outside pair is two fresh wallets that did one escrow together, which fits booth onboarding but cannot by itself prove two different people.
+- **Counts are wallets, not verified people.** Each outside pair is two fresh wallets that did one escrow together, which fits a one-day hands-on testing session but cannot by itself prove two different people.
 
 The app now asks for confirmation before a second lock for the same freelancer and amount (commit `0b7cc18`, Nov 14, 2026).
 
-## Sprint 2 on-chain traction
+## On-chain activity (outside wallets)
 
-<!-- BEGIN GENERATED TRACTION (scripts/index_escrows.mjs) -->
+<!-- BEGIN GENERATED ACTIVITY (scripts/index_escrows.mjs) -->
 _Generated 2026-11-17 01:53 UTC from the same on-chain data. Only escrows where both the client and the freelancer are outside wallets are counted. Counts are wallets, not verified people._
 
-| SOW metric | On-chain count |
+| Count | On-chain |
 |:---|:---:|
-| Outside wallets with escrow activity (onboarded) | 42 |
+| Outside wallets in escrows | 42 |
 | Escrows funded between outside wallets | 24 |
-| End-to-end workflows released on-chain (activated) | 19 |
-| Repeat wallets (2+ escrows) | 6 (clients: 3, freelancers: 3) |
+| Escrows released | 19 |
+| Wallets in 2+ escrows | 6 (clients: 3, freelancers: 3) |
 
-| Week of (Mon, UTC) | New outside wallets | Escrows funded | Released | Cumulative wallets |
-|:---|:---:|:---:|:---:|:---:|
-| 2026-10-26 | 2 | 1 | 0 | 2 |
-| 2026-11-09 | 40 | 23 | 19 | 42 |
-<!-- END GENERATED TRACTION -->
+| Week of (Mon, UTC) | Escrows funded | Released |
+|:---|:---:|:---:|
+| 2026-10-26 | 1 | 0 |
+| 2026-11-09 | 23 | 19 |
+<!-- END GENERATED ACTIVITY -->
 
 ## On-chain escrows
 
@@ -167,15 +167,15 @@ _Generated 2026-11-17 01:53 UTC from Stellar Testnet. 75 escrows. Every funding 
 | 75 | 2026-11-16 14:13:10 | [`GD55LPUA…`](https://stellar.expert/explorer/testnet/account/GD55LPUACPGRZPR6ASWGH4SSAEDK2UUKGQEMHZ22CG3SQID2BOIBD7RT) | [`GC7XXZPG…`](https://stellar.expert/explorer/testnet/account/GC7XXZPGWFV7QRTMZBYIPNAOWXMNSWOUU3HGBSLXEX4H4XZKPXIAVKGN) | 2 XLM | [`927f9aa92d…`](https://stellar.expert/explorer/testnet/tx/927f9aa92dbce789d4922c23520f2b65d36cc38351f21b667d8fde6b8d19b3be) | [`cc98a0ecfd…`](https://stellar.expert/explorer/testnet/tx/cc98a0ecfd4bc1ae639903071e6e6976c1d05b56b1509d6f415706f16016bb2b) | Yes | Team test (team walkthrough video part 2 (client) → team walkthrough video (freelancer)) |
 <!-- END GENERATED ESCROW TABLE -->
 
-## User adoption: verified numbers
+## Feedback records (private sources, not reproducible from the chain)
 
 | Source | Number | How to check |
 |:---|:---:|:---|
 | Pilot intake form responses | **13** | Google Form "GigPay Pilot Program — Early Tester & Freelancer Intake" |
 | Platform sign-ups, Oct 12 – Nov 3, 2026 (personal emails; excludes the founder, the shared reviewer demo account and the July team accounts) | **23** (16 by Oct 18) | Supabase Auth, counted Nov 5 |
 | Sign-ups who created at least one task | **7** | Supabase `tasks` |
-| Recorded onboarding sessions and demos (Oct 16–17, 2026) | **5** | Loom |
-| Outside wallets with escrow activity on-chain (Nov 14, 2026) | **42** (41 exist on-chain); **24** escrows funded (**21** without the 3 duplicate locks #52, #53, #66), **19** released | Generated tables above |
+| Recorded tester sessions and demos (Oct 16–17, 2026) | **5** | Loom |
+| Outside wallets in escrows on-chain (Nov 14, 2026) | **42** (41 exist on-chain); **24** escrows funded (**21** without the 3 duplicate locks #52, #53, #66), **19** released | Generated tables above |
 
 The form, sign-up and session rows above are from Oct 12 – Nov 5, 2026, before the BCC 2026 event. Most on-chain activity came from students at BCC on Nov 12–13, 2026, using practice wallets on their own phones (see the note on duplicate locks above).
 
@@ -184,5 +184,5 @@ The form, sign-up and session rows above are from Oct 12 – Nov 5, 2026, before
 - [PR #2](https://github.com/MarkAngelGuevarra/gigpay/pull/2): Week 1, core Soroban escrow contract and Testnet verification
 - [PR #3](https://github.com/MarkAngelGuevarra/gigpay/pull/3): Week 2, frontend UI and Soroban contract integration
 - [PR #4](https://github.com/MarkAngelGuevarra/gigpay/pull/4): Week 3, Freighter multi-wallet hardening and error resilience
-- [PR #5](https://github.com/MarkAngelGuevarra/gigpay/pull/5): Week 4, verification package, security audit and walkthrough
+- [PR #5](https://github.com/MarkAngelGuevarra/gigpay/pull/5): Week 4, verification package, security self-review and walkthrough
 - Security notes: [SECURITY_AUDIT.md](SECURITY_AUDIT.md). Testing: [TESTING.md](TESTING.md).

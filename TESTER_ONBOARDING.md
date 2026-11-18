@@ -1,4 +1,4 @@
-# GigPay Tester Onboarding (Stellar Testnet)
+# How to try GigPay on Testnet
 
 GigPay runs on **Stellar Testnet**. Testnet XLM is practice money with no cash value: testers never need real money, a bank account, or a crypto wallet.
 
@@ -43,25 +43,15 @@ Then fill in the 2-minute tester form: **https://forms.gle/oLGjJRcxg5LZ5bC96** �
 
 ---
 
-## Part 2 — For the GigPay team (how traction is tracked)
+## Part 2 — For the GigPay team (test hygiene)
 
-**What counts** (Customer Development Plan + Instawards rules): outside wallets with on-chain activity (counted as wallets, not verified people), where **both** the client and the freelancer are outside wallets. Team, QA, founder and scripted wallets never count. Simulated or offline demo activity never counts.
+On-chain counts follow [METRICS.md](METRICS.md): an escrow counts only when **both** client and freelancer are outside wallets. Team, QA, founder and scripted wallets never count, and neither does offline demo activity.
 
-### Weekly routine (every Friday)
-1. Rebuild the evidence from the chain:
-   ```bash
-   node scripts/index_escrows.mjs --write
-   ```
-   This updates the **Sprint 2 on-chain traction** table and the full escrow table in `EVIDENCE_TABLE.md`, and the public ledger snapshot in `src/data/onchainEscrows.json`. Every number comes from Stellar Testnet; nothing is typed in by hand.
-2. Commit and push the result, so the weekly commit history shows the evidence growing.
-   Also check the contract's lifetime: `node scripts/extend_contract_ttl.mjs` shows how many days are left; if it's under 30, run it with `--submit`. (The contract never extends its own storage; if it lapses, every fund/release fails until it's restored.)
-3. Match on-chain wallets to people privately: sign-up email + form response + wallet address. Keep that mapping **out of this public repo** (it contains personal data).
-4. Post the weekly update (X post tagging @StellarOrg, @PHI_stellar, @riseinweb3) with Stellar Expert links to new released escrows.
-
-### Rules that protect the evidence
-- **Team members never test with practice wallets.** A practice wallet is a new random address, and the indexer would count it as an outside user. Test with the team QA client wallet, or add any address you used to `TEAM` in `scripts/index_escrows.mjs` and `TEAM_WALLETS` in `src/lib/ledgerIntegrity.js` before the next run.
-- **Never create wallets or escrows by script** for traction, and never ask friends to "just click through" without really testing.
+- **Add team wallets first.** Any wallet a team member uses must be added to `TEAM` in `scripts/index_escrows.mjs` and `TEAM_WALLETS` in `src/lib/ledgerIntegrity.js` before any test escrow. A practice wallet is a new random address, and the indexer would otherwise count it as an outside wallet.
+- **Regenerate from the chain:** `node scripts/index_escrows.mjs --write` updates `EVIDENCE_TABLE.md` and `src/data/onchainEscrows.json`. Nothing is typed in by hand.
+- **Contract lifetime:** `node scripts/extend_contract_ttl.mjs` shows how many days are left; Mark runs it with `--submit` when it is under 30. (If storage lapses, every fund and release fails until it is restored.)
+- **Never create wallets or escrows by script** to raise a count, and never ask anyone to "just click through" without really testing.
 - `npm test` runs offline. Tests write to the Testnet contract only with `GIGPAY_TESTNET_WRITES=1`, and those escrows pay the team wallet.
-- **Friendbot fallback pool.** Friendbot rate-limits by IP, so a classroom on one Wi-Fi gets refused after the first few wallets. When that happens the app asks the Supabase Edge Function `fund-practice-wallet`, which creates the practice wallet with 25 Testnet XLM from the team pool `GAG74N2W…` (one top-up per signed-in account; the pool's key lives in Supabase Vault, never in this repo). Pool funding does not affect counting: the evidence counts who the client and freelancer of an escrow are, not who funded their wallet. The pool is on the team list and never takes part in escrows. Top it up before an event with Friendbot from a different network if it drops below ~1,000 XLM.
-- **Before a live session:** on the venue Wi-Fi, open `horizon-testnet.stellar.org`, `soroban-testnet.stellar.org`, `friendbot.stellar.org`, the Supabase project URL and `gigpay.tech`; bring a mobile hotspot in case any are blocked; run one full escrow with the team QA wallet.
-- Report wallets as wallets. One person can create several practice wallets, so pair the on-chain count with sign-up and form records before calling it "users".
+- **Practice-wallet funding.** Friendbot rate-limits by IP. When it refuses, the app asks the Supabase Edge Function `fund-practice-wallet`, which creates the practice wallet with 25 Testnet XLM from the team Testnet funding account `GAG74N2W…` (one top-up per signed-in account; its key is in Supabase Vault, never in this repo). Who funded a wallet does not affect counting. The funding account is on the team list and never takes part in escrows.
+- **Privacy:** any record linking a wallet to a person (sign-up email, form response, wallet address) stays out of this public repo. See [PRIVACY.md](PRIVACY.md).
+- Report wallets as wallets. One person can create several practice wallets.
