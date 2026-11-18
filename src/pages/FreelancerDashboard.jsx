@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X, RotateCcw } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { isDemoWallet, isSimulatorWallet, buildExplorerAccountUrl } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
+import { safeHttpsUrl } from '../lib/taskLifecycle';
 import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
@@ -23,6 +24,14 @@ const FreelancerDashboard = () => {
   // Invite QR: the partner scans it with the camera app, so the link opens in the phone's real browser
   // (never a chat app's in-app browser) and the client signs up, locks and releases in that one browser.
   const [inviteQr, setInviteQr] = useState(null);
+  useEffect(() => {
+    if (!inviteQr || typeof window === 'undefined') return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setInviteQr(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inviteQr]);
   const showInviteQr = async () => {
     try {
       setInviteQr({ src: await buildInviteQrDataUrl(publicKey), link: buildInviteLink(publicKey) });
@@ -51,6 +60,8 @@ const FreelancerDashboard = () => {
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
+  const acceptInFlightRef = useRef(false);
+  const powInFlightRef = useRef(false);
   
   // Proof of Work Submission State (Sprint 2 draft D3)
   const [expandedPoWTask, setExpandedPoWTask] = useState(null);
@@ -60,19 +71,39 @@ const FreelancerDashboard = () => {
   const [submissionNotes, setSubmissionNotes] = useState('');
   const [isSubmittingPoW, setIsSubmittingPoW] = useState(false);
 
+  const togglePowForm = (task) => {
+    if (isSubmittingPoW || powInFlightRef.current) return;
+    if (!task || expandedPoWTask === task.id) {
+      setExpandedPoWTask(null);
+      setGithubPrUrl('');
+      setDocUrl('');
+      setLoomUrl('');
+      setSubmissionNotes('');
+      return;
+    }
+    setExpandedPoWTask(task.id);
+    setDocUrl(task.doc_url || '');
+    setGithubPrUrl(task.github_pr_url || '');
+    setLoomUrl(task.loom_url || '');
+    setSubmissionNotes(task.submission_notes || '');
+  };
+
   const handleAcceptWork = async (id, amount) => {
+    if (acceptInFlightRef.current || isAccepting) return;
+    acceptInFlightRef.current = true;
     setIsAccepting(true);
     setAcceptingTaskId(id);
     try {
       // updateTaskStatus asks for the one wallet confirmation itself; asking here too made students sign twice.
       await updateTaskStatus(id, 'In Progress', true);
-      const isSimUser = !!(user?.is_simulation_mode || String(user?.id || '').startsWith('demo-'));
+      const isSimUser = isSimulationMode;
       addToast(isSimUser
         ? "Simulation only: task accepted in this browser. Nothing is locked on Stellar Testnet."
         : "Task accepted. The payment stays locked in the escrow until the client releases it.", isSimUser ? "info" : "success");
     } catch (err) {
       addToast("Failed to accept task: " + (err?.message || err), "error");
     } finally {
+      acceptInFlightRef.current = false;
       setIsAccepting(false);
       setAcceptingTaskId(null);
     }
@@ -81,6 +112,7 @@ const FreelancerDashboard = () => {
   const handleAcceptTask = handleAcceptWork;
 
   const handleSubmitProof = async (taskId) => {
+    if (powInFlightRef.current || isSubmittingPoW) return;
     let finalDocUrl = docUrl ? docUrl.trim() : '';
     let finalGithubUrl = githubPrUrl ? githubPrUrl.trim() : '';
     let finalLoomUrl = loomUrl ? loomUrl.trim() : '';
@@ -93,12 +125,13 @@ const FreelancerDashboard = () => {
       return;
     }
     // Only real web links are saved as proof; nothing is filled in on the freelancer's behalf.
-    const badLink = [finalGithubUrl, finalDocUrl, finalLoomUrl].find((u) => u && !/^https:\/\//i.test(u));
+    const badLink = [finalGithubUrl, finalDocUrl, finalLoomUrl].find((u) => u && (!/^https:\/\//i.test(u) || !safeHttpsUrl(u)));
     if (badLink) {
-      addToast("Work links must start with https:// so your client can open them.", "warning");
+      addToast("Work links must be valid https:// URLs so your client can open them.", "warning");
       return;
     }
 
+    powInFlightRef.current = true;
     setIsSubmittingPoW(true);
     try {
       await submitProofOfWork(taskId, {
@@ -115,6 +148,7 @@ const FreelancerDashboard = () => {
     } catch (err) {
       addToast("Failed to submit proof of work: " + err.message, "error");
     } finally {
+      powInFlightRef.current = false;
       setIsSubmittingPoW(false);
     }
   };
@@ -235,13 +269,13 @@ const FreelancerDashboard = () => {
         </div>
       )}
 
-      {inviteQr && createPortal(
+      {inviteQr && typeof document !== 'undefined' && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Invite QR code"
           onClick={() => setInviteQr(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(3, 7, 18, 0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(3, 7, 18, 0.88)', display: 'flex', alignItems: 'safe center', justifyContent: 'center', overflowY: 'auto', padding: '1rem', boxSizing: 'border-box' }}
         >
           <div
             className="glass-panel"
@@ -421,7 +455,10 @@ const FreelancerDashboard = () => {
             {acceptedTasks.map(task => {
               const isDisputed = task.status === 'Disputed';
               const dispute = getDisputeMetadata(task);
-              const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
+              const safeGithubUrl = safeHttpsUrl(task.github_pr_url);
+              const safeDocUrl = safeHttpsUrl(task.doc_url);
+              const safeLoomUrl = safeHttpsUrl(task.loom_url);
+              const hasProof = task.proof_attached || safeGithubUrl || safeDocUrl || safeLoomUrl;
               const isExpanded = expandedPoWTask === task.id;
 
               return (
@@ -477,18 +514,18 @@ const FreelancerDashboard = () => {
                         <CheckCircle2 size={14} /> Proof of Work Deliverables Attached:
                       </div>
                       <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        {task.github_pr_url && (
-                          <a href={task.github_pr_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
+                        {safeGithubUrl && (
+                          <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
                             <FileCode size={13} /> GitHub PR <ExternalLink size={11} />
                           </a>
                         )}
-                        {task.doc_url && (
-                          <a href={task.doc_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
+                        {safeDocUrl && (
+                          <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
                             <FileText size={13} /> Deliverable Doc <ExternalLink size={11} />
                           </a>
                         )}
-                        {task.loom_url && (
-                          <a href={task.loom_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
+                        {safeLoomUrl && (
+                          <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
                             <Video size={13} /> Loom Walkthrough <ExternalLink size={11} />
                           </a>
                         )}
@@ -505,9 +542,10 @@ const FreelancerDashboard = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.25rem' }}>
                     <button
                       type="button"
-                      onClick={() => setExpandedPoWTask(isExpanded ? null : task.id)}
+                      disabled={isSubmittingPoW}
+                      onClick={() => togglePowForm(task)}
                       className="btn btn-outline"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.4rem 0.8rem', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.4rem 0.8rem', borderColor: 'var(--accent)', color: 'var(--accent)', opacity: isSubmittingPoW ? 0.55 : 1, cursor: isSubmittingPoW ? 'not-allowed' : 'pointer' }}
                     >
                       <UploadCloud size={15} />
                       {hasProof ? 'Update Proof of Work' : 'Attach Proof of Work Deliverables'}
@@ -563,10 +601,11 @@ const FreelancerDashboard = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+                        <label htmlFor={`pow-doc-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
                           1. Document, Design, or Work Link (Google Drive, Canva, Figma, Notion, Docs)
                         </label>
                         <input
+                          id={`pow-doc-${task.id}`}
                           type="url"
                           placeholder="https://docs.google.com/... or Google Drive / Canva link"
                           value={docUrl}
@@ -576,10 +615,11 @@ const FreelancerDashboard = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+                        <label htmlFor={`pow-github-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
                           2. GitHub Pull Request URL (Optional — For Software Developers)
                         </label>
                         <input
+                          id={`pow-github-${task.id}`}
                           type="url"
                           placeholder="https://github.com/organization/repo/pull/12"
                           value={githubPrUrl}
@@ -589,10 +629,11 @@ const FreelancerDashboard = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+                        <label htmlFor={`pow-loom-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
                           3. Loom / Demo Walkthrough Video URL
                         </label>
                         <input
+                          id={`pow-loom-${task.id}`}
                           type="url"
                           placeholder="https://www.loom.com/share/..."
                           value={loomUrl}
@@ -602,10 +643,11 @@ const FreelancerDashboard = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+                        <label htmlFor={`pow-notes-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
                           4. Summary Notes / Changelog
                         </label>
                         <textarea
+                          id={`pow-notes-${task.id}`}
                           rows={2}
                           placeholder="Brief description of work completed for client verification..."
                           value={submissionNotes}
@@ -618,7 +660,7 @@ const FreelancerDashboard = () => {
                         <button
                           type="button"
                           className="btn btn-outline"
-                          onClick={() => setExpandedPoWTask(null)}
+                          onClick={() => togglePowForm(null)}
                           disabled={isSubmittingPoW}
                           style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}
                         >
