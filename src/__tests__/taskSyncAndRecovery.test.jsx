@@ -494,4 +494,97 @@ describe('Phase 2 Slice 2: taskLifecycle merges, deletion sync, dispute prefligh
       .rejects.toThrow(/verify dispute status before releasing/i);
     expect(approveSpy).not.toHaveBeenCalled();
   });
+
+  it('emits balance refresh when an incoming Realtime UPDATE settles the freelancer escrow to Completed', async () => {
+    vi.stubEnv('VITE_OFFLINE_DEMO', 'false');
+    const flId = '22222222-2222-4222-8222-222222222222';
+    const flUser = { id: flId, email: 'fl@gigpay.local', user_metadata: { role: 'freelancer' } };
+    const reviewTask = {
+      id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+      title: 'Realtime Settlement Task',
+      amount: '15',
+      status: 'Under Review',
+      client_id: CLIENT_ID,
+      freelancer_id: flId,
+      client_wallet: CLIENT_KEY,
+      freelancer_wallet: FREELANCER_KEY,
+      on_chain_task_id: 33,
+      tx_hash: 'a'.repeat(64),
+      created_at: '2026-11-18T00:00:00Z',
+    };
+
+    let realtimeHandler = null;
+    vi.doMock('../lib/supabase.js', () => ({
+      supabase: {
+        auth: {
+          getSession: vi.fn().mockResolvedValue({ data: { session: { user: flUser } }, error: null }),
+          onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
+        },
+        from: vi.fn(() => {
+          const b = {
+            select: () => b,
+            eq: () => b,
+            order: () => Promise.resolve({ data: [reviewTask], error: null }),
+            single: async () => ({ data: { role: 'freelancer' }, error: null }),
+            maybeSingle: async () => ({ data: { role: 'freelancer' }, error: null }),
+          };
+          return b;
+        }),
+        channel: vi.fn(() => ({
+          on: function (_ev, _filter, cb) {
+            realtimeHandler = cb;
+            return this;
+          },
+          subscribe: function () { return this; },
+        })),
+        removeChannel: vi.fn(),
+        functions: { invoke: vi.fn() },
+      },
+    }));
+
+    const { AuthProvider } = await import('../context/AuthContext.jsx');
+    const { ToastProvider } = await import('../context/ToastContext.jsx');
+    const { TaskProvider, useTasks } = await import('../context/TaskContext.jsx');
+
+    let latestTasks = null;
+    const Probe = () => {
+      latestTasks = useTasks();
+      return null;
+    };
+
+    let refreshCount = 0;
+    const onBalanceRefresh = () => { refreshCount++; };
+    window.addEventListener('gigpay:balance-refresh', onBalanceRefresh);
+
+    try {
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <ToastProvider>
+              <TaskProvider>
+                <Probe />
+              </TaskProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(latestTasks.tasks).toHaveLength(1);
+      });
+      expect(refreshCount).toBe(0);
+
+      act(() => {
+        realtimeHandler({
+          eventType: 'UPDATE',
+          new: { ...reviewTask, status: 'Completed', release_tx_hash: 'b'.repeat(64), completed_at: '2026-11-18T00:05:00Z' },
+        });
+      });
+
+      expect(refreshCount).toBe(1);
+      expect(latestTasks.tasks[0].status).toBe('Completed');
+    } finally {
+      window.removeEventListener('gigpay:balance-refresh', onBalanceRefresh);
+    }
+  });
 });
