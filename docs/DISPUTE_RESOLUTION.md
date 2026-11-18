@@ -20,7 +20,7 @@ So the freeze is enforced by the GigPay app and its database, not on-chain. Some
 
 | Action | Who | Where in the code |
 |:---|:---|:---|
-| Raise a dispute | The client who owns the task (`tasks.client_id` is the signed-in user), while the task is **In Progress** or **Under Review** | `ClientDashboard.jsx` (Freeze & Dispute button), `raiseDispute` in `TaskContext.jsx` |
+| Raise a dispute | The client who owns the task (`tasks.client_id` is the signed-in user), while the task is **In Progress** or **Under Review** | `ClientDashboard.jsx` (Pause Release & Dispute button), `raiseDispute` in `TaskContext.jsx` |
 | Resolve a dispute | The same client, while the task is **Disputed** | `ClientDashboard.jsx` (Resolve Dispute button), `resolveDispute` in `TaskContext.jsx` |
 | Release the escrow | The same client, only when no dispute is open, after typing `CONFIRM` | `handleApprove` in `ClientDashboard.jsx`, `updateTaskStatus` in `TaskContext.jsx`, `submitApproveTask` in `src/lib/stellar.js` |
 | Freelancer | Can see the dispute and its reason. Cannot raise, resolve or clear it, and cannot change the task (including proof of work) while it is Disputed | `FreelancerDashboard.jsx`, database trigger below |

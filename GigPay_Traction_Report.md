@@ -50,7 +50,7 @@ To learn from early testers, GigPay opened a tester feedback form.
   * Tester names and contact details are kept in the intake form, not in this public report.
 * **Recorded tester sessions (Loom):**
   * **Community Group Call (Oct 17, 2026):** recording kept private because it shows testers on camera (link removed Nov 18, 2026).
-  * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
+  * **Product walkthrough (team, not a tester session):** see the Sprint 2 walkthrough, [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Nov 15, 2026). The older Month 1 demo video was made private on Nov 18, 2026 because its description overstated fiat payout (GigPay has no bank, GCash or fiat withdrawal).
 * **Evidence Repository:** Tester profiles and survey responses contain personal data, so they are kept privately (in the intake form) and are not published. Public evidence is the on-chain table in [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 
 ### 3.2 Sprint 1 records

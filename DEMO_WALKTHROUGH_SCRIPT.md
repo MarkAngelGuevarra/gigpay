@@ -1,7 +1,7 @@
 # GigPay Walkthrough Video Script (3 to 5 minutes)
 **Stellar Philippines Instawards &bull; Sprint 2 work: built before approval; not funded**
 
-Script for recording the walkthrough on today's app at https://gigpay.tech (Stellar Testnet). Button names below are copied from the app; if the app changes, update this file before recording. Status: **recorded and published on Nov 15, 2026 in two parts: [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25: proof, dispute freeze, release, ledger).** Loom's free plan stops at 5 minutes. The demo escrows (#72–#75) used team wallets, which are on the team list.
+Script for recording the walkthrough on today's app at https://gigpay.tech (Stellar Testnet). Button names below are copied from the app; if the app changes, update this file before recording. Status: **recorded and published on Nov 15, 2026 in two parts: [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (5:00) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (4:25: proof, app-level release pause (dispute), release, ledger; the video shows the older "Freeze & Dispute" labels).** Loom's free plan stops at 5 minutes. The demo escrows (#72–#75) used team wallets, which are on the team list.
 
 ---
 
@@ -16,7 +16,7 @@ Script for recording the walkthrough on today's app at https://gigpay.tech (Stel
 - [ ] Client and freelancer on separate practice wallets
 - [ ] Task change appearing on the other screen without a manual reload
 - [ ] Freelancer proof-of-work links
-- [ ] Client dispute freeze (app-level) and resolve
+- [ ] Client app-level release pause (dispute) and resolve
 - [ ] Release confirmation modal (typing `CONFIRM`)
 - [ ] Public Ledger, with dispute column and CSV export
 - [ ] Transaction on Stellar Expert (contract `CAUU2O…7RD3`)
@@ -41,7 +41,7 @@ Script for recording the walkthrough on today's app at https://gigpay.tech (Stel
 - Tap **Attach Proof of Work Deliverables**, paste a Google Doc, GitHub PR and/or Loom link plus a short note, and tap **Submit Deliverables**.
 - Client: *"The proof links now show on the client's task card under Freelancer Proof of Work Attached."*
 
-#### 2:00 – 3:00 | Dispute freeze and release
+#### 2:00 – 3:00 | App-level release pause (dispute) and release
 - Client: click **Pause Release & Dispute**, edit the reason, click **Confirm Dispute (Pause Release)**. (The Nov 15 recording shows the earlier labels "Freeze & Dispute" / "Confirm Dispute Freeze".) *"The task is now Disputed and the release button is gone. This freeze is enforced by the GigPay app; the escrow contract itself has no dispute or refund state."* Show **Release Action Frozen (Disputed State)** with the reason, and **Dispute Frozen** on the freelancer side.
 - Click **Resolve Dispute**. Because proof was already submitted, the task returns to **Under Review** (without proof it would return to **In Progress**).
 - Click **Approve & Release**. *"To avoid accidental payouts, the client must type CONFIRM."* Type `CONFIRM` and click **Release Escrow Payout**. This sends the contract's `approve_task` transaction on Testnet.
