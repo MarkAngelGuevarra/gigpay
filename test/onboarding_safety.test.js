@@ -194,10 +194,10 @@ await test('Activity log never sends a name or email', async () => {
   globalThis.fetch = async (url, init) => { sent.push(String(init?.body || '')); return new Response('{}'); };
   try {
     const { recordStudentToGoogleSheet } = await import('../src/lib/sheetsSync.js');
-    await recordStudentToGoogleSheet({ emailForSourceDetection: 'juan.delacruz@umak.edu.ph', programSection: 'Client', walletAddress: 'GTEST' });
+    await recordStudentToGoogleSheet({ emailForSourceDetection: 'tester01@umak.edu.ph', programSection: 'Client', walletAddress: 'GTEST' });
   } finally { globalThis.fetch = realFetch; }
   assert.strictEqual(sent.length, 1);
-  assert.ok(!sent[0].includes('@') && !sent[0].includes('juan'), 'no email or name in the payload');
+  assert.ok(!sent[0].includes('@') && !sent[0].includes('tester01'), 'no email or name in the payload');
   for (const f of ['src/pages/AuthPage.jsx', 'src/pages/ClientDashboard.jsx']) {
     assert.ok(!/studentId:|studentName:/.test(read(f)), `${f} must not pass names or emails to the activity log`);
   }
@@ -346,7 +346,7 @@ await test('Invite address survives a reload or failed lock; accept signs once; 
   assert.ok(ctx.includes('if (previousId && currentId !== previousId) {'), "leaving an account clears its tasks from memory");
 });
 
-await test('Proof of work needs at least one link and pauses while disputed; release does not wait on the Sheet (SOW D3, Nov 15-16, 2026)', () => {
+await test('Proof of work needs at least one link and pauses while disputed; release does not wait on the Sheet (Sprint 2 draft D3, Nov 15-16, 2026)', () => {
   const free = read('src/pages/FreelancerDashboard.jsx');
   const fn = free.slice(free.indexOf('const handleSubmitProof'), free.indexOf('setIsSubmittingPoW(true);'));
   assert.ok(fn.includes('if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {'), 'no link at all is refused, even with a note');

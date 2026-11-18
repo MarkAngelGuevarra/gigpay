@@ -1,7 +1,7 @@
 /**
  * GigPay Automated Regression Test Suite (22 Tests)
- * Designed to satisfy SDF Instawards Month 2 SOW Deliverable 4
- * Checks GigPay's own reading of its Sprint 2 SOW acceptance criteria (not a program sign-off)
+ * Sprint 2 work (built before approval; not funded)
+ * Checks GigPay's own reading of its draft Sprint 2 acceptance criteria (draft not approved; not a program sign-off)
  *
  * What this file covers: none of its 22 tests import anything from src/. They are configuration
  * checks on literals and on small in-test copies of app logic, so they are named "configuration
@@ -22,7 +22,7 @@ import assert from 'node:assert';
 
 console.log("\n==================================================================");
 console.log("   GIGPAY INSTAWARDS SPRINT 2 — 22 CONFIGURATION CHECKS");
-console.log("   GigPay Sprint 2 SOW self-check (not an official program verification)");
+console.log("   GigPay Sprint 2 self-check (draft scope, not funded; not an official program verification)");
 console.log("==================================================================\n");
 
 let passedCount = 0;
@@ -291,7 +291,7 @@ runTest(22, "configuration check: fallback demo key literal starts with GBDEMO_ 
 console.log("\n==================================================================");
 console.log(`   REGRESSION SUITE RESULTS: ${passedCount}/22 TESTS PASSED`);
 if (failedCount === 0) {
-  console.log("   STATUS: all GigPay SOW self-checks passed");
+  console.log("   STATUS: all GigPay self-checks passed");
 } else {
   console.log(`   STATUS: ${failedCount} FAILURES DETECTED`);
 }

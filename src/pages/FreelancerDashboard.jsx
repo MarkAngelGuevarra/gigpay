@@ -50,7 +50,7 @@ const FreelancerDashboard = () => {
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
   
-  // Proof of Work Submission State (Deliverable 3 - Armielyn Requirement)
+  // Proof of Work Submission State (Sprint 2 draft D3)
   const [expandedPoWTask, setExpandedPoWTask] = useState(null);
   const [githubPrUrl, setGithubPrUrl] = useState('');
   const [docUrl, setDocUrl] = useState('');
@@ -84,7 +84,7 @@ const FreelancerDashboard = () => {
     let finalLoomUrl = loomUrl ? loomUrl.trim() : '';
     const finalNotes = submissionNotes ? submissionNotes.trim() : '';
 
-    // SOW D3(a): proof of work is at least one link (GitHub PR, document or Loom). A note alone isn't proof;
+    // Sprint 2 draft D3(a): proof of work is at least one link (GitHub PR, document or Loom). A note alone isn't proof;
     // the walkthrough recording on Nov 15, 2026 (escrow #73) showed a note-only submission was accepted.
     if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {
       addToast("Add at least one link to your work: a GitHub PR, a document, or a Loom video. The note is optional.", "warning");
@@ -411,7 +411,7 @@ const FreelancerDashboard = () => {
         })}
       </div>
 
-      {/* Active Jobs & Proof of Work Submission (Deliverable 3 - Armielyn Requirement) */}
+      {/* Active Jobs & Proof of Work Submission (Sprint 2 draft D3) */}
       {acceptedTasks.length > 0 && (
         <>
           <h3 style={{ marginTop: '3rem', marginBottom: '1.5rem' }}>Your Active Jobs & Deliverables</h3>
@@ -447,7 +447,7 @@ const FreelancerDashboard = () => {
                         fontSize: '0.8rem'
                       }}>
                         {isDisputed ? <ShieldAlert size={14} /> : <CheckCircle size={14} />} 
-                        {isDisputed ? 'Dispute Frozen' : task.status === 'Under Review' ? 'Submitted: waiting for client approval' : 'In Progress'}
+                        {isDisputed ? 'Release paused (app-level)' : task.status === 'Under Review' ? 'Submitted: waiting for client approval' : 'In Progress'}
                       </span>
                     </div>
                   </div>
@@ -455,7 +455,7 @@ const FreelancerDashboard = () => {
                   {/* Dispute Banner if flagged */}
                   {isDisputed && (
                     <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.75rem', fontSize: '0.85rem', color: '#fca5a5' }}>
-                      <strong>⚠️ Escrow Frozen:</strong> The client flagged this task as Disputed ({task.dispute_reason || 'reason not recorded'}). Standard release is paused until resolved.
+                      <strong>⚠️ Release paused (app-level):</strong> The client flagged this task as Disputed ({task.dispute_reason || 'reason not recorded'}). Standard release is paused until resolved.
                       <div data-testid="dispute-metadata" style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: '0.3rem' }}>
                         <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
                       </div>

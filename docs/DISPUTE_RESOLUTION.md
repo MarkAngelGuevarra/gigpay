@@ -4,7 +4,7 @@ This page documents the dispute freeze as it works today (written November 6, 20
 
 ## Short version
 
-1. The client who funded the task clicks **Freeze & Dispute** and gives a reason.
+1. The client who funded the task clicks **Pause Release & Dispute** and gives a reason.
 2. GigPay records the dispute and refuses to release the escrow while it is open.
 3. Client and freelancer sort out the problem between themselves (outside GigPay).
 4. The client clicks **Resolve Dispute**. The task returns to Under Review if proof of work was already submitted, otherwise to In Progress.

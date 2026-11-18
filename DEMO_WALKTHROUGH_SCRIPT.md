@@ -42,7 +42,7 @@ Script for recording the walkthrough on today's app at https://gigpay.tech (Stel
 - Client: *"The proof links now show on the client's task card under Freelancer Proof of Work Attached."*
 
 #### 2:00 – 3:00 | Dispute freeze and release
-- Client: click **Freeze & Dispute**, edit the reason, click **Confirm Dispute Freeze**. *"The task is now Disputed and the release button is gone. This freeze is enforced by the GigPay app; the escrow contract itself has no dispute or refund state."* Show **Release Action Frozen (Disputed State)** with the reason, and **Dispute Frozen** on the freelancer side.
+- Client: click **Pause Release & Dispute**, edit the reason, click **Confirm Dispute (Pause Release)**. (The Nov 15 recording shows the earlier labels "Freeze & Dispute" / "Confirm Dispute Freeze".) *"The task is now Disputed and the release button is gone. This freeze is enforced by the GigPay app; the escrow contract itself has no dispute or refund state."* Show **Release Action Frozen (Disputed State)** with the reason, and **Dispute Frozen** on the freelancer side.
 - Click **Resolve Dispute**. Because proof was already submitted, the task returns to **Under Review** (without proof it would return to **In Progress**).
 - Click **Approve & Release**. *"To avoid accidental payouts, the client must type CONFIRM."* Type `CONFIRM` and click **Release Escrow Payout**. This sends the contract's `approve_task` transaction on Testnet.
 - Freelancer: tap **Check my balance on Stellar Expert** to show the payment on-chain.

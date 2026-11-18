@@ -1,4 +1,4 @@
-// Ledger evidence rules for the public verification ledger and its CSV export (SOW Deliverable 2b/2c).
+// Ledger evidence rules for the public verification ledger and its CSV export (Sprint 2 draft D2b/2c).
 //
 // Instawards reviewers only count real users with verifiable on-chain activity, and the GigPay
 // Customer Development Plan excludes the team's own wallets from every count. These helpers keep the
@@ -138,7 +138,7 @@ export const onChainEarnings = (tasks, payoutAddress) => {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Public ledger: one row per on-chain escrow (SOW D2b/c)
+// Public ledger: one row per on-chain escrow (Sprint 2 draft D2b/c)
 // ---------------------------------------------------------------------------------------------
 
 const ON_CHAIN_SOURCE = 'On-chain index';
@@ -149,7 +149,7 @@ const minuteUtc = (iso) => {
 };
 
 /**
- * Dispute metadata for the public verification view (SOW D3c): when, who (as a role, never a name or
+ * Dispute metadata for the public verification view (Sprint 2 draft D3c): when, who (as a role, never a name or
  * account) and why, plus the resolution time. Address-like text in the reason is removed, and the
  * reason is shortened. Empty when the task was never disputed.
  */
@@ -161,7 +161,7 @@ export const describeDispute = (task) => {
   if (reason.length > 160) reason = reason.slice(0, 157) + '...';
   const when = minuteUtc(task.disputed_at);
   let text = `Disputed${when ? ' ' + when : ''}${by}${reason ? ': ' + reason : ''}`;
-  if (isDisputeActive(task)) text += ' (open: release frozen in GigPay)';
+  if (isDisputeActive(task)) text += ' (open: release paused in GigPay)';
   else if (task.dispute_resolved_at) text += `${/[.!?]$/.test(text) ? '' : '.'} Resolved ${minuteUtc(task.dispute_resolved_at)}`;
   return text;
 };

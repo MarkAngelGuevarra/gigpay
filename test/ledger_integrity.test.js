@@ -170,7 +170,7 @@ test('Dispute metadata (time, initiator role, reason, resolution) is shown witho
   const { describeDispute, buildPublicLedger, ledgerToCsv } = ledgerMod;
   const base = { client_id: 'c-1', disputed_by: 'c-1', dispute_reason: 'Logo  missing,\n write me at someone@example.com' };
   const open = describeDispute({ ...base, status: 'Disputed', disputed_at: '2026-11-06T10:12:40.123+00:00' });
-  assert.strictEqual(open, 'Disputed 2026-11-06 10:12 UTC by client: Logo missing, write me at [address removed] (open: release frozen in GigPay)');
+  assert.strictEqual(open, 'Disputed 2026-11-06 10:12 UTC by client: Logo missing, write me at [address removed] (open: release paused in GigPay)');
   const resolved = describeDispute({ ...base, status: 'In Progress', disputed_at: '2026-11-06T10:12:00Z', dispute_resolved_at: '2026-11-06T11:30:00Z' });
   assert.match(resolved, /^Disputed 2026-11-06 10:12 UTC by client: .*\. Resolved 2026-11-06 11:30 UTC$/);
   // A reason that already ends in a full stop gets no second one (escrows #73, #74: "specification.. Resolved").

@@ -1,5 +1,5 @@
 /**
- * Dispute metadata shown in the task record (SOW D3(c)): reason, when it was raised, by whom, and when
+ * Dispute metadata shown in the task record (Sprint 2 draft D3(c)): reason, when it was raised, by whom, and when
  * it was resolved. Uses only the stored fields dispute_reason, disputed_at, disputed_by and
  * dispute_resolved_at; anything missing is shown as "not recorded", never guessed.
  */

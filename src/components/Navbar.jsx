@@ -458,7 +458,7 @@ const Navbar = () => {
                 className="btn btn-outline"
                 style={{ flex: '1 1 100%', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', marginTop: '0.5rem', fontSize: '0.85rem' }}
               >
-                ⚡ Continue in Mobile / Simulator Testnet Mode
+                ⚡ Use a Testnet practice wallet in this browser
               </button>
             </div>
           </div>

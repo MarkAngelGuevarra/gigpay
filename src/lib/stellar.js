@@ -223,7 +223,7 @@ export const provisionSimulatorWallet = () => {
  */
 export const createEphemeralTestnetWallet = async () => {
   if (!isEphemeralSignerAllowed()) {
-    throw new Error('The simulator wallet is only available on Stellar Testnet.');
+    throw new Error('The practice wallet is only available on Stellar Testnet.');
   }
   const keypair = StellarSdk.Keypair.random();
   const publicKey = keypair.publicKey();
@@ -271,7 +271,7 @@ export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
 };
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
-// GigPay is a Stellar Testnet pilot only (Sprint 2 SOW: mainnet is out of scope), so the network is fixed.
+// GigPay is a Stellar Testnet pilot only (mainnet is out of scope), so the network is fixed.
 const NETWORK = 'TESTNET';
 const HORIZON_URL = NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org";
 const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
@@ -1199,7 +1199,7 @@ export const submitApproveTask = async (
   const resolvedTaskId = taskRecord ? (taskRecord.id || taskRecord.taskId) : taskId;
   const isMockTask = typeof resolvedTaskId === 'string' && resolvedTaskId.startsWith('task-mock');
 
-  // 0. Dispute freeze (SOW Deliverable 3b). The deployed contract has no dispute state, so this
+  // 0. Dispute freeze (Sprint 2 draft D3b). The deployed contract has no dispute state, so this
   // signing layer is the last point that can refuse a release while a task is Disputed.
   // The dispute timestamps decide, not just the status, so a stale "In Progress" copy can't slip through.
   if (isDisputeActive(taskRecord)) {

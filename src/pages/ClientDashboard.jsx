@@ -81,7 +81,7 @@ const ClientDashboard = () => {
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
 
-  // Dispute Modal State (Deliverable 3 - Armielyn Requirement)
+  // Dispute Modal State (Sprint 2 draft D3)
   const [taskToDispute, setTaskToDispute] = useState(null);
   const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
 
@@ -509,9 +509,9 @@ const ClientDashboard = () => {
                             onClick={() => setTaskToDispute(task.id)}
                             disabled={isTransacting}
                             style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#ef4444', color: '#ef4444' }}
-                            title="Freeze escrow funds and log dispute"
+                            title="Pause release in GigPay (app-level) and log a dispute"
                           >
-                            <AlertTriangle size={13} /> Freeze & Dispute
+                            <AlertTriangle size={13} /> Pause Release & Dispute
                           </button>
                         )}
                         <button 
@@ -561,11 +561,11 @@ const ClientDashboard = () => {
                   </div>
                 </div>
 
-                {/* Dispute Metadata Freeze Alert (Armielyn Acceptance Criteria b & c) */}
+                {/* Dispute Metadata Freeze Alert (Sprint 2 draft D3 b & c) */}
                 {isDisputed && (
                   <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.85rem', fontSize: '0.85rem', color: '#fca5a5' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>
-                      <AlertTriangle size={15} color="#ef4444" /> ⛔ Release Action Frozen (Disputed State)
+                      <AlertTriangle size={15} color="#ef4444" /> ⛔ Release paused (app-level, disputed)
                     </div>
                     <div style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>
                       <strong>Dispute reason:</strong> {task.dispute_reason || 'Not recorded'}
@@ -585,7 +585,7 @@ const ClientDashboard = () => {
                   </div>
                 )}
 
-                {/* Attached Freelancer Proof of Work (Armielyn Deliverable 3 Verification) */}
+                {/* Attached Freelancer Proof of Work (Sprint 2 draft D3) */}
                 {hasProof && (
                   <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#00f2fe', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
@@ -735,7 +735,7 @@ const ClientDashboard = () => {
         </div>
       </div>
 
-      {/* Dispute Reason Modal (Deliverable 3 - Armielyn Requirement) */}
+      {/* Dispute Reason Modal (Sprint 2 draft D3) */}
       {taskToDispute && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #ef4444' }}>
@@ -743,7 +743,7 @@ const ClientDashboard = () => {
               <AlertTriangle size={20} /> Raise Escrow Dispute
             </h3>
             <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Freezes the escrow milestone and blocks standard fund release. Dispute metadata will be logged to the task record.
+              Pauses release in GigPay (app-level). The escrow contract has no dispute state; the funds stay locked until the client releases them. The dispute reason and time are logged to the task record.
             </p>
             <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
               Dispute Reason / Required Revisions:
@@ -767,7 +767,7 @@ const ClientDashboard = () => {
                 onClick={handleDisputeSubmit} 
                 style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#b91c1c', color: 'white', border: 'none', borderRadius: '6px' }}
               >
-                Confirm Dispute Freeze
+                Confirm Dispute (Pause Release)
               </button>
             </div>
           </div>

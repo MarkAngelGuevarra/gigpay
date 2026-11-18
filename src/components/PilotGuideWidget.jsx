@@ -114,11 +114,11 @@ const CLIENT_STEPS = [
     title: 'Review Work or Dispute',
     badge: 'Step 3 of 4 • Review & Quality',
     icon: FileCheck,
-    teacherVoice: 'Once the freelancer submits proof, review deliverables! You can test both the release flow and dispute freeze mechanism.',
-    description: 'Inspect attached GitHub PRs, live demo URLs, or Google Docs. If specs are not met, Freeze & Dispute blocks the release in GigPay until you resolve it.',
+    teacherVoice: 'Once the freelancer submits proof, review deliverables! You can test both the release flow and pausing release with a dispute.',
+    description: 'Inspect attached GitHub PRs, live demo URLs, or Google Docs. If specs are not met, Pause Release & Dispute blocks the release in GigPay until you resolve it.',
     actionLabel: 'Show Tasks to Review',
     actionType: 'scroll_escrows',
-    tip: 'A disputed task cannot be released until the client resolves the dispute. (The freeze is enforced by GigPay; the contract itself has no dispute state.)'
+    tip: 'A disputed task cannot be released until the client resolves the dispute. (The pause is enforced by GigPay; the contract itself has no dispute state.)'
   },
   {
     step: 4,

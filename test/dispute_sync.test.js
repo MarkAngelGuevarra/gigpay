@@ -1,5 +1,5 @@
 /**
- * Dispute freeze across devices (SOW Deliverable 3b: a dispute strictly prevents standard release).
+ * Dispute freeze across devices (Sprint 2 draft D3b: a dispute strictly prevents standard release).
  *
  * "Disputed" and "In Progress" share a lifecycle rank, so the old merge let a stale copy win: a dispute
  * raised on one device was undone by another (and release went ahead), and a resolved dispute stayed

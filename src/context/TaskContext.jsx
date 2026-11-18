@@ -13,7 +13,7 @@ const TaskContext = createContext();
 
 export const useTasks = () => useContext(TaskContext);
 
-// Resilient shared cache keys per Armielyn Obinguar's SOW specification
+// Resilient shared cache keys
 const GIGPAY_SHARED_TASKS_KEY = 'gigpay_shared_tasks';
 const GIGPAY_LEGACY_CACHE_KEY = 'gigpay_tasks_cache_v2';
 const GIGPAY_LEDGER_CACHE_KEY = 'gigpay_verification_ledger_v1';
@@ -646,10 +646,10 @@ export const TaskProvider = ({ children }) => {
     if (disputeError) {
       console.warn("Supabase dispute notice:", disputeError);
       restoreTask(task);
-      throw new Error("GigPay couldn't save the dispute, so nothing was frozen. Only the client who funded this task can dispute it; try again.");
+      throw new Error("GigPay couldn't save the dispute, so release was not paused. Only the client who funded this task can dispute it; try again.");
     }
 
-    addToast("Task has been marked as Disputed. Escrow release is frozen.", "warning");
+    addToast("Task has been marked as Disputed. Release is paused in GigPay (app-level).", "warning");
   };
 
   // 7. Resolve Dispute Action
@@ -669,7 +669,7 @@ export const TaskProvider = ({ children }) => {
     if (resolveError) {
       console.warn("Supabase dispute resolve notice:", resolveError);
       restoreTask(task);
-      throw new Error("GigPay couldn't save the resolution, so the task is still frozen. Try again in a moment.");
+      throw new Error("GigPay couldn't save the resolution, so release is still paused. Try again in a moment.");
     }
 
     addToast(`Dispute resolved. The task is back to ${resolvedData.status}.`, "success");

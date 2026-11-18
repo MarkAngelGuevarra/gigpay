@@ -4,7 +4,7 @@
  * Guards three properties of the signing layer that the Soroban contract itself cannot enforce:
  *   1. A failed on-chain fund/release is reported as a failure, never as a simulated success.
  *   2. A release only ever targets the escrow ID that fund_task returned for that task.
- *   3. A Disputed task cannot be released (SOW Deliverable 3b), and the simulator wallet is Testnet-only.
+ *   3. A Disputed task cannot be released (Sprint 2 draft D3b), and the simulator wallet is Testnet-only.
  *
  * Command: node test/escrow_submission_integrity.test.js
  */

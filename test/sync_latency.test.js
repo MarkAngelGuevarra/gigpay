@@ -1,10 +1,10 @@
 /**
- * Cross-tab sync latency (SOW D1 acceptance (a)/(c): state updates across separate client and
+ * Cross-tab sync latency (Sprint 2 draft D1 acceptance (a)/(c): state updates across separate client and
  * freelancer tabs within 500ms).
  *
  * What this measures: the real production build of the app (vite build of src/), served locally, in
  * two tabs of one headless Chromium profile. Tab A is /client, tab B is /freelancer, both signed in as
- * the offline demo tester. Tab A clicks "Confirm Dispute Freeze" / "Resolve Dispute"; TaskContext's
+ * the offline demo tester. Tab A clicks "Confirm Dispute (Pause Release)" / "Resolve Dispute"; TaskContext's
  * updateTasksAndCache writes gigpay_shared_tasks and posts on the gigpay_sync_channel BroadcastChannel;
  * tab B's TaskContext listeners merge the update and React re-renders the task card. Latency is the
  * time from the click event in tab A to the DOM change in tab B (MutationObserver), both read from
@@ -92,7 +92,7 @@ try {
     // Arms an observer and returns at once, so it is in place before tab A clicks.
     window.__armCardWatch = (wantDisputed) => {
       window.__seenAt = null;
-      const matches = () => { const t = cardText(); return t !== null && t.includes('Dispute Frozen') === wantDisputed; };
+      const matches = () => { const t = cardText(); return t !== null && t.includes('Release paused (app-level)') === wantDisputed; };
       if (matches()) { window.__seenAt = -1; return; } // already in that state: a setup error, reported below
       const obs = new MutationObserver(() => {
         if (matches()) { obs.disconnect(); window.__seenAt = performance.timeOrigin + performance.now(); }
@@ -118,12 +118,12 @@ try {
 
   const samples = [];
   for (let i = 0; i < ITERATIONS; i++) {
-    await cardA.getByRole('button', { name: /Freeze & Dispute/ }).click(); // opens the modal (not timed)
-    samples.push(await measure(true, tabA.getByRole('button', { name: 'Confirm Dispute Freeze' })));
+    await cardA.getByRole('button', { name: /Pause Release & Dispute/ }).click(); // opens the modal (not timed)
+    samples.push(await measure(true, tabA.getByRole('button', { name: 'Confirm Dispute (Pause Release)' })));
     await cardA.getByRole('button', { name: /Resolve Dispute/ }).waitFor();
     await tabA.waitForTimeout(20); // keep dispute/resolve timestamps distinct
     samples.push(await measure(false, cardA.getByRole('button', { name: /Resolve Dispute/ })));
-    await cardA.getByRole('button', { name: /Freeze & Dispute/ }).waitFor();
+    await cardA.getByRole('button', { name: /Pause Release & Dispute/ }).waitFor();
     await tabA.waitForTimeout(20);
   }
 
