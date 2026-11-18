@@ -577,7 +577,7 @@ export const formatStellarError = (error) => {
     return TIMEOUT_MESSAGE;
   }
   if (msg.includes("User declined") || msg.includes("User rejected") || msg.includes("declined")) {
-    return "Transaction signing was rejected in Freighter.";
+    return "Transaction signing was rejected in Varial (formerly Freighter).";
   }
   if (msg.includes("Self-dealing")) {
     return msg;

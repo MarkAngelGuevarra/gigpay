@@ -180,7 +180,7 @@ const Navbar = () => {
             rel="noopener noreferrer"
             onClick={() => openFormLink('navbar_clicked')}
             className="btn btn-outline"
-            title="Pilot form reminder snoozed - click to open"
+            title="Feedback form reminder snoozed - click to open"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -195,7 +195,7 @@ const Navbar = () => {
               whiteSpace: 'nowrap'
             }}
           >
-            ⏳ Pilot Form (Snoozed) <ExternalLink size={13} />
+            ⏳ Feedback Form (Snoozed) <ExternalLink size={13} />
           </a>
         ) : (
           <a
@@ -204,7 +204,7 @@ const Navbar = () => {
             rel="noopener noreferrer"
             onClick={() => openFormLink('navbar_clicked')}
             className="btn btn-outline"
-            title="Complete 60s pilot feedback form"
+            title="Complete 60s feedback form"
             style={{
               display: 'flex',
               alignItems: 'center',

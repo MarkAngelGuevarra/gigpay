@@ -81,7 +81,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Varial (formerly F
 3. When the Varial signature pop-up opens, click **Reject / Decline**.
 4. **Observed Behavior:**
    - The application intercepts the decline gracefully.
-   - Warning toast appears: `"Transaction signing was rejected in Freighter."`
+   - Warning toast appears: `"Transaction signing was rejected in Varial (formerly Freighter)."`
    - The form does not crash or remain stuck in loading state.
 
 ---

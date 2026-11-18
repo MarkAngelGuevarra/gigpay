@@ -100,7 +100,7 @@ runTest(5, "Freelancer Tour defines all 5 required pilot steps", () => {
 });
 
 runTest(6, "Widget controls support minimize, dismiss, and tour restart", () => {
-  assert.ok(widgetSrc.includes("🚀 Pilot Guide (Step"), "Must support sleek minimized glowing pill");
+  assert.ok(widgetSrc.includes("🚀 Testnet Guide (Step"), "Must support sleek minimized glowing pill");
   assert.ok(widgetSrc.includes("isMinimized"), "Must maintain isMinimized state");
   assert.ok(widgetSrc.includes("isDismissed"), "Must maintain isDismissed state");
   assert.ok(widgetSrc.includes("Restart"), "Must provide restart tour control");

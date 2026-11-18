@@ -230,7 +230,7 @@ async function testSuite() {
     );
     assert.strictEqual(
       formatStellarError(new Error("User declined transaction")),
-      "Transaction signing was rejected in Freighter."
+      "Transaction signing was rejected in Varial (formerly Freighter)."
     );
     assert.strictEqual(
       formatStellarError(new Error("HostError: VM call trapped: UnreachableCodeReached")),

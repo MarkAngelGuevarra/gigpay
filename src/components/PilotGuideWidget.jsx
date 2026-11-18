@@ -92,7 +92,7 @@ const CLIENT_STEPS = [
     title: 'Connect Testnet Wallet',
     badge: 'Step 1 of 4 • Wallet Setup',
     icon: Wallet,
-    teacherVoice: '👋 Welcome! I am your Live Pilot Coach. On mobile, you do NOT need any extension—we create a practice Testnet wallet in this browser and fund it with free test XLM (this can take up to 30 seconds).',
+    teacherVoice: '👋 Welcome! I am your Testnet Guide Coach. On mobile, you do NOT need any extension—we create a practice Testnet wallet in this browser and fund it with free test XLM (this can take up to 30 seconds).',
     description: 'Your practice wallet is created for you after you sign in. Wait until the top bar shows a balance.',
     actionLabel: 'Connect Testnet Wallet',
     actionType: 'connect_wallet',
@@ -173,7 +173,7 @@ const FREELANCER_STEPS = [
     badge: 'Step 4 of 5 • Deliverable Proof',
     icon: Sparkles,
     teacherVoice: 'Submit proof of your completed work! Tap below to auto-fill sample Google Docs and Loom demo links in 1 click.',
-    description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample filler to test instantly.',
+    description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample filler to test quickly.',
     actionLabel: '⚡ Auto-Fill Sample Deliverables',
     actionType: 'autofill_proof',
     tip: 'Pre-fills Google Doc and Loom walkthrough links so you can test submission in seconds.'
@@ -222,7 +222,7 @@ export default function PilotGuideWidget() {
       freelancerStep: 1,
       activeTour: 'client',
       // The open guide covers about a third of a phone screen and, on desktop, the Create Task form.
-      // Everyone starts with the small "Pilot Guide" pill and opens it when they want it.
+      // Everyone starts with the small "Testnet Guide" pill and opens it when they want it.
       isMinimized: true,
       isDismissed: false
     };
@@ -640,7 +640,7 @@ export default function PilotGuideWidget() {
             touchAction: 'manipulation',
             minHeight: '44px'
           }}
-          title="Open Live Pilot Coach"
+          title="Open Testnet Guide Coach"
         >
           <span
             style={{
@@ -651,7 +651,7 @@ export default function PilotGuideWidget() {
               boxShadow: '0 0 8px #00f2fe'
             }}
           />
-          <span>🚀 Pilot Guide</span>
+          <span>🚀 Testnet Guide</span>
         </button>
       </>
     );
@@ -722,7 +722,7 @@ export default function PilotGuideWidget() {
           }}
           role="button"
           tabIndex={0}
-          title="Open Live Pilot Coach"
+          title="Open Testnet Guide Coach"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
             <span
@@ -737,7 +737,7 @@ export default function PilotGuideWidget() {
               }}
             />
             <span style={{ color: '#ffffff', fontWeight: 700 }}>
-              🚀 Pilot Guide (Step {currentStep}/{totalSteps}) ▾
+              🚀 Testnet Guide (Step {currentStep}/{totalSteps}) ▾
             </span>
           </div>
           <button

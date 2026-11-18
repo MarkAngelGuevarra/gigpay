@@ -115,7 +115,7 @@ async function runSorobanSimulationTests() {
   // Test 8: Error Normalization & Freighter Rejection Handling
   console.log('--- Test 8: formatStellarError Normalization ---');
   const userDeclinedErr = formatStellarError(new Error('User declined the transaction'));
-  if (userDeclinedErr !== 'Transaction signing was rejected in Freighter.') {
+  if (userDeclinedErr !== 'Transaction signing was rejected in Varial (formerly Freighter).') {
     throw new Error(`Unexpected message for user decline: ${userDeclinedErr}`);
   }
   const timeoutErr = formatStellarError(new Error('TIMEOUT: signature request exceeded 30000ms'));
