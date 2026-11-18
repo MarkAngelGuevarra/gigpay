@@ -1,4 +1,4 @@
-// fund-practice-wallet — Testnet-only fallback when Friendbot rate-limits new GigPay practice wallets
+// fund-practice-wallet: Testnet-only fallback when Friendbot rate-limits new GigPay practice wallets
 // (for example, many testers on one school Wi-Fi share one IP address).
 //
 // Rules:
@@ -9,135 +9,87 @@
 // Funding a wallet does not make it count as a user: the evidence counts escrow parties, not funders.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.110.0";
-import { Keypair, Networks, Operation, StrKey, TransactionBuilder, Account } from "npm:@stellar/stellar-sdk@16.4.1";
+import {
+  Account,
+  Keypair,
+  Networks,
+  Operation,
+  StrKey,
+  TransactionBuilder,
+} from "npm:@stellar/stellar-sdk@16.4.1";
+import {
+  DEFAULT_POOL_AMOUNT,
+  createFundPracticeWalletHandler,
+  resolveNetworkPassphrase,
+  sanitizeHorizonUrl,
+} from "./handler.ts";
 
-const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1", "host.docker.internal"]);
-const BLOCKED_MAINNET_HOSTS = new Set(["horizon.stellar.org", "soroban.stellar.org", "mainnet.sorobanrpc.com"]);
-const DEFAULT_TESTNET_HORIZON = "https://horizon-testnet.stellar.org";
-
-const sanitizeHorizonUrl = (raw: string) => {
-  const trimmed = raw.trim();
-  if (!trimmed) return DEFAULT_TESTNET_HORIZON;
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.username || parsed.password) return DEFAULT_TESTNET_HORIZON;
-    const host = parsed.hostname.toLowerCase();
-    if (BLOCKED_MAINNET_HOSTS.has(host)) return DEFAULT_TESTNET_HORIZON;
-    if (parsed.protocol === "https:" || (parsed.protocol === "http:" && LOCAL_HTTP_HOSTS.has(host))) {
-      return parsed.href.replace(/\/+$/, "");
-    }
-  } catch {
-    // Invalid URL falls back safely.
-  }
-  return DEFAULT_TESTNET_HORIZON;
-};
-
-const rawNetwork = (Deno.env.get("STELLAR_NETWORK") ?? "TESTNET").trim().toUpperCase();
-const isLocalChain = rawNetwork === "LOCAL" || rawNetwork === "STANDALONE";
+const rawNetwork = Deno.env.get("STELLAR_NETWORK") ?? "TESTNET";
 const HORIZON = sanitizeHorizonUrl(Deno.env.get("STELLAR_HORIZON_URL") ?? "");
-const rawPassphrase = (Deno.env.get("STELLAR_NETWORK_PASSPHRASE") ?? "").trim();
-// Never permit Mainnet signing from the practice-wallet pool.
-const NETWORK_PASSPHRASE = isLocalChain
-  ? (rawPassphrase && rawPassphrase !== Networks.PUBLIC && rawPassphrase !== Networks.TESTNET
-      ? rawPassphrase
-      : Networks.STANDALONE)
-  : Networks.TESTNET;
-const POOL_AMOUNT = "25";
+const NETWORK_PASSPHRASE = resolveNetworkPassphrase(
+  rawNetwork,
+  Deno.env.get("STELLAR_NETWORK_PASSPHRASE") ?? "",
+  {
+    PUBLIC: Networks.PUBLIC,
+    TESTNET: Networks.TESTNET,
+    STANDALONE: Networks.STANDALONE,
+  },
+);
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const reply = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const accountExists = async (address: string) => (await fetch(`${HORIZON}/accounts/${address}`)).status === 200;
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return reply(405, { error: "POST only" });
-
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-  const { data: { user } } = await userClient.auth.getUser();
-  if (!user) return reply(401, { error: "Sign in to GigPay first." });
-
-  let address = "";
-  try {
-    address = String((await req.json())?.address ?? "").trim();
-  } catch { /* handled below */ }
-  if (!StrKey.isValidEd25519PublicKey(address)) return reply(400, { error: "Not a valid Stellar address." });
-
-  try {
-    if (await accountExists(address)) return reply(200, { status: "already_active" });
-  } catch (err) {
-    console.error("[fund-practice-wallet] account check failed", (err as Error).message);
-    return reply(502, { error: "Couldn't check wallet status right now. Try again in a minute." });
-  }
-
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
-  // Claim the one-time top-up first; the primary key / unique address stop double funding.
-  const { error: claimError } = await admin
-    .from("practice_wallet_fundings")
-    .insert({ user_id: user.id, address, amount_xlm: Number(POOL_AMOUNT) });
-  if (claimError) {
-    return reply(409, { error: "This account already received its one practice top-up. Wait a minute and refresh, or ask the GigPay team." });
-  }
-  const release = () => admin.from("practice_wallet_fundings").delete().eq("user_id", user.id);
-
-  let submittedToHorizon = false;
-  let horizonRejected = false;
-  try {
-    const { data: secret, error: secretError } = await admin.rpc("gigpay_testnet_pool_secret");
-    if (secretError || !secret) throw new Error("pool not configured");
-    const pool = Keypair.fromSecret(secret as string);
-
-    // A classroom calls this at the same moment: each call reads the pool's sequence number, so all but one
-    // collide with tx_bad_seq. Re-read the sequence and retry with a random pause instead of failing.
-    let submit: Response | null = null;
-    let result: any = null;
-    for (let attempt = 1; attempt <= 6; attempt++) {
-      const poolRes = await fetch(`${HORIZON}/accounts/${pool.publicKey()}`);
-      if (poolRes.status !== 200) throw new Error("pool account missing");
-      const poolAccount = await poolRes.json();
-
-      const tx = new TransactionBuilder(new Account(pool.publicKey(), poolAccount.sequence), {
+const handler = createFundPracticeWalletHandler({
+  horizonUrl: HORIZON,
+  networkPassphrase: NETWORK_PASSPHRASE,
+  poolAmount: DEFAULT_POOL_AMOUNT,
+  fetchImpl: fetch,
+  getAuthenticatedUser: async (authHeader: string) => {
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
+    return user ? { id: user.id } : null;
+  },
+  getAdminStore: () => {
+    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    return {
+      claimFunding: (userId: string, address: string, amountXlm: number) =>
+        admin
+          .from("practice_wallet_fundings")
+          .insert({ user_id: userId, address, amount_xlm: amountXlm }),
+      releaseClaim: (userId: string) =>
+        admin.from("practice_wallet_fundings").delete().eq("user_id", userId),
+      setTxHash: (userId: string, hash: string) =>
+        admin.from("practice_wallet_fundings").update({ tx_hash: hash }).eq("user_id", userId),
+      getPoolSecret: () => admin.rpc("gigpay_testnet_pool_secret"),
+    };
+  },
+  stellar: {
+    isValidPublicKey: (key: string) => StrKey.isValidEd25519PublicKey(key),
+    derivePublicKey: (secret: string) => Keypair.fromSecret(secret).publicKey(),
+    buildAndSignCreateAccountTx: ({
+      poolSecret,
+      poolPublicKey,
+      poolSequence,
+      destination,
+      startingBalance,
+      networkPassphrase,
+    }) => {
+      const tx = new TransactionBuilder(new Account(poolPublicKey, poolSequence), {
         fee: "1000",
-        networkPassphrase: NETWORK_PASSPHRASE,
+        networkPassphrase,
       })
-        .addOperation(Operation.createAccount({ destination: address, startingBalance: POOL_AMOUNT }))
+        .addOperation(Operation.createAccount({ destination, startingBalance }))
         .setTimeout(60)
         .build();
-      tx.sign(pool);
-
-      submittedToHorizon = true;
-      submit = await fetch(`${HORIZON}/transactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ tx: tx.toXDR() }),
-      });
-      result = await submit.json();
-      const badSeq = !submit.ok && result?.extras?.result_codes?.transaction === "tx_bad_seq";
-      if (!badSeq) break;
-      await new Promise((r) => setTimeout(r, 300 + Math.random() * 1200 * attempt));
-    }
-    if (!submit || !submit.ok) {
-      horizonRejected = true;
-      // Someone (e.g. a late Friendbot reply) created the account meanwhile: that's fine.
-      if (await accountExists(address)) { await release(); return reply(200, { status: "already_active" }); }
-      throw new Error(result?.extras?.result_codes ? JSON.stringify(result.extras.result_codes) : "submit failed");
-    }
-
-    await admin.from("practice_wallet_fundings").update({ tx_hash: result.hash }).eq("user_id", user.id);
-    return reply(200, { status: "funded", hash: result.hash, amount: POOL_AMOUNT });
-  } catch (err) {
-    if (!submittedToHorizon || horizonRejected) {
-      await release();
-    }
-    console.error("[fund-practice-wallet]", (err as Error).message);
-    return reply(502, { error: "Couldn't fund the practice wallet right now. Try again in a minute." });
-  }
+      tx.sign(Keypair.fromSecret(poolSecret));
+      return tx.toXDR();
+    },
+  },
 });
+
+Deno.serve(handler);
