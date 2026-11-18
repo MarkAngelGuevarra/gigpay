@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature, formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
+import { requestWalletSignature, formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, parseXlmToStroops, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
+import { safeHttpsUrl } from '../lib/taskLifecycle';
 import { peekInvitePayout, clearInvitePayout } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
 import { findRecentDuplicateLock, duplicateKey } from '../lib/duplicateLock';
@@ -66,8 +68,9 @@ const ClientDashboard = () => {
     : 0;
   
   const [isTransacting, setIsTransacting] = useState(false);
-  // A ref blocks a second Lock tap before React re-renders the disabled button.
+  // Refs prevent duplicate rapid taps before React commits disabled state.
   const lockInFlight = useRef(false);
+  const actionInFlightRef = useRef(false);
   const duplicateConfirm = useRef({ key: '', until: 0 });
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskAmount, setNewTaskAmount] = useState('');
@@ -90,6 +93,23 @@ const ClientDashboard = () => {
   const [taskToDispute, setTaskToDispute] = useState(null);
   const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
 
+  const closeDisputeModal = () => {
+    setTaskToDispute(null);
+    setDisputeReason('Deliverables require revision or do not match agreed specification.');
+  };
+
+  useEffect(() => {
+    if ((!taskToDispute && !taskToApprove) || typeof window === 'undefined') return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isTransacting) {
+        if (taskToApprove) setTaskToApprove(null);
+        else if (taskToDispute) closeDisputeModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [taskToDispute, taskToApprove, isTransacting]);
+
   const initiateApproval = (taskOrId) => {
     // If wallet not yet connected, auto-connect demo wallet so mobile/tablet testers are never blocked
     if (!publicKey && typeof connectTesterWallet === 'function') {
@@ -111,27 +131,36 @@ const ClientDashboard = () => {
   };
 
   const handleDisputeSubmit = async () => {
-    if (!taskToDispute) return;
+    if (!taskToDispute || isTransacting || actionInFlightRef.current) return;
     if (!ownTasks.some(t => t.id === taskToDispute)) {
       addToast("Only the client who funded this escrow can dispute it.", "warning");
-      setTaskToDispute(null);
+      closeDisputeModal();
       return;
     }
+    actionInFlightRef.current = true;
+    setIsTransacting(true);
     try {
       await raiseDispute(taskToDispute, disputeReason);
-      setTaskToDispute(null);
-      setDisputeReason('Deliverables require revision or do not match agreed specification.');
+      closeDisputeModal();
     } catch (error) {
       addToast("Failed to raise dispute: " + error.message, "error");
+    } finally {
+      actionInFlightRef.current = false;
+      setIsTransacting(false);
     }
   };
 
   const handleResolve = async (id) => {
-    if (!ownTasks.some(t => t.id === id)) return;
+    if (!ownTasks.some(t => t.id === id) || isTransacting || actionInFlightRef.current) return;
+    actionInFlightRef.current = true;
+    setIsTransacting(true);
     try {
       await resolveDispute(id);
     } catch (error) {
       addToast("Failed to resolve dispute: " + (error?.message || error), "error");
+    } finally {
+      actionInFlightRef.current = false;
+      setIsTransacting(false);
     }
   };
 
@@ -155,7 +184,7 @@ const ClientDashboard = () => {
   };
 
   const handleApprove = async () => {
-    if (confirmText !== 'CONFIRM' || !taskToApprove) return;
+    if (confirmText !== 'CONFIRM' || !taskToApprove || isTransacting || actionInFlightRef.current) return;
     if (!publicKey && typeof connectTesterWallet === 'function') {
       connectTesterWallet();
     }
@@ -166,6 +195,7 @@ const ClientDashboard = () => {
       return;
     }
 
+    actionInFlightRef.current = true;
     setIsTransacting(true);
     try {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
@@ -200,17 +230,31 @@ const ClientDashboard = () => {
       const isWarning = formatted.includes("rejected") || formatted.includes("declined");
       addToast(formatted, isWarning ? "warning" : "error");
     } finally {
+      actionInFlightRef.current = false;
       setIsTransacting(false);
     }
   };
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!newTaskTitle || !newTaskAmount) return;
+    const trimmedTitle = newTaskTitle.trim();
+    if (!trimmedTitle || !newTaskAmount) {
+      if (newTaskTitle && !trimmedTitle) {
+        addToast("Enter a task title before locking funds in escrow.", "warning");
+      }
+      return;
+    }
+
+    try {
+      parseXlmToStroops(newTaskAmount);
+    } catch (amountErr) {
+      addToast(amountErr.message || "Enter a valid positive amount in XLM.", "warning");
+      return;
+    }
 
     // A Stellar address typed into the title is almost always meant for the payout field (seen in testing).
-    if (/^G[A-Z2-7]{55}$/.test(newTaskTitle.trim())) {
-      if (!freelancerWallet.trim()) setFreelancerWallet(newTaskTitle.trim());
+    if (/^G[A-Z2-7]{55}$/.test(trimmedTitle)) {
+      if (!freelancerWallet.trim()) setFreelancerWallet(trimmedTitle);
       addToast("That looks like a payout address, not a title. It's now in Freelancer's Payout Address; give the task a short title like \"Logo design\".", "warning");
       return;
     }
@@ -249,7 +293,7 @@ const ClientDashboard = () => {
     
     try {
       const newTask = {
-        title: newTaskTitle,
+        title: trimmedTitle,
         amount: newTaskAmount,
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
@@ -482,7 +526,10 @@ const ClientDashboard = () => {
           {!isLoading && clientTasks.map(task => {
             const isDisputed = task.status === 'Disputed';
             const dispute = getDisputeMetadata(task, user?.id);
-            const hasProof = task.proof_attached || task.github_pr_url || task.doc_url || task.loom_url;
+            const safeGithubUrl = safeHttpsUrl(task.github_pr_url);
+            const safeDocUrl = safeHttpsUrl(task.doc_url);
+            const safeLoomUrl = safeHttpsUrl(task.loom_url);
+            const hasProof = task.proof_attached || safeGithubUrl || safeDocUrl || safeLoomUrl;
             // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
             const isMine = isOwnTask(task);
             // Link a transaction only when it really exists on Stellar Testnet (demo/failed tasks have none).
@@ -549,8 +596,19 @@ const ClientDashboard = () => {
                         <button
                           type="button"
                           className="btn btn-outline"
+                          disabled={isTransacting}
                           onClick={() => handleResolve(task.id)}
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', borderColor: '#10b981', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          style={{
+                            padding: '0.4rem 0.8rem',
+                            fontSize: '0.78rem',
+                            borderColor: '#10b981',
+                            color: '#10b981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            opacity: isTransacting ? 0.5 : 1,
+                            cursor: isTransacting ? 'not-allowed' : 'pointer'
+                          }}
                         >
                           <RotateCcw size={12} /> Resolve Dispute
                         </button>
@@ -601,18 +659,18 @@ const ClientDashboard = () => {
                       <CheckCircle2 size={14} /> Freelancer Proof of Work Attached:
                     </div>
                     <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: task.submission_notes ? '0.5rem' : 0 }}>
-                      {task.github_pr_url && (
-                        <a href={task.github_pr_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
+                      {safeGithubUrl && (
+                        <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
                           <FileCode size={13} /> Inspect GitHub PR <ExternalLink size={11} />
                         </a>
                       )}
-                      {task.doc_url && (
-                        <a href={task.doc_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
+                      {safeDocUrl && (
+                        <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
                           <FileText size={13} /> Inspect Document <ExternalLink size={11} />
                         </a>
                       )}
-                      {task.loom_url && (
-                        <a href={task.loom_url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
+                      {safeLoomUrl && (
+                        <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
                           <Video size={13} /> Watch Loom Demo <ExternalLink size={11} />
                         </a>
                       )}
@@ -636,8 +694,9 @@ const ClientDashboard = () => {
           <h3 style={{ marginBottom: '1.5rem' }}>Create Task Escrow</h3>
           <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} onSubmit={handleCreateTask}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Task Title</label>
+              <label htmlFor="client-task-title" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Task Title</label>
               <input 
+                id="client-task-title"
                 type="text" 
                 placeholder="e.g. Logo Design" 
                 value={newTaskTitle}
@@ -649,7 +708,7 @@ const ClientDashboard = () => {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label style={{ color: 'var(--text-muted)', margin: 0 }}>Milestone Amount (XLM)</label>
+                <label htmlFor="client-task-amount" style={{ color: 'var(--text-muted)', margin: 0 }}>Milestone Amount (XLM)</label>
                 <button
                   type="button"
                   onClick={suggestAmount}
@@ -670,6 +729,7 @@ const ClientDashboard = () => {
                 </button>
               </div>
               <input 
+                id="client-task-amount"
                 type="number" 
                 placeholder="e.g. 5" 
                 min="0.1"
@@ -682,10 +742,11 @@ const ClientDashboard = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
+              <label htmlFor="client-freelancer-wallet" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
                 Freelancer's Payout Address
               </label>
               <input
+                id="client-freelancer-wallet"
                 type="text"
                 placeholder="G... (your freelancer copies this from their dashboard)"
                 value={freelancerWallet}
@@ -745,8 +806,16 @@ const ClientDashboard = () => {
       </div>
 
       {/* Dispute Reason Modal (Sprint 2 draft D3) */}
-      {taskToDispute && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
+      {taskToDispute && typeof document !== 'undefined' && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Raise Escrow Dispute"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isTransacting) closeDisputeModal();
+          }}
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}
+        >
           <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #ef4444' }}>
             <h3 style={{ color: '#ef4444', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <AlertTriangle size={20} /> Raise Escrow Dispute
@@ -754,38 +823,53 @@ const ClientDashboard = () => {
             <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               Pauses release in GigPay (app-level). The escrow contract has no dispute state; the funds stay locked until the client releases them. The dispute reason and time are logged to the task record.
             </p>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
+            <label htmlFor="client-dispute-reason" style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
               Dispute Reason / Required Revisions:
             </label>
             <textarea 
+              id="client-dispute-reason"
               rows={3} 
               value={disputeReason} 
               onChange={(e) => setDisputeReason(e.target.value)} 
+              disabled={isTransacting}
               style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ef4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', fontSize: '0.85rem' }} 
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
+                type="button"
                 className="btn btn-outline" 
-                onClick={() => setTaskToDispute(null)} 
-                style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)', padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
+                onClick={() => { if (!isTransacting) closeDisputeModal(); }} 
+                disabled={isTransacting}
+                style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)', padding: '0.45rem 0.9rem', fontSize: '0.8rem', opacity: isTransacting ? 0.5 : 1 }}
               >
                 Cancel
               </button>
               <button 
+                type="button"
                 className="btn" 
                 onClick={handleDisputeSubmit} 
-                style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#b91c1c', color: 'white', border: 'none', borderRadius: '6px' }}
+                disabled={isTransacting}
+                style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#b91c1c', color: 'white', border: 'none', borderRadius: '6px', cursor: isTransacting ? 'not-allowed' : 'pointer', opacity: isTransacting ? 0.65 : 1 }}
               >
-                Confirm Dispute (Pause Release)
+                {isTransacting ? 'Submitting Dispute...' : 'Confirm Dispute (Pause Release)'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Release Confirmation Modal: Strict CONFIRM Requirement */}
-      {taskToApprove && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}>
+      {taskToApprove && typeof document !== 'undefined' && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Milestone Release Confirmation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isTransacting) setTaskToApprove(null);
+          }}
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}
+        >
           <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #10b981' }}>
             <h3 style={{ color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <CheckCircle size={22} /> Milestone Release Confirmation
@@ -827,6 +911,7 @@ const ClientDashboard = () => {
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button 
+                type="button"
                 className="btn btn-outline" 
                 onClick={() => { if (!isTransacting) setTaskToApprove(null); }} 
                 disabled={isTransacting} 
@@ -835,6 +920,7 @@ const ClientDashboard = () => {
                 Cancel
               </button>
               <button 
+                type="button"
                 className="btn" 
                 onClick={handleApprove} 
                 disabled={confirmText !== 'CONFIRM' || isTransacting} 
@@ -853,7 +939,8 @@ const ClientDashboard = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
