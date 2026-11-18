@@ -1,7 +1,7 @@
 import freighterApi from '@stellar/freighter-api';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { isDisputeActive } from './taskLifecycle.js';
-import { getEnvVar, isOfflineDemoEnabled } from './env.js';
+import { getEnvVar, getRawEnvVar, isOfflineDemoEnabled } from './env.js';
 
 const {
   isAllowed,
@@ -70,8 +70,10 @@ export const isOfflineMode = () =>
   isOfflineDemoEnabled() ||
   (typeof globalThis !== 'undefined' && globalThis.GIGPAY_DISABLE_SIMULATOR_SIGNER === true);
 
-export const isEphemeralSignerAllowed = (network = NETWORK) =>
-  network === 'TESTNET' && !isOfflineMode();
+export const isEphemeralSignerAllowed = (network = NETWORK) => {
+  const normalized = String(network || '').trim().toUpperCase();
+  return (normalized === 'TESTNET' || normalized === 'STANDALONE' || normalized === 'LOCAL') && !isOfflineMode();
+};
 // GIGPAY_DISABLE_SIMULATOR_SIGNER lets test suites run the full flow in offline demo mode, so routine test
 // runs do not create escrows on the shared production contract (and pollute its evidence).
 
@@ -83,7 +85,7 @@ const FRIENDBOT_TIMEOUT_MS = 30000;
 const requestFriendbotFunding = async (publicKey) => {
   try {
     const res = await withTimeout(
-      fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`),
+      fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(publicKey)}`),
       FRIENDBOT_TIMEOUT_MS
     );
     return !!res?.ok;
@@ -231,7 +233,7 @@ export const provisionSimulatorWallet = () => {
  */
 export const createEphemeralTestnetWallet = async () => {
   if (!isEphemeralSignerAllowed()) {
-    throw new Error('The practice wallet is only available on Stellar Testnet.');
+    throw new Error('The practice wallet is only available on Stellar Testnet or Local networks.');
   }
   const keypair = StellarSdk.Keypair.random();
   const publicKey = keypair.publicKey();
@@ -244,7 +246,7 @@ export const createEphemeralTestnetWallet = async () => {
   return {
     publicKey,
     secretKey,
-    network: 'TESTNET',
+    network: NETWORK,
     isEphemeral: true
   };
 };
@@ -278,23 +280,100 @@ export const getOrProvisionEphemeralSigner = async (requestedAddress) => {
   return null;
 };
 
-// GigPay is a Stellar Testnet pilot only (mainnet is out of scope), so the network is fixed.
-const NETWORK = 'TESTNET';
-const HORIZON_URL = getEnvVar(
-  'VITE_HORIZON_URL',
-  NETWORK === 'MAINNET' ? "https://horizon.stellar.org" : "https://horizon-testnet.stellar.org"
-);
-const PASSPHRASE = NETWORK === 'MAINNET' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
+const normalizeNetwork = (raw) => {
+  const value = String(raw || '').trim().toUpperCase();
+  if (value === 'LOCAL' || value === 'STANDALONE') return 'STANDALONE';
+  // Mainnet is explicitly out of scope and always forced back to TESTNET.
+  return 'TESTNET';
+};
 
-export const GIGPAY_ESCROW_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
-export const SOROBAN_RPC_URL = getEnvVar('VITE_SOROBAN_RPC_URL', "https://soroban-testnet.stellar.org");
+const LOCAL_HTTP_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const BLOCKED_MAINNET_HOSTS = new Set(['horizon.stellar.org', 'soroban.stellar.org', 'mainnet.sorobanrpc.com']);
+
+const parseHttpUrl = (raw) => {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed);
+  } catch {
+    return null;
+  }
+};
+
+export const isLocalHttpUrl = (url) => {
+  const parsed = parseHttpUrl(url);
+  if (!parsed || parsed.protocol !== 'http:') return false;
+  if (parsed.username || parsed.password) return false;
+  return LOCAL_HTTP_HOSTS.has(parsed.hostname.toLowerCase());
+};
+
+const sanitizeStellarEndpoint = (raw, fallback) => {
+  const parsed = parseHttpUrl(raw);
+  if (!parsed || parsed.username || parsed.password) return fallback;
+  if (BLOCKED_MAINNET_HOSTS.has(parsed.hostname.toLowerCase())) return fallback;
+  if (parsed.protocol !== 'https:' && !isLocalHttpUrl(raw)) return fallback;
+  return parsed.href.replace(/\/+$/, '');
+};
+
+const sanitizeExplorerBaseUrl = (raw, fallback) => {
+  if (raw !== undefined && String(raw).trim() === '') return '';
+  const parsed = parseHttpUrl(raw);
+  if (!parsed || parsed.username || parsed.password) return fallback;
+  if (BLOCKED_MAINNET_HOSTS.has(parsed.hostname.toLowerCase())) return fallback;
+  if (/^\/explorer\/public(?:\/|$)/i.test(parsed.pathname)) return fallback;
+  if (parsed.protocol !== 'https:' && !isLocalHttpUrl(raw)) return fallback;
+  return parsed.href.replace(/\/+$/, '');
+};
+
+const NETWORK = normalizeNetwork(getEnvVar('VITE_STELLAR_NETWORK', 'TESTNET'));
+const IS_LOCAL_NETWORK = NETWORK === 'STANDALONE';
+const DEFAULT_HORIZON_URL = IS_LOCAL_NETWORK ? 'http://localhost:8000' : 'https://horizon-testnet.stellar.org';
+const DEFAULT_SOROBAN_RPC_URL = IS_LOCAL_NETWORK ? 'http://localhost:8000/soroban/rpc' : 'https://soroban-testnet.stellar.org';
+const DEFAULT_FRIENDBOT_URL = IS_LOCAL_NETWORK ? 'http://localhost:8000/friendbot' : 'https://friendbot.stellar.org';
+const DEFAULT_EXPLORER_BASE_URL = IS_LOCAL_NETWORK ? '' : 'https://stellar.expert/explorer/testnet';
+
+export const HORIZON_URL = sanitizeStellarEndpoint(getEnvVar('VITE_HORIZON_URL', DEFAULT_HORIZON_URL), DEFAULT_HORIZON_URL);
+export const FRIENDBOT_URL = sanitizeStellarEndpoint(getEnvVar('VITE_FRIENDBOT_URL', DEFAULT_FRIENDBOT_URL), DEFAULT_FRIENDBOT_URL);
+export const DEFAULT_TESTNET_CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
+export const GIGPAY_ESCROW_CONTRACT_ID = String(getEnvVar('VITE_GIGPAY_ESCROW_CONTRACT_ID', DEFAULT_TESTNET_CONTRACT_ID)).trim() || DEFAULT_TESTNET_CONTRACT_ID;
+export const SOROBAN_RPC_URL = sanitizeStellarEndpoint(getEnvVar('VITE_SOROBAN_RPC_URL', DEFAULT_SOROBAN_RPC_URL), DEFAULT_SOROBAN_RPC_URL);
+
+const rawPassphrase = getEnvVar('VITE_STELLAR_NETWORK_PASSPHRASE', '').trim();
+const PASSPHRASE = IS_LOCAL_NETWORK
+  ? (rawPassphrase && rawPassphrase !== StellarSdk.Networks.PUBLIC && rawPassphrase !== StellarSdk.Networks.TESTNET
+      ? rawPassphrase
+      : StellarSdk.Networks.STANDALONE)
+  : StellarSdk.Networks.TESTNET;
+
 export const STELLAR_NETWORK_PASSPHRASE = PASSPHRASE;
 export const STELLAR_NETWORK_NAME = NETWORK;
+const rawExplorerBase = getRawEnvVar('VITE_EXPLORER_BASE_URL');
+export const EXPLORER_BASE_URL = sanitizeExplorerBaseUrl(
+  rawExplorerBase !== undefined ? rawExplorerBase : DEFAULT_EXPLORER_BASE_URL,
+  DEFAULT_EXPLORER_BASE_URL
+);
+export const buildExplorerTxUrl = (txHash) => {
+  const clean = String(txHash || '').trim();
+  return EXPLORER_BASE_URL && /^[0-9a-f]{64}$/i.test(clean) ? `${EXPLORER_BASE_URL}/tx/${clean}` : null;
+};
+export const buildExplorerAccountUrl = (address) => {
+  const clean = String(address || '').trim();
+  return EXPLORER_BASE_URL && StellarSdk.StrKey.isValidEd25519PublicKey(clean) ? `${EXPLORER_BASE_URL}/account/${clean}` : null;
+};
+export const isStaticTestnetSnapshotEnabled = () =>
+  NETWORK === 'TESTNET' && GIGPAY_ESCROW_CONTRACT_ID === DEFAULT_TESTNET_CONTRACT_ID && !isOfflineDemoEnabled();
+
 export const NATIVE_SAC_CONTRACT_ID = StellarSdk.Asset.native().contractId(PASSPHRASE);
 export const DEFAULT_FREELANCER_TESTNET_ADDRESS = 'GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3';
 
-// Initialize Soroban RPC Client for Protocol 22 Smart Contract Invocations
-export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
+const createHorizonServer = () => new StellarSdk.Horizon.Server(HORIZON_URL, {
+  allowHttp: isLocalHttpUrl(HORIZON_URL)
+});
+
+// Initialize Soroban RPC Client for Contract Invocations
+export const sorobanServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL, {
+  allowHttp: isLocalHttpUrl(SOROBAN_RPC_URL)
+});
 
 /**
  * Checks connection health of the Soroban Testnet RPC endpoint.
@@ -360,18 +439,33 @@ export const connectWallet = async () => {
     const resolvedNetwork = typeof networkResult === 'string'
       ? networkResult
       : (networkResult?.network || networkResult?.networkPassphrase || NETWORK);
-    
+    const resolvedPassphrase = typeof networkResult === 'object' && networkResult?.networkPassphrase
+      ? networkResult.networkPassphrase
+      : '';
+
+    if (
+      resolvedPassphrase === StellarSdk.Networks.PUBLIC ||
+      /^(PUBLIC|MAINNET)$/i.test(String(resolvedNetwork || '').trim())
+    ) {
+      const blockedErr = new Error(
+        `Mainnet wallets are disabled. Switch your wallet extension to ${NETWORK === 'STANDALONE' ? 'Local / Standalone' : 'Testnet'}.`
+      );
+      blockedErr.code = 'MAINNET_WALLET_BLOCKED';
+      throw blockedErr;
+    }
+
     return {
       publicKey: resolvedKey,
       network: resolvedNetwork,
+      networkPassphrase: resolvedPassphrase,
     };
   } catch (error) {
-    if (error.message === 'WALLET_NOT_INSTALLED') {
-      throw error; // Let the UI handle onboarding for missing wallets
+    if (error.message === 'WALLET_NOT_INSTALLED' || error.code === 'MAINNET_WALLET_BLOCKED') {
+      throw error; // Let the UI handle onboarding for missing wallets or Mainnet refusal
     }
     console.error("Freighter Extension blocked/frozen. Activating Demo Fallback Mode.", error);
     // Silent fallback ensures the presentation NEVER fails, even if the browser breaks
-    return { publicKey: DEMO_PUBLIC_KEY, network: NETWORK };
+    return { publicKey: DEMO_PUBLIC_KEY, network: NETWORK, networkPassphrase: PASSPHRASE };
   }
 };
 
@@ -391,7 +485,7 @@ export const getAccountBalance = async (publicKey) => {
   }
 
   try {
-    const server = new StellarSdk.Horizon.Server(HORIZON_URL);
+    const server = createHorizonServer();
     const account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
     const nativeBalance = account.balances.find((b) => b.asset_type === "native");
     const rawNum = nativeBalance ? parseFloat(nativeBalance.balance) : 0;
@@ -427,13 +521,13 @@ export const requestWalletSignature = async (publicKey, description, { offlineDe
     }
 
     let account;
-    const server = new StellarSdk.Horizon.Server(HORIZON_URL);
+    const server = createHorizonServer();
     try {
       account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
     } catch (loadErr) {
-      if (NETWORK === 'TESTNET' && (loadErr?.response?.status === 404 || loadErr?.message?.includes("404"))) {
+      if ((NETWORK === 'TESTNET' || NETWORK === 'STANDALONE') && (loadErr?.response?.status === 404 || loadErr?.message?.includes("404"))) {
         try {
-          await withTimeout(fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`), 5000);
+          await withTimeout(fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(publicKey)}`), FRIENDBOT_TIMEOUT_MS);
           account = await withTimeout(server.loadAccount(publicKey), NETWORK_LOAD_TIMEOUT_MS);
         } catch {
           account = new StellarSdk.Account(publicKey, "0");
@@ -521,7 +615,7 @@ export const simulateFundTask = async ({
     };
   }
 
-  const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
+  const horizon = createHorizonServer();
   const account = await withTimeout(horizon.loadAccount(clientAddress), NETWORK_LOAD_TIMEOUT_MS);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
 
@@ -734,7 +828,7 @@ export const pollSorobanTransactionWithBackoff = async (
           status: 'SUCCESS',
           hash: txHash,
           returnValue,
-          explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+          explorerUrl: buildExplorerTxUrl(txHash),
           attempts
         };
       } else if (txStatus.status === 'FAILED') {
@@ -753,7 +847,7 @@ export const pollSorobanTransactionWithBackoff = async (
   return {
     status: 'SUBMITTED',
     hash: txHash,
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+    explorerUrl: buildExplorerTxUrl(txHash),
     attempts
   };
 };
@@ -786,7 +880,7 @@ export const sendAndConfirm = async (signedTx, { server = sorobanServer, poll = 
   const txHash = sendResult?.hash || localHash;
   const pollResult = await poll(txHash);
   if (pollResult.status !== 'SUCCESS') {
-    return { status: 'PENDING', hash: txHash, explorerUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}` };
+    return { status: 'PENDING', hash: txHash, explorerUrl: buildExplorerTxUrl(txHash) };
   }
   return pollResult;
 };
@@ -1122,7 +1216,7 @@ export const simulateApproveTask = async ({ clientAddress, taskId, offlineDemo =
   if (numericTaskId === null) {
     throw new Error(ESCROW_NOT_FOUND_MESSAGE);
   }
-  const horizon = new StellarSdk.Horizon.Server(HORIZON_URL);
+  const horizon = createHorizonServer();
   const account = await withTimeout(horizon.loadAccount(clientAddress), NETWORK_LOAD_TIMEOUT_MS);
   const contract = new StellarSdk.Contract(GIGPAY_ESCROW_CONTRACT_ID);
 

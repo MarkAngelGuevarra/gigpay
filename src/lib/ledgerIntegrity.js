@@ -11,7 +11,8 @@ import {
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
   DEMO_FREELANCER_KEY,
   DEMO_PUBLIC_KEY,
-  GIGPAY_ESCROW_CONTRACT_ID
+  GIGPAY_ESCROW_CONTRACT_ID,
+  buildExplorerTxUrl
 } from './stellar.js';
 import { isDisputeActive } from './taskLifecycle.js';
 
@@ -101,7 +102,7 @@ export const buildCompletedTaskLedgerRow = (t, mapped = null) => {
     txHash: hash,
     status: 'Completed & Released',
     timestamp: formatUtc(t.completed_at || t.created_at),
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${hash}`
+    explorerUrl: buildExplorerTxUrl(hash)
   });
 };
 
@@ -195,7 +196,7 @@ export const buildOnChainLedgerRow = (e, task = null) => {
     releaseHash: e.releaseTxHash,
     status: e.released ? 'Completed & Released' : 'Escrow Locked (not released)',
     timestamp: formatUtc(e.releasedAt || e.fundedAt),
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${hash}`,
+    explorerUrl: buildExplorerTxUrl(hash),
     source: ON_CHAIN_SOURCE,
     dispute: describeDispute(task),
     task
@@ -219,6 +220,7 @@ export const buildPublicLedger = ({ escrows = [], tasks = [], otherRecords = [],
     const task = r.task || findTaskForHash(r.txHash, tasks);
     return {
       ...r,
+      explorerUrl: buildExplorerTxUrl(r.txHash),
       id: `db-only-${r.txHash}`,
       source: DB_ONLY_SOURCE,
       task,
@@ -230,7 +232,7 @@ export const buildPublicLedger = ({ escrows = [], tasks = [], otherRecords = [],
   return [...chainRows, ...dbOnly];
 };
 
-const csvCell = (v) => {
+export const csvCell = (v) => {
   let s = v == null ? '' : String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // keep spreadsheet apps from running cell text as a formula
   return `"${s.replace(/"/g, '""')}"`;

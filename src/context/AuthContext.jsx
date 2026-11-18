@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { clearInvitePayout } from '../lib/invite';
-import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet } from '../lib/stellar';
+import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet, STELLAR_NETWORK_NAME } from '../lib/stellar';
 
 // Friendbot rate-limits by IP, so a room of testers on one Wi-Fi can't all be funded by it. GigPay's
 // Testnet pool (Edge Function `fund-practice-wallet`) tops up a signed-in tester's practice wallet once.
@@ -326,7 +326,7 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         console.warn("[AuthContext] Could not cache wallet public key:", err);
       }
-      return { publicKey: key, network: res.network };
+      return { publicKey: key, network: res.network, networkPassphrase: res.networkPassphrase };
     } catch (error) {
       console.error("[AuthContext] Wallet connection error:", error);
       throw error;
@@ -344,7 +344,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.warn("[AuthContext] Could not cache demo wallet key:", err);
     }
-    return { publicKey: resolved || demoKey, network: 'TESTNET' };
+    return { publicKey: resolved || demoKey, network: STELLAR_NETWORK_NAME };
   };
 
   const connectEphemeralWallet = async () => {

@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { getAccountBalance, isDemoWallet, isSimulatorWallet, ensureEphemeralAccountFunded, STELLAR_NETWORK_NAME } from '../lib/stellar';
+import { getAccountBalance, isDemoWallet, isSimulatorWallet, ensureEphemeralAccountFunded, STELLAR_NETWORK_NAME, STELLAR_NETWORK_PASSPHRASE } from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { isPilotToolsEnabled } from '../lib/env';
@@ -85,17 +85,25 @@ const Navbar = () => {
 
   const handleConnect = async () => {
     setError('');
+    const targetLabel = STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local (Standalone)';
     try {
       const res = await connectWallet();
       const connectedKey = typeof res === 'string' ? res : res?.publicKey;
-      const network = res?.network || '';
+      const network = String(res?.network || '').trim();
+      const passphrase = String(res?.networkPassphrase || '').trim();
+      const upperNetwork = network.toUpperCase();
+      const isExpectedNetwork = passphrase
+        ? passphrase === STELLAR_NETWORK_PASSPHRASE
+        : (STELLAR_NETWORK_NAME === 'STANDALONE'
+            ? (upperNetwork.includes('STANDALONE') || upperNetwork.includes('LOCAL'))
+            : upperNetwork.includes('TESTNET'));
 
-      if (network && !network.toUpperCase().includes('TESTNET')) {
-        const msg = `Your Varial (formerly Freighter) wallet is on ${network}. Please switch it to Testnet in the wallet settings.`;
+      if ((network || passphrase) && !isExpectedNetwork) {
+        const msg = `Your Varial (formerly Freighter) wallet is on ${network || 'another network'}. Please switch it to ${targetLabel} in the wallet settings.`;
         setError(msg);
         addToast(msg, 'warning');
       } else {
-        addToast(`Connected to Stellar Testnet: ${formatKey(connectedKey)}`, 'success');
+        addToast(`Connected to ${targetLabel}: ${formatKey(connectedKey)}`, 'success');
       }
     } catch (err) {
       if (err.message === 'WALLET_NOT_INSTALLED') {
@@ -333,7 +341,7 @@ const Navbar = () => {
                   whiteSpace: 'nowrap'
                 }}>
                   <Globe size={13} style={{ color: '#60a5fa' }} />
-                  <span style={{ fontWeight: '600' }}>Testnet</span>
+                  <span style={{ fontWeight: '600' }}>{STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'}</span>
                   {balance !== null && (
                     <span style={{
                       marginLeft: '0.25rem',
@@ -460,12 +468,15 @@ const Navbar = () => {
                 onClick={() => {
                   connectTesterWallet();
                   setShowOnboardingModal(false);
-                  addToast('Practice Testnet wallet created in this browser. Test XLM can take up to 30 seconds to arrive.', 'success');
+                  addToast(
+                    `Practice ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'} wallet created in this browser. Test XLM can take up to 30 seconds to arrive.`,
+                    'success'
+                  );
                 }}
                 className="btn btn-outline"
                 style={{ flex: '1 1 100%', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', marginTop: '0.5rem', fontSize: '0.85rem' }}
               >
-                ⚡ Use a Testnet practice wallet in this browser
+                ⚡ Use a {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'} practice wallet in this browser
               </button>
             </div>
           </div>

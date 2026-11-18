@@ -5,7 +5,7 @@ import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileTe
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { isDemoWallet, isSimulatorWallet } from '../lib/stellar';
+import { isDemoWallet, isSimulatorWallet, buildExplorerAccountUrl } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
 import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
@@ -294,8 +294,8 @@ const FreelancerDashboard = () => {
           <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
             Approved payments go straight to your payout address on Stellar Testnet. Testnet XLM is practice money with no cash value. Bank or GCash withdrawal is not part of this pilot.
           </p>
-          {publicKey && !isDemoWallet(publicKey) && (
-            <a className="btn btn-outline" href={'https://stellar.expert/explorer/testnet/account/' + publicKey} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+          {publicKey && !isDemoWallet(publicKey) && buildExplorerAccountUrl(publicKey) && (
+            <a className="btn btn-outline" href={buildExplorerAccountUrl(publicKey)} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
               <Wallet size={16} /> Check my balance on Stellar Expert <ExternalLink size={13} />
             </a>
           )}

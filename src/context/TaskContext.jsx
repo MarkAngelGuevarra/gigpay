@@ -2,8 +2,8 @@ import React, { createContext, useState, useContext, useEffect, useMemo, useRef 
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, statusAfterDisputeResolved, GIGPAY_ESCROW_CONTRACT_ID, isValidStellarAddress } from '../lib/stellar';
-import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
+import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, statusAfterDisputeResolved, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME, isValidStellarAddress, buildExplorerTxUrl, isStaticTestnetSnapshotEnabled } from '../lib/stellar';
+import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash, csvCell } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive } from '../lib/taskLifecycle';
 import { isOfflineDemoEnabled } from '../lib/env';
@@ -83,7 +83,7 @@ const sanitizeTaskRecord = (t) => {
       freelancer_wallet: mapped.freelancerWallet,
       tx_hash: mapped.txHash,
       release_tx_hash: cleanHash,
-      explorer_url: `https://stellar.expert/explorer/testnet/tx/${cleanHash}`
+      explorer_url: buildExplorerTxUrl(cleanHash)
     };
   }
   // Demo-funded tasks keep their own placeholder hash and lose the explorer link. They must not
@@ -99,7 +99,7 @@ const sanitizeTaskRecord = (t) => {
 // Public verification ledger rows, generated from the chain by scripts/index_escrows.mjs (src/data/onchainEscrows.json).
 // One row per escrow; each is labeled outside user vs team/scripted wallet by labelLedgerRecord. No names are attached.
 // Regenerate with: node scripts/index_escrows.mjs --write
-const INITIAL_VERIFICATION_LEDGER = onchainEscrows.escrows.map((e) => ({
+const getStaticVerificationLedger = () => (isStaticTestnetSnapshotEnabled() ? onchainEscrows.escrows : []).map((e) => ({
   id: `onchain-${e.onChainTaskId}`,
   taskId: `Escrow #${e.onChainTaskId} (${e.walletKind})`,
   method: e.released ? "fund_task & approve_task" : "fund_task",
@@ -112,7 +112,7 @@ const INITIAL_VERIFICATION_LEDGER = onchainEscrows.escrows.map((e) => ({
   releaseHash: e.releaseTxHash,
   status: e.released ? "Completed & Released" : "Escrow Locked (not released)",
   timestamp: (e.releasedAt || e.fundedAt).replace("T", " ").replace("Z", " UTC"),
-  explorerUrl: `https://stellar.expert/explorer/testnet/tx/${e.releaseTxHash || e.fundTxHash}`
+  explorerUrl: buildExplorerTxUrl(e.releaseTxHash || e.fundTxHash)
 }));
 
 export const TaskProvider = ({ children }) => {
@@ -308,7 +308,7 @@ export const TaskProvider = ({ children }) => {
           if (!fields) continue;
           const { is_simulated: _local, escrowIdUnknown, ...dbFields } = fields;
           await writeTask(t.id, dbFields);
-          restoreTask({ ...t, ...dbFields, is_simulated: fields.is_simulated ?? t.is_simulated, explorer_url: fields.status === 'Available' ? `https://stellar.expert/explorer/testnet/tx/${t.tx_hash}` : t.explorer_url });
+          restoreTask({ ...t, ...dbFields, is_simulated: fields.is_simulated ?? t.is_simulated, explorer_url: fields.status === 'Available' ? buildExplorerTxUrl(t.tx_hash) : t.explorer_url });
           addToast(fields.status !== 'Available'
             ? `"${t.title}" didn't go through on Stellar, so no money was locked. You can create it again.`
             : escrowIdUnknown
@@ -566,7 +566,7 @@ export const TaskProvider = ({ children }) => {
       // chain later, instead of recording an escrow that may not exist or inviting a second funding.
       const isPending = !!fundResult?.pending;
       const isEvidence = !isPending && !fundResult?.isDemo && !isNonEvidenceHash(txHash);
-      const explorerUrl = isEvidence ? (fundResult?.explorerUrl || `https://stellar.expert/explorer/testnet/tx/${txHash}`) : null;
+      const explorerUrl = isEvidence ? (fundResult?.explorerUrl || buildExplorerTxUrl(txHash)) : null;
       const resolvedClientWallet = fundResult?.clientAddress || (typeof activeKey === 'string' ? activeKey : 'GBDEMO_GIGPAY_WALLET_FALLBACK_ACTIVE_V9XQ3P');
 
       const newTask = {
@@ -652,9 +652,10 @@ export const TaskProvider = ({ children }) => {
       }
       if (isPending) {
         addToast("The network is slow, so your escrow is still confirming. Please don't lock funds again; GigPay will update this task by itself.", "warning");
-      } else if (fundResult?.explorerUrl && !fundResult?.isDemo) {
-        addToast(`Escrow funded on Testnet! Tx: ${txHash.slice(0, 10)}...`, "success");
+      } else if (!fundResult?.isDemo && fundResult?.hash) {
+        addToast(`Escrow funded on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Stellar Local'}! Tx: ${txHash.slice(0, 10)}...`, "success");
       }
+      return { isPending, isDemo: !!fundResult?.isDemo, hash: txHash, explorerUrl };
     } catch (err) {
       console.error("Failed to add task:", err);
       throw err;
@@ -835,7 +836,7 @@ export const TaskProvider = ({ children }) => {
             txHash: relHash,
             status: 'Completed & Released',
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-            explorerUrl: releaseResult?.explorerUrl || `https://stellar.expert/explorer/testnet/tx/${relHash}`
+            explorerUrl: releaseResult?.explorerUrl || buildExplorerTxUrl(relHash)
           }));
         }
       } else {
@@ -867,8 +868,8 @@ export const TaskProvider = ({ children }) => {
       }
     }
 
-    if (releaseResult?.explorerUrl && !releaseResult?.isDemo) {
-      addToast(`Escrow released on Testnet! Tx: ${releaseResult.hash.slice(0, 10)}...`, "success");
+    if (!releaseResult?.alreadyReleased && !releaseResult?.isDemo && releaseResult?.hash) {
+      addToast(`Escrow released on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Stellar Local'}! Tx: ${releaseResult.hash.slice(0, 10)}...`, "success");
     }
 
     return releaseResult || { success: true };
@@ -900,7 +901,7 @@ export const TaskProvider = ({ children }) => {
 
     // 2. Live records written by addTask / updateTaskStatus, and 3. baseline SOW Table 7 records
     const liveRows = storedLedgerRecords.map(labelLedgerRecord);
-    const baselineRows = INITIAL_VERIFICATION_LEDGER.map(labelLedgerRecord);
+    const baselineRows = getStaticVerificationLedger().map(labelLedgerRecord);
 
     return dedupeLedgerByTxHash([...completedRows, ...liveRows, ...baselineRows]);
   }, [tasks, storedLedgerRecords]);
@@ -908,24 +909,24 @@ export const TaskProvider = ({ children }) => {
   // 10. 1-Click CSV Export for Public Verification Ledger
   const exportVerificationCsv = () => {
     try {
-      const headers = ["Transaction ID", "Task Title", "Method", "Amount", "Contract ID", "Client Wallet", "Freelancer Wallet", "Transaction Hash", "Status", "Timestamp (UTC)", "Stellar Expert URL", "Counts As Outside User", "Wallet Note"];
-      const rows = ledgerRecords.map(r => [
-        `"${r.id}"`,
-        `"${r.taskId || ''}"`,
-        `"${r.method || ''}"`,
-        `"${r.amount || ''}"`,
-        `"${r.contractId || ''}"`,
-        `"${r.clientWallet || ''}"`,
-        `"${r.freelancerWallet || ''}"`,
-        `"${r.txHash || ''}"`,
-        `"${r.status || ''}"`,
-        `"${r.timestamp || ''}"`,
-        `"${r.explorerUrl || ''}"`,
-        `"${r.countsAsOutsideUser ? 'Yes' : 'No'}"`,
-        `"${r.walletNote || ''}"`
-      ]);
+      const headers = ["Transaction ID", "Task Title", "Method", "Amount", "Contract ID", "Client Wallet", "Freelancer Wallet", "Transaction Hash", "Status", "Timestamp (UTC)", "Explorer URL", "Counts As Outside User", "Wallet Note"];
+      const rows = ledgerRecords.map((r) => [
+        r.id,
+        r.taskId || '',
+        r.method || '',
+        r.amount || '',
+        r.contractId || '',
+        r.clientWallet || '',
+        r.freelancerWallet || '',
+        r.txHash || '',
+        r.status || '',
+        r.timestamp || '',
+        buildExplorerTxUrl(r.txHash) || '',
+        r.countsAsOutsideUser ? 'Yes' : 'No',
+        r.walletNote || ''
+      ].map(csvCell).join(','));
 
-      const csvString = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      const csvString = [headers.map(csvCell).join(','), ...rows].join('\n');
       const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

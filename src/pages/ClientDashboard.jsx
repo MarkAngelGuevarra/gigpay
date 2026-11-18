@@ -4,7 +4,7 @@ import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, E
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature, formatStellarError, isSimulatedTxHash } from '../lib/stellar';
+import { requestWalletSignature, formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { peekInvitePayout, clearInvitePayout } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
@@ -191,9 +191,9 @@ const ClientDashboard = () => {
       // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an
       // already-released escrow; here we only add what it does not say.
       if (isDemoAccount || result?.isDemo) {
-        addToast("Simulation only: task marked Completed in this browser. No payment was sent on Stellar Testnet.", "info");
-      } else if (!result?.alreadyReleased && !result?.explorerUrl) {
-        addToast("Release submitted. The task card shows its status on Stellar Testnet.", "info");
+        addToast("Simulation only: task marked Completed in this browser. No payment was sent on Stellar.", "info");
+      } else if (!result?.alreadyReleased && !result?.hash) {
+        addToast(`Release submitted. The task card shows its status on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}.`, "info");
       }
     } catch (error) {
       const formatted = formatStellarError(error);
@@ -253,15 +253,17 @@ const ClientDashboard = () => {
         amount: newTaskAmount,
         freelancer_wallet: freelancerWallet.trim() || undefined
       };
-      await addTask(newTask);
+      const created = await addTask(newTask);
       clearInvitePayout();
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
-      // addTask itself reports a confirmed or still-confirming escrow, so this message never claims "funded".
-      addToast(isDemoAccount
-        ? "Simulation only: practice task saved in this browser. Nothing was sent to Stellar Testnet."
-        : "Funding sent. It is being confirmed on Stellar Testnet (about 5 seconds); the task card shows its status.", "info");
+      // addTask itself reports a confirmed or still-confirming on-chain escrow; only surface demo notice here.
+      if (isDemoAccount || created?.isDemo) {
+        addToast("Simulation only: practice task saved in this browser. Nothing was sent to Stellar.", "info");
+      } else if (!created?.hash && !created?.isPending) {
+        addToast(`Funding sent. It is being confirmed on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'} (about 5 seconds); the task card shows its status.`, "info");
+      }
     } catch (error) {
       const formatted = formatStellarError(error);
       const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
@@ -555,9 +557,9 @@ const ClientDashboard = () => {
                       </div>
                     )}
 
-                    {hasRealFundTx && (
+                    {hasRealFundTx && buildExplorerTxUrl(task.tx_hash) && (
                       <a
-                        href={`https://stellar.expert/explorer/testnet/tx/${task.tx_hash}`}
+                        href={buildExplorerTxUrl(task.tx_hash)}
                         target="_blank" 
                         rel="noopener noreferrer" 
                         style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
@@ -789,7 +791,7 @@ const ClientDashboard = () => {
               <CheckCircle size={22} /> Milestone Release Confirmation
             </h3>
             <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              You are about to release funds from the Soroban escrow contract (<code>CAUU2O...7RD3</code>) to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
+              You are about to release funds from the Soroban escrow contract (<code>{GIGPAY_ESCROW_CONTRACT_ID.slice(0, 6)}...{GIGPAY_ESCROW_CONTRACT_ID.slice(-4)}</code>) to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
             </p>
             {taskToApprove?.title && (
               <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.08)' }}>

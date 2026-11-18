@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, ExternalLink, Download, X, Clock, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ExternalLink, Download, X, Clock } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import onchainData from '../data/onchainEscrows.json';
 import { isTeamWallet, isScriptedTestWallet, buildPublicLedger, ledgerToCsv } from '../lib/ledgerIntegrity';
+import {
+  GIGPAY_ESCROW_CONTRACT_ID,
+  SOROBAN_RPC_URL,
+  STELLAR_NETWORK_NAME,
+  buildExplorerAccountUrl,
+  buildExplorerTxUrl,
+  isStaticTestnetSnapshotEnabled
+} from '../lib/stellar';
 
 const isOutside = (w) => !!w && !isTeamWallet(w) && !isScriptedTestWallet(w);
-const chainStats = (() => {
-  const rows = onchainData.escrows || [];
+const computeChainStats = (rows) => {
   const outside = new Set();
   let outsideFunded = 0, outsideReleased = 0;
   for (const r of rows) {
@@ -20,24 +27,34 @@ const chainStats = (() => {
     }
   }
   return { total: rows.length, outsideWallets: outside.size, outsideFunded, outsideReleased };
-})();
+};
 
 const shortKey = (k) => (k ? `${k.slice(0, 6)}…${k.slice(-4)}` : 'not recorded');
-const WalletLink = ({ address }) => (address
-  ? <a href={`https://stellar.expert/explorer/testnet/account/${address}`} target="_blank" rel="noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
-  : <span style={{ color: 'var(--text-muted)' }}>not recorded</span>);
+const WalletLink = ({ address }) => {
+  if (!address) return <span style={{ color: 'var(--text-muted)' }}>not recorded</span>;
+  const accountUrl = buildExplorerAccountUrl(address);
+  return accountUrl
+    ? <a href={accountUrl} target="_blank" rel="noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
+    : <code title={address} style={{ color: '#cbd5e1' }}>{shortKey(address)}</code>;
+};
 
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
   const { tasks, ledgerRecords } = useTasks();
   const { addToast } = useToast() || {};
+  const snapshotActive = isStaticTestnetSnapshotEnabled();
+  const staticEscrows = useMemo(
+    () => (snapshotActive ? (onchainData.escrows || []) : []),
+    [snapshotActive]
+  );
+  const chainStats = useMemo(() => computeChainStats(staticEscrows), [staticEscrows]);
 
   // Each on-chain escrow exactly once (enriched with its Supabase task), then database-only rows.
   const records = useMemo(() => buildPublicLedger({
-    escrows: onchainData.escrows || [],
+    escrows: staticEscrows,
     tasks,
     otherRecords: ledgerRecords,
-    generatedAt: onchainData.generatedAt
-  }), [tasks, ledgerRecords]);
+    generatedAt: snapshotActive ? onchainData.generatedAt : ''
+  }), [staticEscrows, tasks, ledgerRecords, snapshotActive]);
 
   const exportVerificationCsv = () => {
     try {
@@ -165,11 +182,11 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                 Public On-Chain Verification Ledger
               </h3>
               <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)', whiteSpace: 'nowrap' }}>
-                Stellar Testnet
+                {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
               </span>
             </div>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              Every escrow on the GigPay contract, generated from Stellar Testnet, with each wallet labeled as outside user or team/test.
+              Every escrow on the GigPay contract ({STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}), with each wallet labeled as outside user or team/test.
             </p>
           </div>
 
@@ -208,7 +225,11 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Funded outside ↔ outside</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideFunded}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Client and freelancer both outside (3 look like duplicate locks: #52, #53, #66)</div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+              {snapshotActive
+                ? 'Client and freelancer both outside (3 look like duplicate locks: #52, #53, #66)'
+                : 'Client and freelancer both outside'}
+            </div>
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Released outside ↔ outside</div>
@@ -217,7 +238,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
           </div>
         </div>
         <p style={{ margin: '0 0 1.25rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-          Counted from Stellar Testnet on {onchainData.generatedAt} by scripts/index_escrows.mjs. Wallets are counted, not verified people. Team and scripted test wallets are labeled in the table below.
+          {snapshotActive
+            ? `Counted from Stellar Testnet on ${onchainData.generatedAt} by scripts/index_escrows.mjs. Wallets are counted, not verified people. Team and scripted test wallets are labeled in the table below.`
+            : 'Static Testnet snapshot disabled in offline, local, or custom-contract mode; displaying locally recorded verification rows only.'}
         </p>
 
         {/* Contract Metadata Banner */}
@@ -234,11 +257,11 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
         }}>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>Contract ID:</span><br />
-            <code style={{ color: '#00f2fe', wordBreak: 'break-all' }}>CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3</code>
+            <code style={{ color: '#00f2fe', wordBreak: 'break-all' }}>{GIGPAY_ESCROW_CONTRACT_ID}</code>
           </div>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>Network RPC:</span><br />
-            <span style={{ color: 'white' }}>https://soroban-testnet.stellar.org</span>
+            <span style={{ color: 'white' }}>{SOROBAN_RPC_URL}</span>
           </div>
           <div>
             <span style={{ color: 'var(--text-muted)' }}>Data source:</span><br />
@@ -307,18 +330,21 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
                     </code>
                   </td>
                   <td style={{ padding: '0.75rem' }}>
-                    {record.explorerUrl ? (
-                      <a
-                        href={record.explorerUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: '#00f2fe', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', fontWeight: 600 }}
-                      >
-                        Verify <ExternalLink size={12} />
-                      </a>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>N/A</span>
-                    )}
+                    {(() => {
+                      const txExplorerUrl = buildExplorerTxUrl(record.txHash);
+                      return txExplorerUrl ? (
+                        <a
+                          href={txExplorerUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#00f2fe', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', fontWeight: 600 }}
+                        >
+                          Verify <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>N/A</span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -329,7 +355,7 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
         {/* Modal Footer with Explicit Close Action */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', flexWrap: 'wrap', gap: '1rem' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Every escrow on the contract, generated from Stellar Testnet
+            Every escrow on the contract, from {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
           </span>
           <button
             onClick={onClose}
