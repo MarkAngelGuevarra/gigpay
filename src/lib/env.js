@@ -4,9 +4,15 @@ const getRuntimeEnv = () => {
   return { ...procEnv, ...metaEnv };
 };
 
-export const getEnvVar = (key, fallback = '') => {
+export const getRawEnvVar = (key) => {
   const env = getRuntimeEnv();
+  if (!Object.prototype.hasOwnProperty.call(env, key)) return undefined;
   const value = env[key];
+  return value === undefined ? undefined : String(value);
+};
+
+export const getEnvVar = (key, fallback = '') => {
+  const value = getRawEnvVar(key);
   return value !== undefined && value !== '' ? value : fallback;
 };
 

@@ -1,30 +1,46 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const devCspPlugin = () => ({
+const isLocalTargetConfigured = (env) => {
+  const network = String(env.VITE_STELLAR_NETWORK || '').trim().toUpperCase();
+  if (network === 'LOCAL' || network === 'STANDALONE') return true;
+  return [
+    env.VITE_SUPABASE_URL,
+    env.VITE_HORIZON_URL,
+    env.VITE_SOROBAN_RPC_URL,
+    env.VITE_FRIENDBOT_URL,
+  ].some((val) => /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(String(val || '').trim()));
+};
+
+const createCspPlugin = ({ allowInlineScript, allowLocalhostConnect }) => ({
   name: 'gigpay-dev-csp',
-  apply: 'serve',
   transformIndexHtml(html) {
+    if (!allowInlineScript && !allowLocalhostConnect) return html;
     return html.replace(
       /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")([^"]+)(")/i,
       (_, prefix, content, suffix) => {
-        const relaxed = content
-          .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
-          .replace(
+        let next = content;
+        if (allowInlineScript) {
+          next = next.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'");
+        }
+        if (allowLocalhostConnect) {
+          next = next.replace(
             "connect-src 'self'",
             "connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*"
           );
-        return `${prefix}${relaxed}${suffix}`;
+        }
+        return `${prefix}${next}${suffix}`;
       }
     );
   },
 });
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const rawSupabaseUrl = String(env.VITE_SUPABASE_URL || '').trim();
-  const supabaseTarget = (/^https?:\/\//i.test(rawSupabaseUrl)
+  const hasExplicitUrl = /^https?:\/\//i.test(rawSupabaseUrl) && rawSupabaseUrl !== 'YOUR_SUPABASE_URL';
+  const supabaseTarget = (hasExplicitUrl
     ? rawSupabaseUrl
     : 'https://gulshfticoirrpuohdxk.supabase.co').replace(/\/+$/, '');
   const supabaseProxy = {
@@ -36,8 +52,11 @@ export default defineConfig(({ mode }) => {
     },
   };
 
+  const allowInlineScript = command === 'serve';
+  const allowLocalhostConnect = command === 'serve' || isLocalTargetConfigured(env);
+
   return {
-    plugins: [react(), devCspPlugin()],
+    plugins: [react(), createCspPlugin({ allowInlineScript, allowLocalhostConnect })],
     server: {
       proxy: supabaseProxy,
     },

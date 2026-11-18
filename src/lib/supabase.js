@@ -4,10 +4,18 @@ import { getEnvVar, isLocalhostHostname, isOfflineDemoEnabled } from './env.js'
 const DEFAULT_SUPABASE_URL = 'https://gulshfticoirrpuohdxk.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_uimxpjAcUVlf4mqite3pZg_zhrrzy3Y';
 
-const rawSupabaseUrl = String(getEnvVar('VITE_SUPABASE_URL', DEFAULT_SUPABASE_URL)).trim();
-const configuredSupabaseUrl = (/^https?:\/\//i.test(rawSupabaseUrl)
+const rawSupabaseUrl = String(getEnvVar('VITE_SUPABASE_URL', '')).trim();
+const hasConfiguredSupabaseUrl = /^https?:\/\//i.test(rawSupabaseUrl) && rawSupabaseUrl !== 'YOUR_SUPABASE_URL';
+const configuredSupabaseUrl = (hasConfiguredSupabaseUrl
   ? rawSupabaseUrl
   : DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+
+if (!hasConfiguredSupabaseUrl && !isOfflineDemoEnabled()) {
+  const stellarNet = String(getEnvVar('VITE_STELLAR_NETWORK', '')).trim().toUpperCase();
+  if (stellarNet === 'LOCAL' || stellarNet === 'STANDALONE') {
+    console.warn('[supabase] VITE_STELLAR_NETWORK is local while VITE_SUPABASE_URL is unset/placeholder; defaulting /api/supabase proxy to the shared database unless VITE_SUPABASE_URL is configured.');
+  }
+}
 
 const rawAnonKey = String(getEnvVar('VITE_SUPABASE_ANON_KEY', DEFAULT_SUPABASE_ANON_KEY)).trim();
 const supabaseAnonKey = rawAnonKey && rawAnonKey !== 'YOUR_SUPABASE_ANON_KEY'
