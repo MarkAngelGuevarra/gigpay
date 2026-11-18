@@ -1,6 +1,8 @@
-# Sprint 2 evidence map (D1–D4)
+# Pre-approval work map (draft D1–D4)
 
-Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and what evidence is still missing. Written November 6, 2026; on-chain numbers and D2(a) updated November 14, 2026 after BCC 2026 (Nov 12–13); D4(c) video (two parts) and D3 recording added November 15, 2026. Statuses are GigPay's own reading, not a program sign-off.
+**Status (November 18, 2026):** Sprint 2 features were built after Sprint 1, before program approval. The Sprint 2 proposal was not approved (Nov 18, 2026); a revised, technical-only SOW is pending. This page maps what exists for each item of the draft Sprint 2 proposal. None of it is claimed as funded or approved work.
+
+Written November 6, 2026; on-chain numbers and D2(a) updated November 14, 2026 after BCC 2026 (Nov 12–13); D4(c) video (two parts) and D3 recording added November 15, 2026. Statuses are GigPay's own reading, not a program sign-off.
 
 - **Done:** the behaviour is in `main` and has a test or a public record.
 - **Partly:** some of it is in place, or it works but the required evidence is not there yet.
@@ -8,9 +10,9 @@ Each acceptance criterion of the approved Sprint 2 SOW, what exists for it, and 
 
 ## Baseline
 
-The SOW was submitted on October 22, 2026, to start on approval. **The commits dated October 26, 2026 are the pre-sprint baseline**, the state of the code when Sprint 2 work began: `6866518`, `58b5eb6`, `d02ca3f`, `3f94496`, `e04bc14`, `a78417e`, `28d36cd`, `222526d`, `0c7ea19`, `6a256c2`. They are listed below only where a later commit built on them. Two of them made claims that were later corrected: `0c7ea19` reported clean installs on three environments that could not be matched to real runs (corrected in `ab47c2b`, Nov 4), and `222526d` is the regression suite described under D4(a).
+The draft Sprint 2 SOW was submitted on October 22, 2026, to start on approval. It was not approved. **The commits dated October 26, 2026 are the pre-sprint baseline**, the state of the code when Sprint 2 work began: `6866518`, `58b5eb6`, `d02ca3f`, `3f94496`, `e04bc14`, `a78417e`, `28d36cd`, `222526d`, `0c7ea19`, `6a256c2`. They are listed below only where a later commit built on them. Two of them made claims that were later corrected: `0c7ea19` reported clean installs on three environments that could not be matched to real runs (corrected in `ab47c2b`, Nov 4), and `222526d` is the regression suite described under D4(a).
 
-On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-14 11:34 UTC.
+On-chain numbers below come from `src/data/onchainEscrows.json`, generated from Stellar Testnet by `scripts/index_escrows.mjs` on 2026-11-17 01:53 UTC.
 
 ## Deliverable 1: real-time task and escrow sync
 
@@ -25,19 +27,19 @@ Notes:
 
 - `test/sync_latency.test.js` times dispute raise and resolve between two tabs of the same browser and asserts p95 < 500ms. It does not time a funded task reaching the freelancer feed, and it does not measure sync between devices (Supabase Realtime). Recorded run: GitHub Actions run 42162411037 on commit `524fe5c` (Nov 6, 2026), n=40, median 1.9 ms, p95 4.9 ms, max 15.9 ms (https://github.com/MarkAngelGuevarra/gigpay/actions/runs/42162411037). CI repeats it on every push to main.
 - Since Nov 11, 2026 (`cdd89b7`), the `tasks` table is in Supabase's Realtime publication, and the app also re-reads tasks every 10 seconds and when the page regains focus. Delivery between devices was seen working in two-phone dry runs but is not benchmarked.
-- The SOW mentions reconciling with "contract events". The contract emits no events. The app reconciles by checking the transaction result and, since `58c4017`, the contract's `get_task`.
+- The draft SOW mentions reconciling with "contract events". The contract emits no events. The app reconciles by checking the transaction result and, since `58c4017`, the contract's `get_task`.
 
 ## Deliverable 2: practice wallet and public verification ledger
 
 | Criterion | Status | Files | Commits | Tests |
 |:---|:---|:---|:---|:---|
-| (a) Mobile and extensionless users can fund and approve with the badged Testnet practice wallet | Done (used on students' phones by outside wallets on Nov 12, 2026; see Success metric) | `src/lib/stellar.js`, `src/context/AuthContext.jsx`, `supabase/functions/fund-practice-wallet` | `663514e`, `e0256b6`, `65a0959` | `test/escrow_submission_integrity.test.js`, `test/onboarding_at_scale.test.js`, `test/onboarding_safety.test.js` |
+| (a) Mobile and extensionless users can fund and approve with the badged Testnet practice wallet | Done (used on their own phones by outside wallets on Nov 12, 2026; see On-chain activity) | `src/lib/stellar.js`, `src/context/AuthContext.jsx`, `supabase/functions/fund-practice-wallet` | `663514e`, `e0256b6`, `65a0959` | `test/escrow_submission_integrity.test.js`, `test/onboarding_at_scale.test.js`, `test/onboarding_safety.test.js` |
 | (b) Public ledger shows every on-chain escrow, methods, caller public keys, timestamps and Stellar Expert links | Done | `src/components/VerificationLedgerModal.jsx`, `src/lib/ledgerIntegrity.js`, `scripts/index_escrows.mjs` | `9f5f2e9`, `8702923`, `b5e36eb`, `6b87016` | `test/ledger_integrity.test.js` |
 | (c) 1-click CSV export of the ledger | Done | `src/components/VerificationLedgerModal.jsx`, `src/lib/ledgerIntegrity.js` (`ledgerToCsv`) | baseline `d02ca3f`; `b5e36eb`, `d20f800` | `test/ledger_integrity.test.js` |
 
 Notes:
 
-- (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. Outside users did so at BCC 2026 (see Success metric).
+- (a) Escrows #41–#46 were funded on Nov 5, 2026 from a practice wallet created on a team device, and #42, #43 and #45 were also released. That is team testing. Outside wallets did so at the Blockchain Campus Conference, Nov 12–13, 2026 (see On-chain activity).
 - (b) The ledger reads a snapshot of the chain (75 escrows on Nov 17, 2026). It must be regenerated (`node scripts/index_escrows.mjs --write`) before a review. Escrows funded after the snapshot show up as "Database only" rows that are not counted.
 - Before `b5e36eb` the CSV listed some escrows twice and left out #42, #43 and #45 as on-chain rows.
 
@@ -52,7 +54,7 @@ Notes:
 
 Notes:
 
-- (b) The deployed contract has no dispute, refund or cancel state, so the freeze is enforced by the app and the database only. The SOW's success metric "Active contract freeze state" is not met as written. The workflow and its limits are in [DISPUTE_RESOLUTION.md](DISPUTE_RESOLUTION.md).
+- (b) The deployed contract has no dispute, refund or cancel state, so the freeze is enforced by the app and the database only. The draft SOW's metric "Active contract freeze state" is not met as written. An on-chain dispute and refund state (contract v2) is proposed in the revised SOW, pending approval; it is not built. The workflow and its limits are in [DISPUTE_RESOLUTION.md](DISPUTE_RESOLUTION.md).
 - (c) No task in the production database had a recorded dispute when checked on Nov 6, 2026, so there is no live example yet.
 - Regression tests 16–17 in `test/gigpay_regression.test.js` compare two string values defined in the test file; they do not exercise the modal.
 
@@ -69,31 +71,34 @@ Notes:
 - (a) The 22 tests in `test/gigpay_regression.test.js` (the baseline "18 tests", since extended) mostly check values defined inside the test file and import no app code. The 82 tests in the other six suites call the app's own modules, or check its source files directly (some tests in `test/onboarding_safety.test.js`).
 - (b) The three runs are Windows 11 on a personal computer (Nov 4), Linux in a fresh cloud container (Nov 5) and macOS on a fresh GitHub-hosted virtual machine (Nov 12). Only the first is a personal physical computer; the other two are separate, freshly created machines.
 
-## Success metric: on-chain transactions
+## On-chain activity (generated Nov 17, 2026)
 
-SOW section 6.3 targets **at least 50 verifiable transactions between outside (non-team) wallets**; team, QA and scripted escrows are excluded.
-
-As of 2026-11-17 the contract has 75 escrows. Most early ones are testing:
+Reported as history, not as a target. As of 2026-11-17 the contract has 75 escrows. Most early ones are testing:
 
 - #1–#14, #36–#48, #72–#75 (31 escrows): team, QA, dry-run or walkthrough-video wallets.
 - #16–#35 (20 escrows): created by a script on Nov 3, 2026.
-- #15 and #49–#71 (24 escrows): **between outside wallets**. #49–#70 were funded at the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026).
+- #15 and #49–#71 (24 escrows): **between outside wallets**. #49–#70 were funded at a hands-on testing session at the Blockchain Campus Conference (University of Makati, Nov 12–13, 2026).
 
-| Outside-wallet count (Nov 14, 2026) | As indexed | Without the 3 duplicate locks (#52, #53, #66) |
+| Count (snapshot 2026-11-17 01:53 UTC) | As indexed | Without the 3 duplicate locks (#52, #53, #66) |
 |:---|:---:|:---:|
-| Outside wallets | 42 (41 exist on-chain) | 42 (41) |
-| Escrows funded | 24 | 21 |
-| Escrows released end to end | 19 | 19 |
-| Repeat wallets | 6 | **0** |
-| **Outside-wallet transactions (funds + releases)** | 43 | **40 of the 50 targeted** |
+| Outside wallets in escrows | 42 (41 exist on-chain) | 42 (41) |
+| Escrows funded between outside wallets | 24 | 21 |
+| Escrows released | 19 | 19 |
+| Wallets in a second escrow | 6 | **0** |
 
 - All 41 outside wallets that exist on-chain were created by the public Testnet Friendbot, not by a team wallet or the GigPay funding pool.
 - Counts are wallets, not verified people. Duplicate locks, #15's unactivated wallet, after-hours escrows (#60, #71) and large Testnet amounts are disclosed in `EVIDENCE_TABLE.md`.
-- The target is **not met yet**: 10 more transactions (5 completed escrows) are needed on the deduplicated count.
 
-## Evidence still missing
+## Known gaps
+
+No new work is planned on these until a revised SOW is approved.
 
 1. Optional: a clean install on a second personal computer, since two of the three D4b runs are virtual machines.
 2. A measurement of a funded task reaching the freelancer feed and of sync between devices (D1a, D1c).
-3. More escrows funded **and released** between outside wallets: 40 of the 50 targeted transactions as of Nov 14, 2026, without duplicate locks (success metrics).
-4. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
+3. A fresh `node scripts/index_escrows.mjs --write` just before review, so the ledger includes every escrow.
+
+## Process notes (added November 18, 2026)
+
+- **Oct 26, 2026:** the baseline for these features was committed as 9 commits within one minute (12:52 +0800: `58b5eb6`, `d02ca3f`, `3f94496`, `e04bc14`, `a78417e`, `28d36cd`, `222526d`, `0c7ea19`, `6a256c2`) before program approval.
+- **Nov 6, 2026:** 48 commits were made in one day, 35 of them between 11:00 and 12:59 +0800. By type: 19 docs, 16 fix, 6 test, 4 feat, 3 other.
+- Commit history has not been rewritten. Work now goes in as a few focused commits per day.

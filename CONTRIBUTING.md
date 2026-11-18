@@ -1,6 +1,6 @@
 # Contributing to GigPay
 
-Thanks for helping. GigPay is a milestone escrow app for freelancers on the **Stellar Testnet**, built for the Stellar Philippines Instawards program (Sprint 2; Demo Day November 19, 2026). The grant has strict rules about scope, honesty and privacy, so please read this page before changing anything. When in doubt, ask Mark first.
+Thanks for helping. GigPay is a milestone escrow app for freelancers on the **Stellar Testnet**, built for the Stellar Philippines Instawards program (Demo Day November 19, 2026). The grant has strict rules about scope, honesty and privacy, so please read this page before changing anything. When in doubt, ask Mark first.
 
 ## 1. Setup
 
@@ -24,24 +24,23 @@ Everything runs on **Testnet with practice XLM**. Nothing in this project may to
 - CI (`.github/workflows/ci.yml`) is green on your branch.
 - You checked your change in the browser if it affects the UI, including on a phone-sized screen (most testers use phones).
 
-## 4. Scope: only the approved Sprint 2 work
+## 4. Scope: nothing new until a revised SOW is approved
 
-The program counts only work listed in the approved Statement of Work. In scope:
+Sprint 2 features were built after Sprint 1, before program approval. The Sprint 2 proposal was not approved (Nov 18, 2026); a revised, technical-only SOW is pending. The program counts only work in an approved Statement of Work, and work outside it can get the project removed.
 
-- **D1** Real-time task and escrow sync across tabs and devices.
-- **D2** Practice wallet for phones without a wallet extension, plus the public verification ledger and CSV export.
-- **D3** Proof of work (at least one link), the app-level dispute freeze, and the `CONFIRM` release step.
-- **D4** Automated tests, clean installs, walkthrough video.
+Until a revised SOW is approved, only fixes to docs, tests and existing bugs go to `main`. No new features.
 
-**Out of scope until a later sprint:** ratings or reputation profiles, Mainnet, fiat on/off-ramps, a new contract version, marketplace features, mobile apps. Please don't build these now, even as a "quick extra".
+What already exists (built before approval, not funded): real-time task and escrow sync; the Testnet practice wallet, public verification ledger and CSV export; proof of work, the app-level dispute freeze and the `CONFIRM` release step; automated tests, clean installs and a walkthrough video.
+
+**Not planned now:** ratings or reputation profiles, Mainnet, fiat on/off-ramps, marketplace features, mobile apps. A new contract version (v2, with on-chain dispute and refund) is proposed in the revised SOW and will not be built unless it is approved.
 
 ## 5. Smart contract rules
 
 - Deployed contract (Testnet): `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`. Source: `contracts/gigpay_escrow`.
-- **Do not redeploy or change the deployed contract.** A new version needs the Chapter Lead's approval.
+- **Do not redeploy or change the deployed contract.** A new version needs an approved SOW and the Chapter Lead's approval.
 - **Do not run `node scripts/extend_contract_ttl.mjs --submit`.** Mark handles contract storage upkeep.
-- **Do not create Testnet escrows** from scripts or test wallets without asking. Every escrow shows up in the public ledger and in the traction count. If testing needs one, its wallets must be added to the team lists in **both** `scripts/index_escrows.mjs` (`TEAM`) and `src/lib/ledgerIntegrity.js`, so they are excluded from user counts.
-- Known limits (documented, don't "fix" by redeploying): the dispute freeze is enforced by the app and database, not the contract; the contract has no events or refund; all escrows share one storage entry with room for about 130 more.
+- **Do not create Testnet escrows** from scripts or test wallets without asking. Every escrow shows up in the public ledger and in the on-chain counts. If testing needs one, its wallets must be added to the team lists in **both** `scripts/index_escrows.mjs` (`TEAM`) and `src/lib/ledgerIntegrity.js`, so they are excluded from outside-wallet counts.
+- Known limits (documented): the dispute freeze is enforced by the app and database, not the contract; the contract has no events or refund; all escrows share one storage entry with room for about 130 more. A v2 contract that addresses these is proposed in the revised SOW and will not be built until it is approved.
 
 ## 6. Database (Supabase) rules
 
@@ -53,7 +52,7 @@ The program counts only work listed in the approved Statement of Work. In scope:
 
 Reviewers check every number against the chain, so:
 
-- Traction numbers come **only** from `node scripts/index_escrows.mjs --write` (see `EVIDENCE_TABLE.md` and `METRICS.md`).
+- On-chain counts come **only** from `node scripts/index_escrows.mjs --write` (see `EVIDENCE_TABLE.md` and `METRICS.md`).
 - Counts are **wallets, not verified people**. Team, QA, scripted (#16–#35) and duplicate escrows (#52, #53, #66) are excluded.
 - Never add placeholder or fake transaction hashes, demo data shown as on-chain, or words like "verified users", "real users" or "production-ready" that the evidence doesn't support.
 - When updating a submitted document, keep the original text and add a dated note ("Update, <date>: …") instead of silently rewriting history.
@@ -84,11 +83,12 @@ Also:
 | Tests | `test/*.test.js` |
 | Evidence and rules | `docs/SPRINT2_EVIDENCE.md`, `EVIDENCE_TABLE.md`, `METRICS.md`, `DISPUTE_RESOLUTION.md`, `PRIVACY.md` |
 
-## 10. Good places to help (in scope, ask before starting)
+## 10. Good places to help (ask before starting)
+
+Only fixes to docs, tests and existing bugs until a revised SOW is approved.
 
 - A test that times a newly funded task reaching the freelancer's feed in a second tab (closes the D1a measurement gap).
-- UX: disable "Approve & Release" until proof is submitted; accessibility fixes (form labels, focus states, phone layouts).
+- Accessibility fixes to existing screens (form labels, focus states, phone layouts).
 - More tests that exercise the real modules (the CONFIRM modal, the dispute freeze) instead of comparing constants.
-- A per-deliverable traceability table in `docs/SPRINT2_EVIDENCE.md` (SOW item → commit → transaction or video timestamp).
 
 Thank you for helping keep GigPay honest and safe.
