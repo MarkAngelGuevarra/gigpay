@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ExternalLink, Clock, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
@@ -13,9 +13,15 @@ export default function PilotIntakeBanner() {
     openFormLink,
     markCompleted
   } = usePilotFeedbackState();
+  const hasRecordedViewRef = useRef(false);
 
   useEffect(() => {
-    if (shouldShowBanner) {
+    if (!shouldShowBanner) {
+      hasRecordedViewRef.current = false;
+      return;
+    }
+    if (!hasRecordedViewRef.current) {
+      hasRecordedViewRef.current = true;
       markBannerViewed('banner_viewed');
     }
   }, [shouldShowBanner, markBannerViewed]);

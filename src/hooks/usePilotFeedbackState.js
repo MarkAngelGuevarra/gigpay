@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
+const INTRA_TAB_SYNC_EVENT = 'gigpay_pilot_feedback_sync';
 
 export const PILOT_FEEDBACK_STORAGE_KEY = 'gigpay_pilot_feedback_v1';
 export const PILOT_FORM_URL = 'https://forms.gle/oLGjJRcxg5LZ5bC96';
@@ -257,39 +259,57 @@ export function usePilotFeedbackState(storage = safeStorage, authOverride = null
     const raw = storage.getItem(PILOT_FEEDBACK_STORAGE_KEY);
     return parseFeedbackState(raw);
   });
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-  // Cross-tab synchronization via storage event
+  // Cross-tab (storage event) and intra-tab (CustomEvent) synchronization
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleStorageChange = (e) => {
-      if (e.key === PILOT_FEEDBACK_STORAGE_KEY && e.newValue) {
+      if (e.key === PILOT_FEEDBACK_STORAGE_KEY || e.key === null) {
         const synced = parseFeedbackState(e.newValue);
+        stateRef.current = synced;
         setState(synced);
       }
     };
+    const handleIntraTabSync = (e) => {
+      if (e.detail?.storage === storage && e.detail?.state) {
+        stateRef.current = e.detail.state;
+        setState(e.detail.state);
+      }
+    };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    window.addEventListener(INTRA_TAB_SYNC_EVENT, handleIntraTabSync);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(INTRA_TAB_SYNC_EVENT, handleIntraTabSync);
+    };
+  }, [storage]);
 
-  // Save changes to storage
+  const getLatestState = useCallback(() => {
+    const raw = storage.getItem(PILOT_FEEDBACK_STORAGE_KEY);
+    return raw ? parseFeedbackState(raw) : stateRef.current;
+  }, [storage]);
+
+  // Save changes to storage and broadcast intra-tab without triggering side effects in state updaters
   const persistState = useCallback((nextState) => {
+    stateRef.current = nextState;
     setState(nextState);
     storage.setItem(PILOT_FEEDBACK_STORAGE_KEY, JSON.stringify(nextState));
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(INTRA_TAB_SYNC_EVENT, { detail: { storage, state: nextState } }));
+    }
   }, [storage]);
 
   // Reconcile user identity when authenticated persona changes
   useEffect(() => {
-    if (userId) {
-      setState(prev => {
-        const updated = reconcilePersonaBinding(prev, userId, walletKey);
-        if (updated !== prev) {
-          storage.setItem(PILOT_FEEDBACK_STORAGE_KEY, JSON.stringify(updated));
-          return updated;
-        }
-        return prev;
-      });
+    if (!userId) return;
+    const latest = getLatestState();
+    const updated = reconcilePersonaBinding(latest, userId, walletKey);
+    if (updated !== latest) {
+      persistState(updated);
     }
-  }, [userId, walletKey, storage]);
+  }, [userId, walletKey, getLatestState, persistState]);
 
   // Derived state calculations
   const isCompleted = state.status === FEEDBACK_STATES.COMPLETED;
@@ -302,41 +322,26 @@ export function usePilotFeedbackState(storage = safeStorage, authOverride = null
   const shouldShowBanner = !isCompleted && !isSnoozed;
   const shouldShowSubtlePill = !isCompleted && isSnoozed;
 
-  // Actions
+  // Actions read latest persisted state to avoid overwriting newer cross-tab or sibling hook updates.
   const markBannerViewed = useCallback((touchpoint = 'banner_viewed') => {
-    setState(prev => {
-      const next = transitionBannerViewed(prev, touchpoint);
-      persistState(next);
-      return next;
-    });
-  }, [persistState]);
+    persistState(transitionBannerViewed(getLatestState(), touchpoint));
+  }, [persistState, getLatestState]);
 
   const snoozePrompt = useCallback((hours = 24) => {
-    setState(prev => {
-      const next = transitionSnoozed(prev, hours);
-      persistState(next);
-      return next;
-    });
-  }, [persistState]);
+    persistState(transitionSnoozed(getLatestState(), hours));
+  }, [persistState, getLatestState]);
 
-  const openFormLink = useCallback((touchpoint = 'navbar_clicked') => {
-    setState(prev => {
-      const next = transitionOpenedForm(prev, touchpoint);
-      persistState(next);
-      return next;
-    });
-    if (typeof window !== 'undefined' && typeof window.open === 'function') {
+  const openFormLink = useCallback((touchpoint = 'navbar_clicked', options = {}) => {
+    persistState(transitionOpenedForm(getLatestState(), touchpoint));
+    // Anchor elements (<a target="_blank">) already navigate natively; only open programmatically when requested.
+    if (options?.openTab && typeof window !== 'undefined' && typeof window.open === 'function') {
       window.open(PILOT_FORM_URL, '_blank', 'noopener,noreferrer');
     }
-  }, [persistState]);
+  }, [persistState, getLatestState]);
 
   const markCompleted = useCallback(() => {
-    setState(prev => {
-      const next = transitionCompleted(prev);
-      persistState(next);
-      return next;
-    });
-  }, [persistState]);
+    persistState(transitionCompleted(getLatestState()));
+  }, [persistState, getLatestState]);
 
   const resetFeedbackState = useCallback(() => {
     persistState({ ...DEFAULT_STATE });
