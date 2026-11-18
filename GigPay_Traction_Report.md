@@ -49,7 +49,7 @@ To learn from early testers, GigPay opened a tester feedback form.
 * **Tester records:**
   * Tester names and contact details are kept in the intake form, not in this public report.
 * **Recorded tester sessions (Loom):**
-  * **Community Group Call (Oct 17, 2026):** [`https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0`](https://www.loom.com/share/c58f5cdb0a3446988f3ae1eb85cc59a0) — Live group session with 5 community members and the founder on camera, demonstrating milestone creation, escrow lock, and mobile tester mode.
+  * **Community Group Call (Oct 17, 2026):** recording kept private because it shows testers on camera (link removed Nov 18, 2026).
   * **1-on-1 SQA & Security Walkthrough:** [`https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6`](https://www.loom.com/share/0e0cf9099d8e4fe4b38a162d6972dab6)
 * **Evidence Repository:** Tester profiles and survey responses contain personal data, so they are kept privately (in the intake form) and are not published. Public evidence is the on-chain table in [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
 

@@ -1,4 +1,4 @@
-# GigPay Setup & Verification Guide (SOW Deliverable 4b)
+# GigPay Setup & Verification Guide (Sprint 2 work: built before approval; not funded)
 
 How to install, test and build GigPay from a clean checkout, and where the real clean-install results are recorded.
 

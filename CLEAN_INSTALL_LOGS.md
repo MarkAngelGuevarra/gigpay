@@ -1,6 +1,6 @@
-# GigPay Clean-Install Logs (SOW Deliverable 4b)
+# GigPay Clean-Install Logs (Sprint 2 work: built before approval; not funded)
 
-The SOW requires the project to run from a clean installation on three separate computers or environments. This file records only runs that actually happened, with their real output.
+The draft Sprint 2 SOW (not approved) asked for the project to run from a clean installation on three separate computers or environments. This file records only runs that actually happened, with their real output.
 
 ## Status
 
