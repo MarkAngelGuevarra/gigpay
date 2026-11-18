@@ -85,19 +85,52 @@ const getTask = async (id) => {
   return S.scValToNative(r.result.retval);
 };
 
+const STROOPS_PER_XLM = 10_000_000n;
+const decimalToStroops = (value) => {
+  const s = String(value ?? '0').trim();
+  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(s);
+  if (!match) return 0n;
+  const sign = match[1] ? -1n : 1n;
+  const whole = BigInt(match[2]);
+  const frac = BigInt((match[3] || '').slice(0, 7).padEnd(7, '0'));
+  return sign * (whole * STROOPS_PER_XLM + frac);
+};
+const stroopsToString = (stroops) => {
+  const neg = stroops < 0n ? '-' : '';
+  const abs = stroops < 0n ? -stroops : stroops;
+  const whole = abs / STROOPS_PER_XLM;
+  const frac = (abs % STROOPS_PER_XLM).toString().padStart(7, '0').replace(/0+$/, '');
+  return frac ? `${neg}${whole}.${frac}` : `${neg}${whole}`;
+};
+const isAccountKey = (addr) => typeof addr === 'string' && S.StrKey.isValidEd25519PublicKey(addr);
+
 const tasks = [];
 for (let id = 1; ; id++) {
   const t = await getTask(id);
   if (!t) break;
-  tasks.push({ id, client: t.client, freelancer: t.freelancer, amount: Number(t.amount) / 1e7, approved: t.is_approved });
+  const amountStroops = BigInt(t.amount);
+  tasks.push({
+    id,
+    client: t.client,
+    freelancer: t.freelancer,
+    amountStroops,
+    amount: Number(stroopsToString(amountStroops)),
+    amountText: stroopsToString(amountStroops),
+    approved: t.is_approved
+  });
 }
 
 const funds = [];
 const approves = {};
-for (const client of [...new Set(tasks.map((t) => t.client))]) {
+const seenOps = new Set();
+const accountClients = [...new Set(tasks.map((t) => t.client))].filter(isAccountKey);
+for (const client of accountClients) {
   let page = await hz.operations().forAccount(client).order('asc').limit(200).call();
   while (page.records.length) {
     for (const op of page.records) {
+      const opKey = op.id || op.paging_token;
+      if (opKey && seenOps.has(opKey)) continue;
+      if (opKey) seenOps.add(opKey);
       if (op.type !== 'invoke_host_function' || !op.transaction_successful) continue;
       if (!Array.isArray(op.parameters) || op.parameters.length < 2) continue;
       let targetContract = ''; let fn = null; let args = [];
@@ -107,31 +140,47 @@ for (const client of [...new Set(tasks.map((t) => t.client))]) {
         fn = S.scValToNative(S.xdr.ScVal.fromXDR(op.parameters[1].value, 'base64'));
         args = op.parameters.slice(2).map((p) => S.scValToNative(S.xdr.ScVal.fromXDR(p.value, 'base64')));
       } catch { continue; }
-      if (fn === 'fund_task') funds.push({ hash: op.transaction_hash, at: op.created_at, pt: BigInt(op.paging_token), client });
+      if (fn === 'fund_task' && String(args[0]) === client) {
+        funds.push({ hash: op.transaction_hash, at: op.created_at, pt: BigInt(op.paging_token), client });
+      }
       if (fn === 'approve_task') { const id = Number(args[0]); approves[id] ??= { hash: op.transaction_hash, at: op.created_at }; }
     }
     page = await page.next();
   }
 }
 funds.sort((a, b) => (a.pt < b.pt ? -1 : a.pt > b.pt ? 1 : 0));
-if (funds.length !== tasks.length) throw new Error(`fund_task calls (${funds.length}) != escrows (${tasks.length}); index incomplete`);
+const accountTasks = tasks.filter((t) => isAccountKey(t.client));
+if (funds.length !== accountTasks.length) {
+  throw new Error(`fund_task calls (${funds.length}) != account-funded escrows (${accountTasks.length}); index incomplete`);
+}
 
 let rpcChecked = 0;
-tasks.forEach((t, i) => {
-  if (funds[i].client !== t.client) throw new Error(`escrow #${t.id}: funding wallet mismatch`);
-  t.fund = funds[i];
+const accountFundQueue = [...funds];
+tasks.forEach((t) => {
+  if (isAccountKey(t.client)) {
+    const f = accountFundQueue.shift();
+    if (f.client !== t.client) throw new Error(`escrow #${t.id}: funding wallet mismatch`);
+    t.fund = f;
+  } else {
+    t.fund = null;
+  }
   t.release = approves[t.id] || null;
   t.kind = classify(t);
 });
 for (const t of tasks) {
+  if (!t.fund?.hash) continue;
   // Independent check: the fund tx must have moved exactly this escrow's amount out of the client wallet.
   const ops = await hz.operations().forTransaction(t.fund.hash).call();
   const invokeOp = ops.records.find((r) => r.type === 'invoke_host_function') || ops.records[0];
-  const moved = (invokeOp?.asset_balance_changes || [])
-    .filter((c) => c.from === t.client).reduce((s, c) => s + Number(c.amount), 0);
-  if (Math.abs(moved - t.amount) > 1e-7) throw new Error(`escrow #${t.id}: fund tx moved ${moved} XLM, escrow holds ${t.amount}`);
+  const movedStroops = (invokeOp?.asset_balance_changes || [])
+    .filter((c) => c.from === t.client && c.asset_type === 'native' && (!c.to || c.to === CONTRACT_ID))
+    .reduce((s, c) => s + decimalToStroops(c.amount), 0n);
+  if (movedStroops !== t.amountStroops) {
+    throw new Error(`escrow #${t.id}: fund tx moved ${stroopsToString(movedStroops)} XLM, escrow holds ${t.amountText}`);
+  }
 }
 for (const t of tasks) {
+  if (!t.fund?.hash) continue;
   const tx = await rpc.getTransaction(t.fund.hash).catch(() => null);
   if (tx?.returnValue) {
     if (Number(S.scValToNative(tx.returnValue)) !== t.id) throw new Error(`escrow #${t.id}: RPC return value disagrees`);
@@ -140,8 +189,8 @@ for (const t of tasks) {
 }
 
 const outside = tasks.filter((t) => t.kind === 'Outside wallet');
-// Rounded to 7 decimals (stroops): plain float sums printed "2587.2999999999997 XLM".
-const sum = (xs) => Number(xs.reduce((s, t) => s + t.amount, 0).toFixed(7));
+// Sum in exact integer stroops (7 decimal places) so floats never print 2587.2999999999997 XLM.
+const sum = (xs) => stroopsToString(xs.reduce((s, t) => s + t.amountStroops, 0n));
 const generated = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 
 const lines = [];
@@ -160,7 +209,8 @@ lines.push('');
 lines.push(`| # | Funded (UTC) | Client | Freelancer | Amount | Fund tx | Release tx | Released | Wallets |`);
 lines.push(`|:---:|:---|:---|:---|:---:|:---|:---|:---:|:---|`);
 for (const t of tasks) {
-  lines.push(`| ${t.id} | ${t.fund.at.replace('T', ' ').replace('Z', '')} | ${acct(t.client)} | ${acct(t.freelancer)} | ${t.amount} XLM | ${txLink(t.fund.hash)} | ${txLink(t.release?.hash)} | ${t.approved ? 'Yes' : 'No'} | ${t.kind} |`);
+  const fundedAtText = t.fund?.at ? t.fund.at.replace('T', ' ').replace('Z', '') : 'Contract client';
+  lines.push(`| ${t.id} | ${fundedAtText} | ${acct(t.client)} | ${acct(t.freelancer)} | ${t.amountText} XLM | ${txLink(t.fund?.hash)} | ${txLink(t.release?.hash)} | ${t.approved ? 'Yes' : 'No'} | ${t.kind} |`);
 }
 lines.push(`<!-- END GENERATED ESCROW TABLE -->`);
 const table = lines.join('\n');
@@ -171,6 +221,7 @@ const table = lines.join('\n');
 // can create several practice wallets, so pair these numbers with sign-up and feedback records.
 const counted = tasks.filter((t) => t.kind === 'Outside wallet');
 const weekOf = (iso) => {
+  if (!iso) return 'Unknown';
   const d = new Date(iso);
   d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // Monday of that week
@@ -192,8 +243,8 @@ tr.push(`| Wallets in 2+ escrows | ${[...appearances.values()].filter((n) => n >
 tr.push('');
 tr.push('| Week of (Mon, UTC) | Escrows funded | Released |');
 tr.push('|:---|:---:|:---:|');
-for (const wk of [...new Set(counted.map((t) => weekOf(t.fund.at)))].sort()) {
-  const xs = counted.filter((t) => weekOf(t.fund.at) === wk);
+for (const wk of [...new Set(counted.map((t) => weekOf(t.fund?.at)))].sort()) {
+  const xs = counted.filter((t) => weekOf(t.fund?.at) === wk);
   tr.push(`| ${wk} | ${xs.length} | ${xs.filter((t) => t.approved).length} |`);
 }
 if (!counted.length) tr.push('| — | 0 | 0 |');
@@ -211,8 +262,8 @@ if (process.argv.includes('--write')) {
     clientWallet: t.client,
     freelancerWallet: t.freelancer,
     released: t.approved,
-    fundTxHash: t.fund.hash,
-    fundedAt: t.fund.at,
+    fundTxHash: t.fund?.hash || null,
+    fundedAt: t.fund?.at || null,
     releaseTxHash: t.release?.hash || null,
     releasedAt: t.release?.at || null,
     walletKind: t.kind
