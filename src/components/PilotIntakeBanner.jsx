@@ -1,10 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { ExternalLink, Clock, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ExternalLink, Clock, CheckCircle2, Sparkles } from 'lucide-react';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 
 export default function PilotIntakeBanner() {
   const {
-    state,
     shouldShowBanner,
     isCompleted,
     isFormOpened,

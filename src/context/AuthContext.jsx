@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { clearInvitePayout } from '../lib/invite';
 import { connectWallet as connectFreighter, DEMO_PUBLIC_KEY, DEMO_FREELANCER_KEY, createEphemeralTestnetWallet, checkFreighterConnection, isDemoWallet, provisionSimulatorWallet, setPracticeWalletFundingFallback, setPracticeWalletOwner, isSimulatorWallet, STELLAR_NETWORK_NAME } from '../lib/stellar';

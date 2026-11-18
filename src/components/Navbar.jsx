@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Zap, ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
+import { ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAccountBalance, isDemoWallet, isSimulatorWallet, ensureEphemeralAccountFunded, STELLAR_NETWORK_NAME, STELLAR_NETWORK_PASSPHRASE } from '../lib/stellar';

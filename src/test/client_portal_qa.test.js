@@ -1,5 +1,4 @@
 import assert from 'assert';
-import * as StellarSdk from '@stellar/stellar-sdk';
 import { 
   GIGPAY_ESCROW_CONTRACT_ID, 
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
@@ -7,10 +6,8 @@ import {
   simulateApproveTask,
   validateEscrowParties,
   isValidStellarAddress,
-  checkBalanceSufficiency,
   formatStellarError,
   TIMEOUT_MESSAGE,
-  pollSorobanTransactionWithBackoff,
   getAccountBalance
 } from '../lib/stellar.js';
 

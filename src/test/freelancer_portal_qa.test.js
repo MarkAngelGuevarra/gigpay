@@ -1,10 +1,3 @@
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { 
-  GIGPAY_ESCROW_CONTRACT_ID, 
-  DEFAULT_FREELANCER_TESTNET_ADDRESS,
-  validateEscrowParties
-} from '../lib/stellar.js';
-
 // Setup Mock Browser Storage
 class MockLocalStorage {
   constructor() {

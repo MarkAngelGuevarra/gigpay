@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, ExternalLink, Download, X, Clock } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';

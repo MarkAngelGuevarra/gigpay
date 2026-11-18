@@ -448,7 +448,7 @@ export const checkFreighterConnection = async () => {
     const res = await withTimeout(isConnected(), 2000);
     if (res?.error) return false;
     return res === true || res?.isConnected === true;
-  } catch (err) {
+  } catch {
     return false;
   }
 };

@@ -1,11 +1,9 @@
-import * as StellarSdk from '@stellar/stellar-sdk';
 import { 
   GIGPAY_ESCROW_CONTRACT_ID, 
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
   simulateFundTask,
   simulateApproveTask,
-  validateEscrowParties,
-  formatStellarError
+  validateEscrowParties
 } from '../lib/stellar.js';
 import { supabase } from '../lib/supabase.js';
 

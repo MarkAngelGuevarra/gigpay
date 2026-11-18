@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node test/gigpay_regression.test.js && node test/escrow_submission_integrity.test.js && node test/ledger_integrity.test.js && node test/onboarding_at_scale.test.js && node test/dispute_sync.test.js && node test/onboarding_safety.test.js && node test/chain_safety.test.js",
     "test:unit": "vitest run",
+    "test:db": "node test/db_guards.test.js",
     "test:latency": "node test/sync_latency.test.js",
-    "preview": "vite preview",
-    "server": "json-server --watch db.json --port 3001"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -27,7 +27,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
     "jsdom": "^29.1.1",
-    "json-server": "^1.0.0-beta.15",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^5.1.1"

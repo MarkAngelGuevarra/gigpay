@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { 
   DEMO_PUBLIC_KEY, 
   DEMO_FREELANCER_KEY, 

@@ -1,10 +1,8 @@
-import * as StellarSdk from '@stellar/stellar-sdk';
 import { 
   GIGPAY_ESCROW_CONTRACT_ID, 
   DEFAULT_FREELANCER_TESTNET_ADDRESS,
   simulateFundTask,
   simulateApproveTask,
-  validateEscrowParties,
   resolveOnChainTaskId
 } from '../lib/stellar.js';
 import { EventEmitter } from 'events';
@@ -162,15 +160,7 @@ class SimulatedBrowserWindow {
     let savedTask = null;
 
     if (simulateSupabaseRLSError) {
-      // Simulate Supabase PostgreSQL error 42501 (Insufficient Privilege / RLS Policy Violation)
-      const mockSupabaseError = {
-        code: '42501',
-        message: 'new row violates row-level security policy for table "tasks"',
-        details: null,
-        hint: null
-      };
-      // Emulate TaskContext.jsx catch (dbErr) { console.warn(...) }
-      // Graceful fallback to local cache
+      // Simulated PostgreSQL RLS failure falls back gracefully to local cache
       savedTask = {
         id: 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
         title: taskPayload.title,
