@@ -262,6 +262,10 @@ describe('Phase 2 Slice 1: role boundaries, Freighter v6 API, and auth confirmat
 
   it('normalizes Freighter v6 objects, rejects denied permission cleanly, and unwraps signedTxXdr and error objects', async () => {
     vi.stubEnv('VITE_OFFLINE_DEMO', 'false');
+    vi.stubEnv('VITE_STELLAR_NETWORK', 'TESTNET');
+    vi.stubEnv('VITE_STELLAR_NETWORK_PASSPHRASE', undefined);
+    vi.stubEnv('VITE_HORIZON_URL', undefined);
+    vi.stubEnv('VITE_SOROBAN_RPC_URL', undefined);
     const signCalls = [];
     const mockIsConnected = vi.fn()
       .mockResolvedValueOnce({ isConnected: false })
@@ -396,5 +400,51 @@ describe('Phase 2 Slice 1: role boundaries, Freighter v6 API, and auth confirmat
       await vi.advanceTimersByTimeAsync(1000);
     });
     expect(screen.getByText('Slow Session Dashboard')).toBeInTheDocument();
+  });
+
+  it('preserves pending invite payout across signUp and clears it on signOut', async () => {
+    vi.stubEnv('VITE_OFFLINE_DEMO', 'false');
+    const invitedFreelancer = StellarSdk.Keypair.random().publicKey();
+    const { captureInviteFromUrl, peekInvitePayout } = await import('../lib/invite.js');
+    captureInviteFromUrl(`?pay=${invitedFreelancer}`);
+    expect(peekInvitePayout()).toBe(invitedFreelancer);
+
+    const newClient = {
+      id: '66666666-6666-4666-8666-666666666666',
+      email: 'invited-client@gigpay.local',
+      user_metadata: { role: 'client' },
+    };
+    const signUpMock = vi.fn().mockResolvedValue({
+      data: { user: newClient, session: { user: newClient } },
+      error: null,
+    });
+    vi.doMock('../lib/supabase.js', () => buildSupabaseMock(null, { signUp: signUpMock }));
+
+    const { AuthProvider, useAuth } = await import('../context/AuthContext.jsx');
+    let latestAuth = null;
+    const AuthProbe = () => {
+      latestAuth = useAuth();
+      return null;
+    };
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe />
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(latestAuth.isLoading).toBe(false));
+
+    await act(async () => {
+      await latestAuth.signUp(newClient.email, 'StrongPass123!', { role: 'client' });
+    });
+    expect(peekInvitePayout()).toBe(invitedFreelancer);
+
+    await act(async () => {
+      await latestAuth.signOut();
+    });
+    expect(peekInvitePayout()).toBeNull();
   });
 });
