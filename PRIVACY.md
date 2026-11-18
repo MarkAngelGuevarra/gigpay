@@ -1,6 +1,6 @@
 # GigPay Pilot — Privacy Notice
 
-_Last updated: November 10, 2026_
+_Last updated: November 18, 2026_
 
 GigPay is a pilot running on **Stellar Testnet** as part of the Stellar Philippines Instawards program. Testnet XLM is practice money with no cash value. This notice explains what the pilot collects and why, in line with the Philippine Data Privacy Act of 2012 (RA 10173).
 
@@ -20,7 +20,10 @@ GigPay is a pilot running on **Stellar Testnet** as part of the Stellar Philippi
 Transactions on **Stellar Testnet are public**: anyone can see a wallet address, the escrows it funded or received, and their amounts on explorers such as Stellar Expert. GigPay's public evidence table lists wallet addresses and transaction links, never emails or names.
 
 ## Who can see your data
-The GigPay team, and the service providers that host the pilot (Supabase for accounts and tasks, Vercel for the website, Google Forms for feedback). The team may also keep an anonymous activity log in a private Google Sheet: your role, wallet address, device type, which event you joined from and escrow transaction links, never your name or email. We do not sell your data or share your email with anyone else.
+The GigPay team, and the service providers that host the pilot (Supabase for accounts and tasks, Vercel for the website, Google Forms for feedback). The team keeps a private record linking sign-up email, feedback form response and wallet address, used only to exclude team wallets and to answer data requests. It is never published. Wallet addresses are public on Testnet, so they are pseudonymous, not anonymous. The team may also keep a private activity log in a Google Sheet (role, wallet address, device type, which event you joined from and escrow transaction links). We do not sell your data or share your email with anyone else.
+
+## Older commits
+Older commits in GigPay's public code history contain some testers' names and emails. The team is handling this.
 
 ## How long we keep it
 For the duration of the pilot and the Instawards program reporting. You can ask us to delete your account and pilot data at any time. Transactions already on Stellar Testnet cannot be removed by anyone, but we will stop linking them to you.

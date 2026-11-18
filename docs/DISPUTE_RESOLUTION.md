@@ -1,6 +1,6 @@
 # Dispute freeze and resolution (Stellar Testnet)
 
-This is the documented Testnet workflow that SOW Deliverable 3 refers to: a disputed task stays frozen "until the dispute is manually resolved through an explicitly documented Testnet administrative or agreed workflow." It describes what the app does today (November 6, 2026). It is not arbitration, and GigPay does not decide who is right.
+This page documents the dispute freeze as it works today (written November 6, 2026; updated November 18, 2026) and its limits. **The freeze is enforced by the GigPay app and its database, not by the contract.** It is not arbitration, and GigPay does not decide who is right.
 
 ## Short version
 
@@ -14,7 +14,7 @@ This is the documented Testnet workflow that SOW Deliverable 3 refers to: a disp
 
 The deployed contract (`CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`, `contracts/gigpay_escrow/src/lib.rs`) has only `fund_task`, `approve_task` and `get_task`. It stores no dispute, refund or cancel state. `approve_task` only checks that the client signed and that the escrow was not already released.
 
-So the freeze is enforced by the GigPay app and its database, not on-chain. Someone holding the client's secret key could still call `approve_task` directly, for example from Stellar Lab or the CLI, and the contract would release the funds. This is a known limit of the prototype. The contract is not being redeployed in Sprint 2.
+So the freeze is enforced by the GigPay app and its database, not on-chain. Someone holding the client's secret key could still call `approve_task` directly, for example from Stellar Lab or the CLI, and the contract would release the funds. This is the main open security limit (THREAT-09 in [SECURITY_AUDIT.md](../SECURITY_AUDIT.md)). A replacement contract (v2) with on-chain dispute and refund is proposed in the revised SOW. It is planned, pending approval, and not built.
 
 ## Who can do what
 
@@ -59,16 +59,16 @@ The XLM stays locked in the contract during the dispute. Nothing is moved on-cha
 
 ## How a dispute is resolved (the agreed workflow)
 
-1. **Talk.** Client and freelancer agree on the fix outside GigPay (chat, call, the BCC lab session). GigPay has no messaging or arbitration.
+1. **Talk.** Client and freelancer agree on the fix outside GigPay (chat, call or in person). GigPay has no messaging or arbitration.
 2. **Unfreeze.** The client clicks **Resolve Dispute**. The task goes back to Under Review (proof already submitted) or In Progress, and the freelancer can work on it and submit proof of work again.
 3. **Finish.** When the client is satisfied, they release the payment by typing `CONFIRM`. If not, they can raise a new dispute.
 
-There is no administrator screen. The database trigger does not restrict writes made without a signed-in user (the Supabase dashboard or service role), so a project administrator could set `dispute_resolved_at` by hand if a client cannot. This has not been needed so far. If it is ever used, it should be written down with the date and reason. Even then, only the client's wallet can release the escrow on-chain.
+There is no administrator screen. The database trigger does not restrict writes made without a signed-in user (the Supabase dashboard or service role), so a project administrator could set `dispute_resolved_at` by hand if a client cannot. This has not been needed so far. If it is ever used, it should be written down with the date and reason. Even then, only the client's wallet can release the escrow on-chain. This is the centralization risk the program flagged (THREAT-09); the proposed v2 contract would move the dispute state on-chain.
 
 ## Limits
 
-- **No on-chain freeze.** See above. The freeze holds only for releases made through GigPay.
+- **No on-chain freeze.** See above. The freeze holds only for releases made through GigPay. A v2 contract with an on-chain dispute state is proposed in the revised SOW (pending approval).
 - **No refund or cancel.** The contract cannot return funds to the client. If the two sides never agree, the Testnet XLM stays locked in the contract.
-- **No arbitration.** Decentralized arbitration and dispute resolution are out of scope for this Instaward.
+- **No arbitration.** GigPay has no third-party arbitration.
 - **Local-only tasks.** A task that has no database row (offline demo only) is frozen only in that browser.
 - **Testnet only.** All amounts are Stellar Testnet practice money.
