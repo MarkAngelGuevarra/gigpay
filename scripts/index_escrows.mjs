@@ -14,11 +14,20 @@ import * as S from '@stellar/stellar-sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isLocalHttpUrl, loadScriptStellarConfig } from './stellarConfig.mjs';
 
-const CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
-const READ_SOURCE = 'GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3'; // any funded account works for read-only simulation
-const rpc = new S.rpc.Server('https://soroban-testnet.stellar.org');
-const hz = new S.Horizon.Server('https://horizon-testnet.stellar.org');
+const {
+  isLocalChain,
+  contractId: CONTRACT_ID,
+  readSource: READ_SOURCE,
+  rpcUrl: RPC_URL,
+  horizonUrl: HORIZON_URL,
+  explorerBase: EXPLORER_BASE,
+  networkPassphrase: NETWORK_PASSPHRASE,
+} = loadScriptStellarConfig();
+
+const rpc = new S.rpc.Server(RPC_URL, { allowHttp: isLocalHttpUrl(RPC_URL) });
+const hz = new S.Horizon.Server(HORIZON_URL, { allowHttp: isLocalHttpUrl(HORIZON_URL) });
 
 // Wallet classes (see src/lib/ledgerIntegrity.js for the reasoning behind each list)
 const TEAM = {
@@ -56,16 +65,24 @@ const classify = (t) => {
 };
 
 const short = (h) => `${h.slice(0, 10)}…`;
-const txLink = (h) => (h ? `[\`${short(h)}\`](https://stellar.expert/explorer/testnet/tx/${h})` : '—');
-const acct = (a) => `[\`${a.slice(0, 8)}…\`](https://stellar.expert/explorer/testnet/account/${a})`;
+const txLink = (h) => (h ? (EXPLORER_BASE ? `[\`${short(h)}\`](${EXPLORER_BASE}/tx/${h})` : `\`${short(h)}\``) : '—');
+const acct = (a) => (EXPLORER_BASE ? `[\`${a.slice(0, 8)}…\`](${EXPLORER_BASE}/account/${a})` : `\`${a.slice(0, 8)}…\``);
 
-const source = await hz.loadAccount(READ_SOURCE);
+const defaultReadSource = READ_SOURCE || (isLocalChain ? '' : 'GAATY4U2IOYKFY2IAZ3W5VRZQME4UD2Z3TAVLOE5ONEICGXZX7HRX7D3');
+const source = defaultReadSource
+  ? await hz.loadAccount(defaultReadSource)
+  : new S.Account(S.Keypair.random().publicKey(), '0');
 const getTask = async (id) => {
-  const tx = new S.TransactionBuilder(source, { fee: '100', networkPassphrase: S.Networks.TESTNET })
+  const tx = new S.TransactionBuilder(source, { fee: '100', networkPassphrase: NETWORK_PASSPHRASE })
     .addOperation(new S.Contract(CONTRACT_ID).call('get_task', S.nativeToScVal(id, { type: 'u32' })))
     .setTimeout(30).build();
   const r = await rpc.simulateTransaction(tx);
-  return S.rpc.Api.isSimulationError(r) ? null : S.scValToNative(r.result.retval);
+  if (S.rpc.Api.isSimulationError(r)) {
+    const msg = String(r.error || '');
+    if (/UnreachableCodeReached|InvalidAction|MissingValue|not found/i.test(msg)) return null;
+    throw new Error(`get_task(${id}) simulation failed: ${msg}`);
+  }
+  return S.scValToNative(r.result.retval);
 };
 
 const tasks = [];
@@ -82,8 +99,11 @@ for (const client of [...new Set(tasks.map((t) => t.client))]) {
   while (page.records.length) {
     for (const op of page.records) {
       if (op.type !== 'invoke_host_function' || !op.transaction_successful) continue;
-      let fn = null; let args = [];
+      if (!Array.isArray(op.parameters) || op.parameters.length < 2) continue;
+      let targetContract = ''; let fn = null; let args = [];
       try {
+        targetContract = String(S.scValToNative(S.xdr.ScVal.fromXDR(op.parameters[0].value, 'base64')) || '');
+        if (targetContract !== CONTRACT_ID) continue;
         fn = S.scValToNative(S.xdr.ScVal.fromXDR(op.parameters[1].value, 'base64'));
         args = op.parameters.slice(2).map((p) => S.scValToNative(S.xdr.ScVal.fromXDR(p.value, 'base64')));
       } catch { continue; }
@@ -106,7 +126,8 @@ tasks.forEach((t, i) => {
 for (const t of tasks) {
   // Independent check: the fund tx must have moved exactly this escrow's amount out of the client wallet.
   const ops = await hz.operations().forTransaction(t.fund.hash).call();
-  const moved = (ops.records[0].asset_balance_changes || [])
+  const invokeOp = ops.records.find((r) => r.type === 'invoke_host_function') || ops.records[0];
+  const moved = (invokeOp?.asset_balance_changes || [])
     .filter((c) => c.from === t.client).reduce((s, c) => s + Number(c.amount), 0);
   if (Math.abs(moved - t.amount) > 1e-7) throw new Error(`escrow #${t.id}: fund tx moved ${moved} XLM, escrow holds ${t.amount}`);
 }
@@ -125,7 +146,7 @@ const generated = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UT
 
 const lines = [];
 lines.push(`<!-- BEGIN GENERATED ESCROW TABLE (scripts/index_escrows.mjs) -->`);
-lines.push(`_Generated ${generated} from Stellar Testnet. ${tasks.length} escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; ${rpcChecked} are also confirmed by the contract's return value on Soroban RPC._`);
+lines.push(`_Generated ${generated} from ${isLocalChain ? 'Stellar Local' : 'Stellar Testnet'}. ${tasks.length} escrows. Every funding transaction is matched to its escrow by ledger order and verified to have moved exactly that escrow's amount; ${rpcChecked} are also confirmed by the contract's return value on Soroban RPC._`);
 lines.push('');
 lines.push(`| | Count | Amount |`);
 lines.push(`|:---|:---:|:---:|`);
@@ -180,6 +201,9 @@ tr.push('<!-- END GENERATED ACTIVITY -->');
 const traction = tr.join('\n');
 
 if (process.argv.includes('--write')) {
+  if (tasks.length === 0 && !process.argv.includes('--allow-empty')) {
+    throw new Error('Refusing to overwrite snapshot/EVIDENCE_TABLE.md with 0 escrows (pass --allow-empty if intended).');
+  }
   // Snapshot read by the app's public verification ledger (src/context/TaskContext.jsx).
   const snapshot = tasks.map((t) => ({
     onChainTaskId: t.id,

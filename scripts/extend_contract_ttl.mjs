@@ -10,9 +10,17 @@
 //
 // Run it at least every two weeks (with the Friday evidence routine is easiest).
 import * as S from '@stellar/stellar-sdk';
+import { isLocalHttpUrl, loadScriptStellarConfig } from './stellarConfig.mjs';
 
-const CONTRACT_ID = 'CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3';
-const rpc = new S.rpc.Server('https://soroban-testnet.stellar.org');
+const {
+  contractId: CONTRACT_ID,
+  rpcUrl: RPC_URL,
+  friendbotUrl: FRIENDBOT_URL,
+  explorerBase: EXPLORER_BASE,
+  networkPassphrase: NETWORK_PASSPHRASE,
+} = loadScriptStellarConfig();
+
+const rpc = new S.rpc.Server(RPC_URL, { allowHttp: isLocalHttpUrl(RPC_URL) });
 const SECONDS_PER_LEDGER = 5;
 const submit = process.argv.includes('--submit');
 
@@ -26,11 +34,24 @@ const code = (await rpc.getLedgerEntries(codeKey)).entries[0];
 const days = (until) => (((until - latest) * SECONDS_PER_LEDGER) / 86400).toFixed(1);
 console.log(`Instance expires in ${days(instance.liveUntilLedgerSeq)} days (ledger ${instance.liveUntilLedgerSeq}); Wasm code in ${days(code.liveUntilLedgerSeq)} days.`);
 
-// Fee payer: a fresh Testnet account (Friendbot), so no team secret is involved.
+// Fee payer: dry runs simulate with a dummy account; --submit funds a fresh Friendbot payer.
 const payer = S.Keypair.random();
-const fb = await fetch(`https://friendbot.stellar.org?addr=${payer.publicKey()}`);
-if (!fb.ok) throw new Error(`Friendbot refused the fee payer (${fb.status}); try again from another network.`);
-const account = await rpc.getAccount(payer.publicKey());
+let account;
+if (submit) {
+  const fb = await fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(payer.publicKey())}`);
+  if (!fb.ok) throw new Error(`Friendbot refused the fee payer (${fb.status}); try again from another network.`);
+  for (let i = 0; i < 5; i++) {
+    try {
+      account = await rpc.getAccount(payer.publicKey());
+      break;
+    } catch (accErr) {
+      if (i === 4) throw accErr;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+} else {
+  account = new S.Account(payer.publicKey(), '0');
+}
 
 // Extend to just under the network's maximum entry TTL. Asking for the maximum itself (or more) is
 // rejected on-chain as extendFootprintTtlMalformed, and simulation does not catch it.
@@ -40,7 +61,7 @@ const archivalKey = S.xdr.LedgerKey.configSetting(new S.xdr.LedgerKeyConfigSetti
 const maxEntryTtl = (await rpc.getLedgerEntries(archivalKey)).entries[0].val.configSetting().stateArchivalSettings().maxEntryTtl();
 const extendTo = maxEntryTtl - 1;
 console.log(`Network maximum: ${maxEntryTtl} ledgers (~${((maxEntryTtl * SECONDS_PER_LEDGER) / 86400).toFixed(0)} days). Extending to ${extendTo}.`);
-const tx = new S.TransactionBuilder(account, { fee: '1000000', networkPassphrase: S.Networks.TESTNET })
+const tx = new S.TransactionBuilder(account, { fee: '1000000', networkPassphrase: NETWORK_PASSPHRASE })
   .setSorobanData(new S.SorobanDataBuilder().setReadOnly([instanceKey, codeKey]).build())
   .addOperation(S.Operation.extendFootprintTtl({ extendTo }))
   .setTimeout(60)
@@ -70,4 +91,4 @@ const now = (await rpc.getLatestLedger()).sequence;
 for (const e of after) {
   console.log(`${e.key.switch().name}: now expires in ${(((e.liveUntilLedgerSeq - now) * SECONDS_PER_LEDGER) / 86400).toFixed(1)} days`);
 }
-console.log(`Extended. Tx: https://stellar.expert/explorer/testnet/tx/${sent.hash}`);
+console.log(EXPLORER_BASE ? `Extended. Tx: ${EXPLORER_BASE}/tx/${sent.hash}` : `Extended. Tx: ${sent.hash}`);
