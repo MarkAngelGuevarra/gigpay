@@ -3,6 +3,7 @@
 // like it was confirming. Before a new lock, find a recent unreleased escrow with the same freelancer and
 // amount so the client can be asked to tap again on purpose.
 export const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
+export const MAX_CLOCK_SKEW_MS = 60 * 1000;
 
 const OPEN = new Set(['Confirming', 'Available', 'In Progress', 'Under Review', 'Disputed']);
 
@@ -14,7 +15,7 @@ export function findRecentDuplicateLock(tasks, { freelancerWallet, amount, now =
     if (!t || (t.freelancer_wallet || '').trim() !== wallet) return false;
     if (Number(t.amount) !== value || !OPEN.has(t.status)) return false;
     const created = Date.parse(t.created_at || '');
-    return Number.isFinite(created) && now - created >= 0 && now - created <= windowMs;
+    return Number.isFinite(created) && now - created >= -MAX_CLOCK_SKEW_MS && now - created <= windowMs;
   }) || null;
 }
 
