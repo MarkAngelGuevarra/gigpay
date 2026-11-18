@@ -77,7 +77,7 @@ runTest(5, "ClientDashboard.jsx computes totalEscrowed, activeEscrows, and total
   const content = readSource('src/pages/ClientDashboard.jsx');
   assert.ok(content.includes('const totalEscrowed = fundedTasks.reduce(') && content.includes('const fundedTasks = ownTasks.filter('), "Must compute totalEscrowed via reduce");
   assert.ok(content.includes("const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length"), "Must compute activeEscrows strictly for active states");
-  assert.ok(content.includes("const totalReleased = fundedTasks.filter(t => t.status === 'Completed').reduce("), "Must compute totalReleased");
+  assert.ok(content.includes("const completedTasks = fundedTasks.filter(t => t.status === 'Completed' || t.status === 'Paid')") && content.includes("const totalReleased = completedTasks.reduce("), "Must compute totalReleased across Completed and Paid tasks");
 });
 
 runTest(6, "ClientDashboard.jsx renders activeEscrows in aggregate summary cards", () => {
@@ -101,9 +101,9 @@ runTest(8, "FreelancerDashboard.jsx awaits updateTaskStatus in handleAcceptWork"
   assert.ok(content.includes("await updateTaskStatus(id, 'In Progress', true)"), "handleAcceptWork must await updateTaskStatus");
 });
 
-runTest(9, "FreelancerDashboard.jsx provides handleAcceptTask alias and exact toast feedback", () => {
+runTest(9, "FreelancerDashboard provides handleAcceptWork with exact toast feedback", () => {
   const content = readSource('src/pages/FreelancerDashboard.jsx');
-  assert.ok(content.includes("const handleAcceptTask = handleAcceptWork"), "Must define handleAcceptTask alias");
+  assert.ok(content.includes("const handleAcceptWork = async"), "Must define handleAcceptWork handler");
   assert.ok(content.includes("Task accepted. The payment stays locked in the escrow until the client releases it."), "Must display exact escrow confirmation toast");
   assert.ok(content.includes("Failed to accept task:"), "Must catch errors and display error toast");
 });

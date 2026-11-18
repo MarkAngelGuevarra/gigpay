@@ -48,12 +48,27 @@ test('TEST 3: Public verification ledger never displays tester emails', () => {
   assert.ok(!/email/i.test(modal), 'VerificationLedgerModal must not render emails');
 });
 
+const { LEDGER_CSV_HEADERS, ledgerToCsv } = await import('../src/lib/ledgerIntegrity.js');
+
 test('TEST 4: Ledger CSV export contains wallets only, no names or emails', () => {
-  const ctx = read('src', 'context', 'TaskContext.jsx');
-  const m = ctx.match(/const headers = \[(.*?)\];/s);
-  assert.ok(m, 'Could not find CSV headers in TaskContext.jsx');
-  assert.ok(!/Email|Student|Name"/.test(m[1]), `CSV headers must not include personal data: ${m[1]}`);
-  assert.ok(m[1].includes('Counts As Outside User'), 'CSV must label which rows count as outside users');
+  const joinedHeaders = LEDGER_CSV_HEADERS.join(',');
+  assert.ok(!/Email|Student|Name/.test(joinedHeaders), `CSV headers must not include personal data: ${joinedHeaders}`);
+  assert.ok(LEDGER_CSV_HEADERS.includes('Counts As Outside User'), 'CSV must label which rows count as outside users');
+  const csv = ledgerToCsv([{
+    id: 'row-1',
+    taskId: 'Sample Task',
+    method: 'fund_task',
+    amount: '2 XLM',
+    contractId: 'CTEST',
+    clientWallet: 'GCLIENT...',
+    freelancerWallet: 'GFREE...',
+    txHash: 'a'.repeat(64),
+    status: 'Completed & Released',
+    timestamp: '2026-11-18 10:00:00 UTC',
+    countsAsOutsideUser: false,
+    walletNote: 'Team wallet',
+  }]);
+  assert.ok(csv.includes('Counts As Outside User') && !csv.includes('@'));
 });
 
 test('TEST 5: No hardcoded tester list (names, ratings or quotes) ships in the app', () => {
@@ -77,7 +92,7 @@ test("TEST 6: ClientDashboard requires exact uppercase 'CONFIRM' to release escr
 });
 
 test("TEST 7: Freelancer must accept before submitting proof; client cannot release an 'Available' task", () => {
-  assert.ok(read('src', 'pages', 'FreelancerDashboard.jsx').includes('handleAcceptWork(task.id, task.amount)'));
+  assert.ok(read('src', 'pages', 'FreelancerDashboard.jsx').includes('handleAcceptWork(task.id)'));
   assert.ok(read('src', 'pages', 'ClientDashboard.jsx').includes("taskObj.status === 'Available'"));
 });
 

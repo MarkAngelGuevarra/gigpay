@@ -320,5 +320,6 @@ runAdversarialTest(6, "Escrow lifecycle monotonicity: Completed (Rank 3) strictl
 });
 
 console.log("\n==================================================================");
-console.log(`   CHALLENGER SUITE SUMMARY: ${passedCount}/6 TESTS EXECUTED`);
+console.log(`   CHALLENGER SUITE SUMMARY: ${passedCount}/6 TESTS EXECUTED (${failedCount} FAILED)`);
 console.log("==================================================================\n");
+if (failedCount > 0) process.exit(1);

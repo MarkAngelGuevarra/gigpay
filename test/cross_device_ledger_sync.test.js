@@ -11,13 +11,6 @@
  */
 
 import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
 
 console.log("\n==================================================================");
 console.log("   GIGPAY SPRINT 2 — CROSS-DEVICE LEDGER SYNC VERIFICATION");
@@ -534,17 +527,38 @@ runTest(10, "Rapid modal re-open queries are suppressed within 10-second debounc
 // -------------------------------------------------------------
 // Test 11: Production Codebase Integrity & Architectural Assertions
 // -------------------------------------------------------------
-runTest(11, "TaskContext.jsx & VerificationLedgerModal.jsx keep the ledger chain-verified", () => {
-  const taskContextSource = fs.readFileSync(path.join(projectRoot, 'src/context/TaskContext.jsx'), 'utf8');
-  const modalSource = fs.readFileSync(path.join(projectRoot, 'src/components/VerificationLedgerModal.jsx'), 'utf8');
+const { dedupeLedgerByTxHash, buildPublicLedger, ledgerToCsv } = await import('../src/lib/ledgerIntegrity.js');
+const { isSimulatedTxHash } = await import('../src/lib/stellar.js');
 
-  // Updated Nov 4, 2026: the previous invariants pinned an implementation that substituted real fallback
-  // hashes for missing ones and linked July tasks to escrows created on Nov 3. These check the replacement.
-  assert.ok(taskContextSource.includes("import onchainEscrows from '../data/onchainEscrows.json'"), "Seed ledger must come from the chain snapshot");
-  assert.ok(taskContextSource.includes('dedupeLedgerByTxHash('), "Ledger must list each transaction once");
-  assert.ok(!taskContextSource.includes('720fd4e0f4e92689bbffb56fcf0652eddcfa45a19dd2f5837290455496913164'), "No borrowed fallback hash");
-  assert.ok(taskContextSource.includes('const VERIFIED_TASK_ONCHAIN_MAP = {};'), "No unverifiable task-to-escrow links");
-  assert.ok(!modalSource.includes('Live Synced with Supabase'), "Ledger modal must not claim a live sync it does not do");
+runTest(11, "Ledger builder deduplicates by tx hash and never substitutes borrowed hashes", () => {
+  const realHash = 'a'.repeat(64);
+  const duped = dedupeLedgerByTxHash([
+    { id: '1', txHash: realHash },
+    { id: '2', txHash: realHash },
+    { id: '3', txHash: 'demo_123' },
+  ]);
+  assert.strictEqual(duped.length, 1, 'Duplicate or demo tx hashes must be dropped');
+  assert.strictEqual(isSimulatedTxHash('demo_123'), true);
+
+  const escrow = {
+    onChainTaskId: 75,
+    clientWallet: 'GAGCJHFNVZWJOLTM2VC3ITYNXRPUVFLWQSDSYYO6EYY3RVP4Z7NTTBVM',
+    freelancerWallet: 'GBX7C2W3W7A3Q2G4E6J5D4M5N6P7Q8R9S0T1U2V3W4X5Y6Z7A8B9C0D1',
+    amount: '2',
+    released: true,
+    fundTxHash: realHash,
+    releaseTxHash: 'b'.repeat(64),
+    fundedAt: '2026-11-16T00:00:00Z',
+    releasedAt: '2026-11-16T00:05:00Z',
+    walletKind: 'Outside wallet',
+  };
+  const ledger = buildPublicLedger({
+    escrows: [escrow],
+    tasks: [],
+    otherRecords: [{ id: 'dup', txHash: realHash, taskId: 'Duplicate' }],
+  });
+  assert.strictEqual(ledger.length, 1, 'On-chain escrow must not be duplicated by db row');
+  assert.ok(ledgerToCsv(ledger).includes(realHash));
 });
 
 // -------------------------------------------------------------

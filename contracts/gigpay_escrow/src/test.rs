@@ -1,9 +1,11 @@
 #![cfg(test)]
 
+extern crate std;
+
 use super::*;
 use soroban_sdk::{
-    testutils::Address as _,
-    token, Address, Env,
+    testutils::{Address as _, AuthorizedFunction, AuthorizedInvocation, EnvTestConfig, MockAuth, MockAuthInvoke},
+    token, Address, Env, IntoVal, Symbol,
 };
 
 fn setup() -> (
@@ -141,4 +143,253 @@ fn test_multiple_concurrent_tasks_isolation() {
     client.approve_task(&id_1);
     assert_eq!(token_client.balance(&freelancer_x), amount_a);
     assert_eq!(token_client.balance(&client.address), 0);
+}
+
+fn setup_unmocked() -> (
+    Env,
+    GigPayEscrowClient<'static>,
+    Address,
+    token::Client<'static>,
+    token::StellarAssetClient<'static>,
+    Address,
+) {
+    let env = Env::new_with_config(EnvTestConfig {
+        capture_snapshot_at_drop: false,
+    });
+    let contract_id = env.register(GigPayEscrow, ());
+    let client = GigPayEscrowClient::new(&env, &contract_id);
+
+    let token_admin_addr = Address::generate(&env);
+    let token_sac = env.register_stellar_asset_contract_v2(token_admin_addr.clone());
+    let token_address = token_sac.address();
+    let token_client = token::Client::new(&env, &token_address);
+    let token_admin_client = token::StellarAssetClient::new(&env, &token_address);
+
+    (
+        env,
+        client,
+        token_address,
+        token_client,
+        token_admin_client,
+        token_admin_addr,
+    )
+}
+
+fn mock_mint_and_fund(
+    env: &Env,
+    client: &GigPayEscrowClient<'static>,
+    token_address: &Address,
+    token_admin: &token::StellarAssetClient<'static>,
+    token_admin_addr: &Address,
+    client_addr: &Address,
+    freelancer_addr: &Address,
+    amount: i128,
+) -> u32 {
+    env.mock_auths(&[MockAuth {
+        address: token_admin_addr,
+        invoke: &MockAuthInvoke {
+            contract: token_address,
+            fn_name: "mint",
+            args: (client_addr, &amount).into_val(env),
+            sub_invokes: &[],
+        },
+    }]);
+    token_admin.mint(client_addr, &amount);
+
+    env.mock_auths(&[MockAuth {
+        address: client_addr,
+        invoke: &MockAuthInvoke {
+            contract: &client.address,
+            fn_name: "fund_task",
+            args: (client_addr, freelancer_addr, token_address, &amount).into_val(env),
+            sub_invokes: &[MockAuthInvoke {
+                contract: token_address,
+                fn_name: "transfer",
+                args: (client_addr, &client.address, &amount).into_val(env),
+                sub_invokes: &[],
+            }],
+        },
+    }]);
+    client.fund_task(client_addr, freelancer_addr, token_address, &amount)
+}
+
+#[test]
+#[should_panic]
+fn test_fund_task_requires_client_auth() {
+    let (env, client, token_address, _token_client, token_admin, token_admin_addr) =
+        setup_unmocked();
+    let client_addr = Address::generate(&env);
+    let freelancer_addr = Address::generate(&env);
+    let amount: i128 = 50_0000000;
+
+    env.mock_auths(&[MockAuth {
+        address: &token_admin_addr,
+        invoke: &MockAuthInvoke {
+            contract: &token_address,
+            fn_name: "mint",
+            args: (&client_addr, &amount).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+    token_admin.mint(&client_addr, &amount);
+
+    env.set_auths(&[]);
+    client.fund_task(&client_addr, &freelancer_addr, &token_address, &amount);
+}
+
+#[test]
+#[should_panic]
+fn test_approve_task_requires_client_auth() {
+    let (env, client, token_address, _token_client, token_admin, token_admin_addr) =
+        setup_unmocked();
+    let client_addr = Address::generate(&env);
+    let freelancer_addr = Address::generate(&env);
+
+    let task_id = mock_mint_and_fund(
+        &env,
+        &client,
+        &token_address,
+        &token_admin,
+        &token_admin_addr,
+        &client_addr,
+        &freelancer_addr,
+        100_0000000,
+    );
+
+    env.set_auths(&[]);
+    client.approve_task(&task_id);
+}
+
+#[test]
+#[should_panic]
+fn test_approve_task_rejects_freelancer_auth() {
+    let (env, client, token_address, _token_client, token_admin, token_admin_addr) =
+        setup_unmocked();
+    let client_addr = Address::generate(&env);
+    let freelancer_addr = Address::generate(&env);
+
+    let task_id = mock_mint_and_fund(
+        &env,
+        &client,
+        &token_address,
+        &token_admin,
+        &token_admin_addr,
+        &client_addr,
+        &freelancer_addr,
+        100_0000000,
+    );
+
+    env.mock_auths(&[MockAuth {
+        address: &freelancer_addr,
+        invoke: &MockAuthInvoke {
+            contract: &client.address,
+            fn_name: "approve_task",
+            args: (&task_id,).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+    client.approve_task(&task_id);
+}
+
+#[test]
+fn test_approve_task_succeeds_with_exact_client_auth() {
+    let (env, client, token_address, token_client, token_admin, token_admin_addr) =
+        setup_unmocked();
+    let client_addr = Address::generate(&env);
+    let freelancer_addr = Address::generate(&env);
+    let amount: i128 = 150_0000000;
+
+    let task_id = mock_mint_and_fund(
+        &env,
+        &client,
+        &token_address,
+        &token_admin,
+        &token_admin_addr,
+        &client_addr,
+        &freelancer_addr,
+        amount,
+    );
+
+    env.mock_auths(&[MockAuth {
+        address: &client_addr,
+        invoke: &MockAuthInvoke {
+            contract: &client.address,
+            fn_name: "approve_task",
+            args: (&task_id,).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+    client.approve_task(&task_id);
+
+    assert_eq!(token_client.balance(&client.address), 0);
+    assert_eq!(token_client.balance(&freelancer_addr), amount);
+    assert!(client.get_task(&task_id).is_approved);
+}
+
+#[test]
+#[should_panic]
+fn test_get_task_nonexistent_panics() {
+    let env = Env::new_with_config(EnvTestConfig {
+        capture_snapshot_at_drop: false,
+    });
+    let contract_id = env.register(GigPayEscrow, ());
+    let client = GigPayEscrowClient::new(&env, &contract_id);
+    client.get_task(&999);
+}
+
+#[test]
+fn test_contract_records_client_authorizations_only() {
+    let env = Env::new_with_config(EnvTestConfig {
+        capture_snapshot_at_drop: false,
+    });
+    env.mock_all_auths();
+    let contract_id = env.register(GigPayEscrow, ());
+    let client = GigPayEscrowClient::new(&env, &contract_id);
+    let token_admin_addr = Address::generate(&env);
+    let token_sac = env.register_stellar_asset_contract_v2(token_admin_addr);
+    let token_address = token_sac.address();
+    let token_admin = token::StellarAssetClient::new(&env, &token_address);
+    let client_addr = Address::generate(&env);
+    let freelancer_addr = Address::generate(&env);
+    let amount: i128 = 75_0000000;
+
+    token_admin.mint(&client_addr, &amount);
+    let task_id = client.fund_task(&client_addr, &freelancer_addr, &token_address, &amount);
+    assert_eq!(
+        env.auths(),
+        [(
+            client_addr.clone(),
+            AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    client.address.clone(),
+                    Symbol::new(&env, "fund_task"),
+                    (&client_addr, &freelancer_addr, &token_address, &amount).into_val(&env),
+                )),
+                sub_invocations: std::vec![AuthorizedInvocation {
+                    function: AuthorizedFunction::Contract((
+                        token_address.clone(),
+                        Symbol::new(&env, "transfer"),
+                        (&client_addr, &client.address, &amount).into_val(&env),
+                    )),
+                    sub_invocations: std::vec![],
+                }],
+            }
+        )]
+    );
+
+    client.approve_task(&task_id);
+    assert_eq!(
+        env.auths(),
+        [(
+            client_addr.clone(),
+            AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    client.address.clone(),
+                    Symbol::new(&env, "approve_task"),
+                    (&task_id,).into_val(&env),
+                )),
+                sub_invocations: std::vec![],
+            }
+        )]
+    );
 }

@@ -44,7 +44,6 @@ import {
   SafeStorage,
   DEFAULT_STATE,
   PILOT_FEEDBACK_STORAGE_KEY,
-  PILOT_FORM_URL,
   FEEDBACK_STATES,
   isSnoozeActive,
   calculateSnoozeExpiration,
@@ -145,7 +144,7 @@ runStress("CORRUPT-06", "Prototype pollution vectors do not contaminate Object p
     __proto__: { polluted: true },
     constructor: { prototype: { compromised: true } }
   });
-  const res = parseFeedbackState(attackPayload);
+  parseFeedbackState(attackPayload);
   const probe = {};
   assert.strictEqual(probe.polluted, undefined, "Object prototype must not be polluted");
   assert.strictEqual(probe.compromised, undefined, "Object prototype constructor must not be polluted");

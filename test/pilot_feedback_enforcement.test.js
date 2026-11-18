@@ -32,7 +32,6 @@ import {
   PILOT_FORM_URL,
   FEEDBACK_STATES,
   isSnoozeActive,
-  calculateSnoozeExpiration,
   parseFeedbackState,
   transitionBannerViewed,
   transitionSnoozed,
@@ -44,7 +43,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gigpayRoot = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(gigpayRoot, '..');
+const repoRoot = gigpayRoot;
 
 console.log("\n==================================================================");
 console.log("   GIGPAY SPRINT 2: PILOT FEEDBACK ENFORCEMENT VERIFICATION");

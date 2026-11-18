@@ -105,11 +105,14 @@ await test('Pool also fails: reports not funded instead of pretending', async ()
 });
 
 await test('Pool function keeps its key server-side and limits one top-up per account', () => {
-  const fn = fs.readFileSync(new URL('../supabase/functions/fund-practice-wallet/index.ts', import.meta.url), 'utf8');
-  assert.ok(!/\bS[A-Z2-7]{55}\b/.test(fn), 'no secret key may be committed in the function source');
-  assert.ok(fn.includes('gigpay_testnet_pool_secret'), 'secret must come from Vault');
-  assert.ok(fn.includes('practice_wallet_fundings'), 'one-top-up ledger must be used');
-  assert.ok(fn.includes('Networks.TESTNET'), 'pool must be Testnet only');
+  const indexSrc = fs.readFileSync(new URL('../supabase/functions/fund-practice-wallet/index.ts', import.meta.url), 'utf8');
+  const handlerSrc = fs.readFileSync(new URL('../supabase/functions/fund-practice-wallet/handler.ts', import.meta.url), 'utf8');
+  const combined = `${indexSrc}\n${handlerSrc}`;
+  assert.ok(!/\bS[A-Z2-7]{55}\b/.test(combined), 'no secret key may be committed in the function source');
+  assert.ok(indexSrc.includes('gigpay_testnet_pool_secret'), 'secret must come from Vault');
+  assert.ok(indexSrc.includes('practice_wallet_fundings'), 'one-top-up ledger must be used');
+  assert.ok(indexSrc.includes('Networks.TESTNET'), 'pool must preserve Testnet support');
+  assert.ok(handlerSrc.includes('tx_bad_seq'), 'handler retries concurrent sequence collisions');
 });
 
 globalThis.fetch = realFetch;

@@ -229,7 +229,7 @@ runTest(14, "Modal Overlays: All mobile modal backdrops include padding to preve
   assert.ok(clientOverlayCount >= 2, "ClientDashboard modals must have 1rem backdrop padding");
 
   // FreelancerDashboard no longer opens modals (the simulated KYC and bank modals were removed).
-  assert.ok(!/position:s*'fixed'/.test(freelancerDashboardSrc) || /position:s*'fixed'[sS]*?padding:s*'1rem'/.test(freelancerDashboardSrc), "Any FreelancerDashboard modal backdrop must have 1rem padding");
+  assert.ok(!/position:\s*'fixed'/.test(freelancerDashboardSrc) || /position:\s*'fixed'[\s\S]*?padding:\s*'1rem'/.test(freelancerDashboardSrc), "Any FreelancerDashboard modal backdrop must have 1rem padding");
 });
 
 // -----------------------------------------------------------------

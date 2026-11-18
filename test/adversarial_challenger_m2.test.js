@@ -62,7 +62,6 @@ const bannerSrc = readGigpayFile('src/components/PilotIntakeBanner.jsx');
 const navbarSrc = readGigpayFile('src/components/Navbar.jsx');
 const clientSrc = readGigpayFile('src/pages/ClientDashboard.jsx');
 const freelancerSrc = readGigpayFile('src/pages/FreelancerDashboard.jsx');
-const appSrc = readGigpayFile('src/App.jsx');
 const hookSrc = readGigpayFile('src/hooks/usePilotFeedbackState.js');
 const indexCssSrc = readGigpayFile('src/index.css');
 
@@ -210,10 +209,9 @@ runTest(14, "Stacking Context & Z-Index Analysis across Banner and Modals", () =
   const onboardingZ = parseInt(onboardingZMatch[1], 10);
   assert.ok(onboardingZ > bannerZ, `Onboarding modal zIndex (${onboardingZ}) must be higher than banner (${bannerZ})`);
 
-  // Verify toast container is above banner
-  const toastSrc = readGigpayFile('src/context/ToastContext.jsx');
-  const toastZMatch = toastSrc.match(/zIndex:\s*(\d+)/);
-  assert.ok(toastZMatch, "Toast container must specify zIndex");
+  // Verify toast container is above banner (.toast-stack in src/index.css)
+  const toastZMatch = indexCssSrc.match(/\.toast-stack\s*\{[\s\S]*?z-index:\s*(\d+)/);
+  assert.ok(toastZMatch, "Toast stack CSS rule must specify z-index");
   const toastZ = parseInt(toastZMatch[1], 10);
   assert.ok(toastZ > bannerZ, `Toast container zIndex (${toastZ}) must be higher than banner (${bannerZ})`);
 });

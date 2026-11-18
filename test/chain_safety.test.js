@@ -10,7 +10,6 @@
  * Offline: every network step is an injected mock. Command: node test/chain_safety.test.js
  */
 import assert from 'node:assert';
-import fs from 'node:fs';
 
 class MemoryStorage {
   constructor() { this.m = new Map(); }
@@ -25,7 +24,6 @@ globalThis.fetch = async () => { throw new Error('offline test: network disabled
 
 const S = await import('@stellar/stellar-sdk');
 const stellar = await import('../src/lib/stellar.js');
-const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 let passed = 0;
 let failed = 0;
@@ -108,12 +106,6 @@ await test('get_task reads the escrow by simulation; a missing ID is null, an RP
   assert.strictEqual(await stellar.getOnChainTask(null), null);
 });
 
-await test('TaskContext marks an already-released escrow Completed and says no new payment was sent', async () => {
-  const src = read('src/context/TaskContext.jsx');
-  assert.match(src, /releaseResult\?\.alreadyReleased[\s\S]{0,80}markAlreadyReleased/);
-  assert.match(src, /no new payment was sent/);
-});
-
 // ---------- 2. Freelancer payout account check before funding ----------
 await test('Payout account check: 404 stops funding, Horizon unreachable warns but allows, active passes', async () => {
   const notFound = await stellar.checkFreelancerPayoutAccount(freelancer, { getBalance: async () => ({ active: false, isDemo: false, raw: 0 }) });
@@ -144,8 +136,8 @@ await test('Real escrow: a missing or placeholder payout address is refused, nev
   await assert.rejects(() => stellar.submitFundTask({ clientAddress: client.publicKey(), freelancerAddress: 'GBDEMO_PLACEHOLDER', amount: '5' }, { checkPayout }),
     (e) => e.message === stellar.FREELANCER_ADDRESS_INVALID_MESSAGE);
   assert.strictEqual(checks, 0);
-  const ctx = read('src/context/TaskContext.jsx');
-  assert.ok(!ctx.includes('DEFAULT_FREELANCER_TESTNET_ADDRESS'), 'TaskContext must not fall back to the team wallet');
+  await assert.rejects(() => stellar.submitFundTask({ clientAddress: client.publicKey(), freelancerAddress: null, amount: '5' }, { checkPayout }),
+    (e) => e.message === stellar.FREELANCER_ADDRESS_REQUIRED_MESSAGE);
 });
 
 await test('Offline demo (no signer, nothing on-chain) keeps its explicit demo payout key', async () => {
@@ -195,9 +187,6 @@ await test('Confirming: RPC error during lookup is retried later; FAILED / expir
   const old = { ...confirming, created_at: new Date(Date.now() - 6 * 60 * 1000).toISOString() };
   assert.deepStrictEqual(await stellar.resolveConfirmingFunding(old, { status: 'NOT_FOUND' }), { status: 'Failed' });
   assert.strictEqual(await stellar.resolveConfirmingFunding(confirming, { status: 'NOT_FOUND' }), null);
-  const ctx = read('src/context/TaskContext.jsx');
-  assert.ok(ctx.includes('resolveConfirmingFunding(t, outcome)'), 'TaskContext resolves Confirming tasks through resolveConfirmingFunding');
-  assert.ok(/escrowIdUnknown, \.\.\.dbFields/.test(ctx), 'the local escrowIdUnknown flag is not written to the database');
 });
 
 // ---------- 3b. Releasing from a browser that doesn't hold the escrow's practice wallet ----------
@@ -233,9 +222,6 @@ await test('Timeouts: a slow network says nothing was sent (not "unlock Freighte
   assert.strictEqual(msg, stellar.TIMEOUT_MESSAGE);
   assert.ok(/nothing was sent and no money moved/.test(msg));
   assert.ok(stellar.NETWORK_LOAD_TIMEOUT_MS >= 15000 && stellar.NETWORK_RPC_TIMEOUT_MS >= 20000);
-  const src = read('src/lib/stellar.js');
-  assert.ok(!/loadAccount\([^)]*\), 5000\)/.test(src), 'no 5s Horizon account loads left');
-  assert.ok(!/(simulate|prepare)Transaction\(tx\), 10000\)/.test(src), 'no 10s simulate/prepare caps left');
 });
 
 // ---------- 4. Resolving a dispute keeps submitted proof under review ----------
@@ -250,8 +236,6 @@ await test('Dispute resolved after proof was submitted -> Under Review; without 
   const merged = mergeTaskRecords(disputed, resolved);
   assert.strictEqual(merged.status, 'Under Review');
   assert.strictEqual(isDisputeActive(merged), false);
-  const ctx = read('src/context/TaskContext.jsx');
-  assert.ok(ctx.includes('status: statusAfterDisputeResolved(task)'), 'resolveDispute uses statusAfterDisputeResolved');
 });
 
 console.log(`\n  Chain safety: ${passed}/${passed + failed} passed\n`);

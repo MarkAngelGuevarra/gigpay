@@ -177,7 +177,7 @@ runTest(15, "configuration check: in-test guard rejects release of a Disputed ta
     if (task.status === 'Disputed') {
       throw new Error("Cannot release funds while task is in Disputed status.");
     }
-  } catch (err) {
+  } catch {
     releaseBlocked = true;
   }
   assert.strictEqual(releaseBlocked, true, "Disputed task must reject release invocation");
@@ -209,7 +209,7 @@ runTest(18, "configuration check: CSV row built in the test contains the contrac
   };
   const headers = ["Transaction ID", "Task Title", "Method", "Amount", "Contract ID", "Transaction Hash"];
   const csvRow = `"${record.id}","${record.taskId}","${record.method}","${record.amount}","${record.contractId}","${record.txHash}"`;
-  assert.ok(csvRow.includes('CAUU2O5Z3X'));
+  assert.ok(headers.includes('Contract ID') && csvRow.includes('CAUU2O5Z3X'));
   assert.ok(csvRow.includes('40df1a722e'));
 });
 
