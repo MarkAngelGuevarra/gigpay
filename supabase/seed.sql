@@ -1,0 +1,4 @@
+-- Optional local seed script for `supabase db reset`.
+-- Keep test-only secrets out of git; to exercise `fund-practice-wallet` locally against
+-- Stellar Quickstart or Testnet, store a throwaway funded pool secret in local Vault via psql:
+--   select vault.create_secret('S...', 'gigpay_testnet_pool_secret', 'Local practice wallet pool');

@@ -38,6 +38,11 @@ temp_downloaded_sow.txt
 target/
 contracts/**/target/
 
+# Local CLI scratch state
+supabase/.branches/
+supabase/.temp/
+.stellar/
+
 # Local tooling and internal planning notes (not for the public repo)
 .claude/
 DEMO_DAY_PRESENTATION_GUIDE*.md

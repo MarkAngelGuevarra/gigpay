@@ -1,5 +1,7 @@
 -- Applied to Supabase project gulshfticoirrpuohdxk on 2026-11-05.
 -- GigPay: guard task updates and harden auth trigger functions
+alter table public.tasks add column if not exists completed_at timestamp with time zone;
+
 -- 1) Escrow identity and price are write-once; only the right party can change each field.
 create or replace function public.enforce_task_update()
 returns trigger
@@ -73,6 +75,11 @@ create trigger enforce_task_update
 
 -- 2) Auth trigger functions: fixed search_path, not callable through the API.
 alter function public.handle_new_user() set search_path = '';
-alter function public.handle_user_update() set search_path = '';
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
-revoke execute on function public.handle_user_update() from public, anon, authenticated;
+do $$
+begin
+  if to_regprocedure('public.handle_user_update()') is not null then
+    execute 'alter function public.handle_user_update() set search_path = ''''';
+    execute 'revoke execute on function public.handle_user_update() from public, anon, authenticated';
+  end if;
+end $$;

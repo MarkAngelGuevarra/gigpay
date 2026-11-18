@@ -1,7 +1,9 @@
 -- =========================================================================
--- GIGPAY CORE SUPABASE SCHEMA & CROSS-DEVICE PERSISTENCE MIGRATION
--- Supports: Soroban Milestone Escrow, Verification Ledger, Proof-of-Work,
---           Dispute Resolution, and Multi-Client Realtime Sync
+-- GIGPAY INITIAL REFERENCE SCHEMA (BASELINE SNAPSHOT ONLY)
+-- Authoritative, full schema with security triggers (enforce_task_update,
+-- enforce_profile_update), practice_wallet_fundings, and realtime publication
+-- lives in `supabase/migrations/` (run `supabase db reset`). Do NOT re-run
+-- this file directly over a migrated database.
 -- =========================================================================
 
 -- 1. Create a profiles table that links to auth.users
@@ -25,14 +27,19 @@ create policy "Users can update their own profile." on public.profiles for updat
 
 -- Trigger to automatically create a profile on signup
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
   insert into public.profiles (id, role, display_name)
   values (new.id, new.raw_user_meta_data->>'role', new.raw_user_meta_data->>'display_name')
   on conflict (id) do nothing;
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -65,6 +72,7 @@ create table if not exists public.tasks (
   disputed_at timestamp with time zone,
   disputed_by text,
   dispute_resolved_at timestamp with time zone,
+  completed_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -84,6 +92,7 @@ alter table public.tasks add column if not exists dispute_reason text;
 alter table public.tasks add column if not exists disputed_at timestamp with time zone;
 alter table public.tasks add column if not exists disputed_by text;
 alter table public.tasks add column if not exists dispute_resolved_at timestamp with time zone;
+alter table public.tasks add column if not exists completed_at timestamp with time zone;
 alter table public.tasks add column if not exists on_chain_task_id bigint;
 
 -- Migration add_task_escrow_identity_columns (applied to production 2026-11-04):

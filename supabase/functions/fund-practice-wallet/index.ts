@@ -11,7 +11,37 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.110.0";
 import { Keypair, Networks, Operation, StrKey, TransactionBuilder, Account } from "npm:@stellar/stellar-sdk@16.4.1";
 
-const HORIZON = "https://horizon-testnet.stellar.org";
+const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1", "host.docker.internal"]);
+const BLOCKED_MAINNET_HOSTS = new Set(["horizon.stellar.org", "soroban.stellar.org", "mainnet.sorobanrpc.com"]);
+const DEFAULT_TESTNET_HORIZON = "https://horizon-testnet.stellar.org";
+
+const sanitizeHorizonUrl = (raw: string) => {
+  const trimmed = raw.trim();
+  if (!trimmed) return DEFAULT_TESTNET_HORIZON;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.username || parsed.password) return DEFAULT_TESTNET_HORIZON;
+    const host = parsed.hostname.toLowerCase();
+    if (BLOCKED_MAINNET_HOSTS.has(host)) return DEFAULT_TESTNET_HORIZON;
+    if (parsed.protocol === "https:" || (parsed.protocol === "http:" && LOCAL_HTTP_HOSTS.has(host))) {
+      return parsed.href.replace(/\/+$/, "");
+    }
+  } catch {
+    // Invalid URL falls back safely.
+  }
+  return DEFAULT_TESTNET_HORIZON;
+};
+
+const rawNetwork = (Deno.env.get("STELLAR_NETWORK") ?? "TESTNET").trim().toUpperCase();
+const isLocalChain = rawNetwork === "LOCAL" || rawNetwork === "STANDALONE";
+const HORIZON = sanitizeHorizonUrl(Deno.env.get("STELLAR_HORIZON_URL") ?? "");
+const rawPassphrase = (Deno.env.get("STELLAR_NETWORK_PASSPHRASE") ?? "").trim();
+// Never permit Mainnet signing from the practice-wallet pool.
+const NETWORK_PASSPHRASE = isLocalChain
+  ? (rawPassphrase && rawPassphrase !== Networks.PUBLIC && rawPassphrase !== Networks.TESTNET
+      ? rawPassphrase
+      : Networks.STANDALONE)
+  : Networks.TESTNET;
 const POOL_AMOUNT = "25";
 
 const cors = {
@@ -40,7 +70,12 @@ Deno.serve(async (req) => {
   } catch { /* handled below */ }
   if (!StrKey.isValidEd25519PublicKey(address)) return reply(400, { error: "Not a valid Stellar address." });
 
-  if (await accountExists(address)) return reply(200, { status: "already_active" });
+  try {
+    if (await accountExists(address)) return reply(200, { status: "already_active" });
+  } catch (err) {
+    console.error("[fund-practice-wallet] account check failed", (err as Error).message);
+    return reply(502, { error: "Couldn't check wallet status right now. Try again in a minute." });
+  }
 
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -53,6 +88,8 @@ Deno.serve(async (req) => {
   }
   const release = () => admin.from("practice_wallet_fundings").delete().eq("user_id", user.id);
 
+  let submittedToHorizon = false;
+  let horizonRejected = false;
   try {
     const { data: secret, error: secretError } = await admin.rpc("gigpay_testnet_pool_secret");
     if (secretError || !secret) throw new Error("pool not configured");
@@ -69,13 +106,14 @@ Deno.serve(async (req) => {
 
       const tx = new TransactionBuilder(new Account(pool.publicKey(), poolAccount.sequence), {
         fee: "1000",
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(Operation.createAccount({ destination: address, startingBalance: POOL_AMOUNT }))
         .setTimeout(60)
         .build();
       tx.sign(pool);
 
+      submittedToHorizon = true;
       submit = await fetch(`${HORIZON}/transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -87,6 +125,7 @@ Deno.serve(async (req) => {
       await new Promise((r) => setTimeout(r, 300 + Math.random() * 1200 * attempt));
     }
     if (!submit || !submit.ok) {
+      horizonRejected = true;
       // Someone (e.g. a late Friendbot reply) created the account meanwhile: that's fine.
       if (await accountExists(address)) { await release(); return reply(200, { status: "already_active" }); }
       throw new Error(result?.extras?.result_codes ? JSON.stringify(result.extras.result_codes) : "submit failed");
@@ -95,7 +134,9 @@ Deno.serve(async (req) => {
     await admin.from("practice_wallet_fundings").update({ tx_hash: result.hash }).eq("user_id", user.id);
     return reply(200, { status: "funded", hash: result.hash, amount: POOL_AMOUNT });
   } catch (err) {
-    await release();
+    if (!submittedToHorizon || horizonRejected) {
+      await release();
+    }
     console.error("[fund-practice-wallet]", (err as Error).message);
     return reply(502, { error: "Couldn't fund the practice wallet right now. Try again in a minute." });
   }
