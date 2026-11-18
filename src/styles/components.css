@@ -1,0 +1,391 @@
+/* =========================================================================
+   GigPay Core Components (Cards, Buttons, Inputs, Status, 4-Stage Stepper,
+   Sheets & QR Ph Card Primitives)
+   ========================================================================= */
+
+.gp-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.gp-card--interactive:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.gp-card--disputed {
+  border-color: var(--signal-danger-border);
+}
+
+.gp-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  border: 0;
+  margin: 0;
+}
+
+/* Buttons */
+.gp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.gp-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.gp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gp-btn-lg {
+  min-height: 46px;
+  padding: 0.7rem 1.35rem;
+  font-size: var(--text-body);
+}
+
+.gp-btn-primary {
+  background: var(--accent-primary);
+  color: var(--accent-primary-fg);
+}
+
+.gp-btn-primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.gp-btn-money {
+  background: var(--signal-money);
+  color: #ffffff;
+}
+
+.gp-btn-money:hover:not(:disabled) {
+  background: var(--signal-money-hover);
+}
+
+.gp-btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.gp-btn-secondary:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+.gp-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.gp-btn-ghost:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.gp-btn-danger {
+  background: var(--signal-danger-bg);
+  color: var(--signal-danger);
+  border-color: var(--signal-danger-border);
+}
+
+.gp-btn-danger:hover:not(:disabled) {
+  border-color: var(--signal-danger);
+}
+
+/* Inputs & Form Fields */
+.gp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.gp-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.gp-hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.gp-input,
+.gp-textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.45;
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.gp-input::placeholder,
+.gp-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.72;
+}
+
+.gp-input:hover,
+.gp-textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.gp-input:focus,
+.gp-textarea:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--signal-money-bg);
+}
+
+/* Connected Segmented Control */
+.gp-segmented {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  gap: 2px;
+}
+
+.gp-segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.gp-segmented-btn[aria-selected='true'],
+.gp-segmented-btn[aria-pressed='true'] {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+/* Semantic Status Indicators (strictly for real workflow/financial states) */
+.gp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.2;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.gp-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.gp-status--money {
+  background: var(--signal-money-bg);
+  border-color: var(--signal-money-border);
+  color: var(--signal-money-fg);
+}
+
+.gp-status--warn {
+  background: var(--signal-warn-bg);
+  border-color: var(--signal-warn-border);
+  color: var(--signal-warn);
+}
+
+.gp-status--danger {
+  background: var(--signal-danger-bg);
+  border-color: var(--signal-danger-border);
+  color: var(--signal-danger);
+}
+
+/* 4-Stage Escrow Progress Stepper */
+.gp-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.gp-stepper-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.gp-stepper-bar {
+  height: 4px;
+  width: 100%;
+  border-radius: var(--radius-full);
+  background: var(--border-subtle);
+  transition: background-color var(--duration-base) var(--ease-out);
+}
+
+.gp-stepper-step--done .gp-stepper-bar {
+  background: var(--signal-money);
+}
+
+.gp-stepper-step--active .gp-stepper-bar {
+  background: var(--text-primary);
+}
+
+.gp-stepper-step--warn .gp-stepper-bar {
+  background: var(--signal-warn);
+}
+
+.gp-stepper-step--danger .gp-stepper-bar {
+  background: var(--signal-danger);
+}
+
+.gp-stepper-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gp-stepper-step--done .gp-stepper-label,
+.gp-stepper-step--active .gp-stepper-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.gp-stepper-step--danger .gp-stepper-label {
+  color: var(--signal-danger);
+  font-weight: 600;
+}
+
+/* Modal / Sheet Overlay */
+.gp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: var(--bg-scrim);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.gp-modal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  animation: gpFadeUp 0.2s var(--ease-out) backwards;
+}
+
+.gp-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.gp-modal-close:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* Financial Amount Row */
+.gp-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.gp-amount--money {
+  color: var(--signal-money-fg);
+}
+
+.gp-amount--danger {
+  color: var(--signal-danger);
+}
+
+@media (max-width: 640px) {
+  .gp-btn {
+    min-height: 44px;
+  }
+
+  .gp-modal-backdrop {
+    align-items: flex-end;
+    padding: 0.5rem;
+  }
+
+  .gp-modal {
+    border-radius: var(--radius-xl);
+    max-width: 100%;
+  }
+
+  .gp-stepper-label {
+    font-size: 0.75rem;
+  }
+}

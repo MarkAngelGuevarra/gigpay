@@ -1,41 +1,58 @@
-import React from 'react';
+const STAGES = [
+  { key: 'Available', label: 'Funded' },
+  { key: 'In Progress', label: 'In Progress' },
+  { key: 'Under Review', label: 'Under Review' },
+  { key: 'Completed', label: 'Paid' },
+];
+
+const resolveStageIndex = (status) => {
+  if (status === 'Completed' || status === 'Paid') return 3;
+  if (status === 'Under Review') return 2;
+  if (status === 'In Progress' || status === 'Disputed') return 1;
+  if (status === 'Available') return 0;
+  return -1;
+};
 
 const TaskProgress = ({ status }) => {
-  const steps = ['Available', 'In Progress', 'Completed'];
-  let currentStep = steps.indexOf(status);
-  
-  if (status === 'Disputed' || status === 'Under Review') {
-    currentStep = 1; // It's at In Progress / Review stage
-  }
+  const isDisputed = status === 'Disputed';
+  const isFailed = status === 'Failed';
+  const isConfirming = status === 'Confirming';
+  const activeIndex = resolveStageIndex(status);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginTop: '1rem', marginBottom: '0.5rem', gap: '0.5rem' }}>
-      {steps.map((step, index) => {
-        const isCompleted = index <= currentStep && status !== 'Disputed';
-        const isDisputed = index === 1 && status === 'Disputed';
-        
-        let color = 'var(--border)';
-        if (isCompleted) color = 'var(--accent)';
-        if (isDisputed) color = '#ef4444';
+    <div className="gp-stepper" role="list" aria-label={`Escrow progress: ${status || 'Unknown'}`}>
+      {STAGES.map((stage, index) => {
+        let modifier = '';
+        let label = stage.label;
+
+        if (isFailed && index === 0) {
+          modifier = 'gp-stepper-step--danger';
+          label = 'Failed';
+        } else if (isConfirming && index === 0) {
+          modifier = 'gp-stepper-step--warn';
+          label = 'Confirming';
+        } else if (isDisputed && index === 1) {
+          modifier = 'gp-stepper-step--danger';
+          label = 'Disputed';
+        } else if (isDisputed && index === 0) {
+          modifier = 'gp-stepper-step--done';
+        } else if (!isDisputed && activeIndex >= 0) {
+          if (index < activeIndex || (activeIndex === 3 && index === 3)) {
+            modifier = 'gp-stepper-step--done';
+          } else if (index === activeIndex) {
+            modifier = 'gp-stepper-step--active';
+          }
+        }
 
         return (
-          <React.Fragment key={step}>
-            <div style={{ display: 'flex', flexDirection: 'column', flex: index < steps.length - 1 ? 1 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                <div style={{ 
-                  width: '12px', height: '12px', borderRadius: '50%', 
-                  backgroundColor: color,
-                  boxShadow: isCompleted || isDisputed ? `0 0 8px ${color}` : 'none'
-                }}></div>
-                {index < steps.length - 1 && (
-                  <div style={{ flex: 1, height: '2px', backgroundColor: index < currentStep ? 'var(--accent)' : 'var(--border)', margin: '0 4px' }}></div>
-                )}
-              </div>
-              <span style={{ fontSize: '0.75rem', color: isCompleted || isDisputed ? 'white' : 'var(--text-muted)', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>
-                {isDisputed && index === 1 ? 'Disputed' : step === 'Completed' ? 'Paid' : step === 'Available' ? 'Funded' : step}
-              </span>
-            </div>
-          </React.Fragment>
+          <div
+            key={stage.key}
+            role="listitem"
+            className={`gp-stepper-step${modifier ? ` ${modifier}` : ''}`}
+          >
+            <div className="gp-stepper-bar" aria-hidden="true" />
+            <span className="gp-stepper-label">{label}</span>
+          </div>
         );
       })}
     </div>

@@ -7,6 +7,7 @@ import ProfilePage from './pages/ProfilePage';
 import { TaskProvider } from './context/TaskContext';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PilotGuideWidget from './components/PilotGuideWidget';
@@ -42,6 +43,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
           <TaskProvider>
@@ -86,6 +88,7 @@ function App() {
           </TaskProvider>
         </ToastProvider>
       </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
