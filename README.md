@@ -4,7 +4,7 @@
 ![Languages](https://img.shields.io/github/languages/top/MarkAngelGuevarra/gigpay)
 ![License](https://img.shields.io/github/license/MarkAngelGuevarra/gigpay)
 ![Network](https://img.shields.io/badge/Stellar-Testnet-teal)
-![Tests](https://img.shields.io/badge/npm%20test-104%2F104%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/npm%20test-91%2F91%20%2B%2053%20Vitest-brightgreen)
 
 **Stellar Philippines Instawards:** Sprint 1 completed. The Sprint 2 proposal was not approved (Nov 18, 2026); a revised, technical-only SOW is pending.  
 **Track:** Milestone escrow on Stellar Testnet for Filipino freelancers  
@@ -45,7 +45,7 @@ By leveraging the Stellar network and Soroban Smart Contracts, we provide:
 2. **Every escrow, from the chain:** [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md) lists all escrows with funding and release links, and labels team, scripted and outside wallets. As of Nov 17, 2026: **75 escrows; 24 between outside wallets (21 without 3 duplicate locks), 19 released**, most from a hands-on testing session at the Blockchain Campus Conference (Nov 12–13, 2026). Regenerate it yourself with `node scripts/index_escrows.mjs` (read-only).
 3. **Counting rules:** [METRICS.md](METRICS.md) defines every on-chain count (escrow parties, released escrows, wallets in a second escrow), lists which wallets are excluded, and shows how to reproduce the counts.
 4. **Corrections:** earlier overstated claims and how they were fixed are listed in the correction notice at the top of [EVIDENCE_TABLE.md](EVIDENCE_TABLE.md).
-5. **Tests:** `npm ci && npm test` runs 104 offline tests in 7 suites.
+5. **Tests:** `npm ci && npm test` runs 91 offline tests in 7 suites, `npm run test:unit` runs 53 Vitest/RTL/Edge-Function tests across 10 files, and `cargo test --locked` runs 10 Soroban contract tests.
 6. **Privacy:** [PRIVACY.md](PRIVACY.md). Public evidence shows wallet addresses and transactions, never tester emails.
 7. **Work map:** [docs/SPRINT2_EVIDENCE.md](docs/SPRINT2_EVIDENCE.md) maps each item of the draft Sprint 2 proposal (D1–D4) to what exists. These features were built before program approval and are not funded.
 8. **Dispute workflow:** [docs/DISPUTE_RESOLUTION.md](docs/DISPUTE_RESOLUTION.md) describes the app-level release pause during a dispute and how a dispute is resolved on Testnet (not arbitration).
@@ -79,7 +79,7 @@ Sprint 2 features were built after Sprint 1, before program approval. The Sprint
 * **Release confirmation:** the client must type `CONFIRM` before the release transaction is signed.
 
 ### 4. Automated tests, clean-install logs and walkthrough video
-* **Automated Tests:** `npm test` runs 104 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 27 onboarding-safety, 18 chain-safety), plus 4/4 Rust contract tests (`cargo test` in `contracts/gigpay_escrow`).
+* **Automated Tests:** `npm test` runs 91 tests offline in 7 suites (22 regression, 10 escrow-integrity, 12 ledger-integrity, 7 onboarding-at-scale, 8 dispute-sync, 15 onboarding-safety, 17 chain-safety), `npm run test:unit` runs 53 tests across 10 Vitest suites (React Testing Library dashboards/modals, Edge Function handlers, auth/task isolation, and RPC hardening), and `cargo test --locked` runs 10/10 Rust contract tests in `contracts/gigpay_escrow`.
 * **Clean-Install Validation:** Verified from a fresh clone on a Windows 11 PC, in a Linux (Ubuntu 24.04) cloud container and on a GitHub-hosted macOS virtual machine. See [CLEAN_INSTALL_LOGS.md](CLEAN_INSTALL_LOGS.md).
 * **Walkthrough video:** [Part 1](https://www.loom.com/share/2349b5ba9dd440ce94e38d0c72b8b5a8) (Loom, 5:00: wallets, invite, lock, accept, CONFIRM release, public ledger) and [Part 2](https://www.loom.com/share/494376d91b364210911e014374b85240) (Loom, 4:25: proof of work, app-level release pause (dispute) and resolve, release, public ledger and CSV; the video shows the older "Freeze & Dispute" labels); recorded in two parts because Loom's free plan stops at 5 minutes. Script: [DEMO_WALKTHROUGH_SCRIPT.md](DEMO_WALKTHROUGH_SCRIPT.md). Its demo escrows (#72–#75) use team wallets and are not counted as outside use.
 
@@ -87,19 +87,24 @@ Sprint 2 features were built after Sprint 1, before program approval. The Sprint
 
 ## 🧪 Running Automated Tests
 
-Run the full automated test suite locally:
+Run the offline Node, Vitest, lint, and typecheck suites locally:
 ```bash
 npm test
+npm run test:unit
+npm run lint
+npm run typecheck
 ```
 
 ### Test Suites
-`npm test` runs 104 tests with no network access: the 22-test regression suite plus the escrow-integrity (10), ledger-integrity (12), onboarding-at-scale (7), dispute-sync (8), onboarding-safety (27) and chain-safety (18) suites. The older suites below are not part of `npm test`; run them individually with `node <file>`. `soroban_sim` and `live_headless_e2e` need Stellar Testnet access and were not re-run for this README.
-* `soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9 checks).
-* `task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
-* `client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
-* `live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15 checks).
-* `freelancer_portal_qa.test.js`: Real-time cross-tab sync, double-click protection, work proof submission (12/12).
-* `dual_role_simulation.test.js`: Dynamic role switcher, paired practice keypairs, anti-self-dealing verification (17/17).
+`npm test` runs 91 tests with no network access: the 22-test regression suite plus escrow-integrity (10), ledger-integrity (12), onboarding-at-scale (7), dispute-sync (8), onboarding-safety (15), and chain-safety (17). `npm run test:unit` runs 53 offline Vitest tests across 10 files (component workflows, Edge Function handlers, auth/task isolation, role/wallet guards, RPC hardening, and local config validation). When local Supabase Docker is running (`npx supabase start`), `npm run test:db` runs rolled-back PostgreSQL RLS, trigger, and constraint assertions against `supabase_db_gigpay`.
+
+Standalone suites (all run offline by default via `node <file>`; pass `--live` to `src/test/soroban_sim.test.js` or set `GIGPAY_LIVE_TESTNET=1` for live Stellar Testnet checks):
+* `src/test/soroban_sim.test.js`: Soroban RPC health, contract format, SAC binding, resource fee calculation, error normalization, exponential backoff (9 checks; offline mock by default, `--live` for Stellar Testnet).
+* `src/test/task_lifecycle.test.js`: End-to-end task creation, acceptance, milestone release, and earnings aggregation (9/9).
+* `src/test/client_portal_qa.test.js`: Client validation, optimistic escrow lock, "CONFIRM" modal guard (14/14).
+* `src/test/live_headless_e2e.test.js`: Multi-window isolation, real-time storage bridge, Supabase 42501 resilience (15 checks).
+* `src/test/freelancer_portal_qa.test.js`: Real-time cross-tab sync, double-click protection, work proof submission (12/12).
+* `src/test/dual_role_simulation.test.js`: Dynamic role switcher, paired practice keypairs, anti-self-dealing verification (17/17).
 
 ---
 
@@ -121,12 +126,14 @@ git clone https://github.com/MarkAngelGuevarra/gigpay.git
 cd gigpay
 
 # 2. Install dependencies
-npm install
+npm ci
 
-# 3. Run automated test suite
+# 3. Run offline test and verification suites
 npm test
+npm run test:unit
+npm run lint && npm run typecheck
 
-# 4. Start local development server
+# 4. Start local development server (or configure .env.local for local Supabase + Stellar Quickstart)
 npm run dev
 ```
 

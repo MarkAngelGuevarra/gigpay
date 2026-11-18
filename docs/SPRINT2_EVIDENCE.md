@@ -69,6 +69,7 @@ Notes:
 Notes:
 
 - (a) The 22 tests in `test/gigpay_regression.test.js` (the baseline "18 tests", since extended) mostly check values defined inside the test file and import no app code. The 82 tests in the other six suites call the app's own modules, or check its source files directly (some tests in `test/onboarding_safety.test.js`).
+- **Update (Nov 19, 2026):** UI, Edge Function, and integration assertions previously checked via source substring scans in `test/onboarding_safety.test.js` and `test/chain_safety.test.js` were migrated into React Testing Library and Vitest (`npm run test:unit`: 53 tests across 10 files) alongside 91 tests across the 7 Node suites (`npm test`) and 10 Rust contract tests (`cargo test --locked`).
 - (b) The three runs are Windows 11 on a personal computer (Nov 4), Linux in a fresh cloud container (Nov 5) and macOS on a fresh GitHub-hosted virtual machine (Nov 12). Only the first is a personal physical computer; the other two are separate, freshly created machines.
 
 ## On-chain activity (generated Nov 17, 2026)

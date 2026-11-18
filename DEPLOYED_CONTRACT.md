@@ -14,7 +14,7 @@ Where the **GigPay Soroban escrow contract** is deployed on Stellar Testnet (not
 - **Stellar Lab Verification:** [Stellar Lab Contract](https://lab.stellar.org/r/testnet/contract/CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3)
 
 ## 📁 Code Repository Mapping
-1. **Rust Smart Contract:** located at `contracts/gigpay_escrow/src/lib.rs` (soroban-sdk 22.0.8, 4/4 passing unit tests)
+1. **Rust Smart Contract:** located at `contracts/gigpay_escrow/src/lib.rs` (soroban-sdk 22.0.8, unchanged since `ebb2a7a`; 10/10 passing unit & auth tests in `contracts/gigpay_escrow/src/test.rs`)
 2. **Compiled WASM Binary:** not tracked in git. Build it with `stellar contract build` (or `cargo build --target wasm32v1-none --release`) in `contracts/gigpay_escrow`; output goes to `target/wasm32v1-none/release/gigpay_escrow.wasm`.
 3. **Frontend Connection:** Configured in `src/lib/stellar.js` and `src/context/TaskContext.jsx`, referencing `CAUU2O5Z3XPYEXPS4RNHSEEROBCF3BNUFLFL5XRCPAISV3B56SOB7RD3`.
 

@@ -10,7 +10,7 @@ The draft Sprint 2 SOW (not approved) asked for the project to run from a clean 
 | 2 | Linux: Ubuntu 24.04.5 LTS (fresh cloud container, not a separate physical computer; kernel 6.18), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-05 (log below) |
 | 3 | macOS 26.7.2 (arm64) on a fresh GitHub-hosted virtual machine (not a personal computer), Node v22.23.4, npm 10.9.9 | ✅ **Passed**, 2026-11-12 22:25 UTC ([run 43319819222](https://github.com/MarkAngelGuevarra/gigpay/actions/runs/43319819222); log below) |
 
-Three real runs so far. `npm test` today runs 104 offline tests in 7 suites; each log below shows the counts that existed at the commit it ran, so they are lower than today's.
+Three real runs so far. Today `npm test` runs 91 offline tests in 7 suites alongside 53 Vitest tests (`npm run test:unit`) and 10 Rust contract tests (`cargo test --locked`); historical logs below reflect the Node-only test layout at the commit each run executed (for instance, Environment 3 ran 99 checks in `npm test` before React/UI assertions migrated to Vitest).
 
 > **Correction, Nov 4, 2026.** An earlier version of this file (and of `SETUP_VERIFICATION.md`) showed passing runs on macOS Sonoma and Ubuntu 24.04. Those logs cannot be matched to any real run:
 > - The two files disagreed on the macOS version (14.4.1 vs 14.5) and on how Ubuntu was run (a cloud node vs Docker and GitHub Actions). The repo had no GitHub Actions workflow at the time.
@@ -111,7 +111,7 @@ Use a computer that is not one of the three above (a different physical machine 
 
 1. In an empty folder, run these and keep the terminal output:
    ```bash
-   date -u                     # Windows PowerShell: Get-Date -AsUTC
+   date -u                     # Windows PowerShell: (Get-Date).ToUniversalTime().ToString('u')
    # OS version: macOS `sw_vers`; Linux `grep PRETTY_NAME /etc/os-release`; Windows `cmd /c ver`
    node -v; npm -v; git --version
    git clone https://github.com/MarkAngelGuevarra/gigpay.git
@@ -121,6 +121,6 @@ Use a computer that is not one of the three above (a different physical machine 
    npm test
    npm run build
    ```
-2. Add a section "Environment 3: <OS>, <date> (real output)" below, and paste **unedited**: the date, the OS version line, the Node/npm/git versions, the commit hash, the `added N packages` line from `npm ci`, every suite summary line from `npm test` (for example `Escrow integrity: 10/10 passed`) and its exit code, and the `✓ built in` line. You may trim other lines, but say that you trimmed.
+2. Add a section "Environment 4: <OS>, <date> (real output)" below, and paste **unedited**: the date, the OS version line, the Node/npm/git versions, the commit hash, the `added N packages` line from `npm ci`, every suite summary line from `npm test` (for example `Escrow integrity: 10/10 passed`) and its exit code, and the `✓ built in` line. You may trim other lines, but say that you trimmed.
 3. If any step fails, paste the failure and mark the row "Failed". If you then fix something and run again, keep both runs in the log.
 4. Update the status table above and the Results table in [SETUP_VERIFICATION.md](SETUP_VERIFICATION.md), and the clean-install line in [README.md](README.md). A screenshot or short screen recording of the run is good supporting evidence.

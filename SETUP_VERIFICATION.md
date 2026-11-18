@@ -4,19 +4,22 @@ How to install, test and build GigPay from a clean checkout, and where the real 
 
 ## Requirements
 
-- Node.js 20.19 or newer (Vite 8 does not run on older Node versions)
+- Node.js 20.19.0 or newer, or 22.12.0 or newer (Vite 8 `engines.node`: `^20.19.0 || >=22.12.0`; CI runs Node 22)
 - npm 10 or newer, and git
-- Internet access for `npm ci`. `npm test` itself runs offline; `node scripts/index_escrows.mjs` and the `src/test/soroban_sim.test.js` suite need Stellar Testnet access.
+- Internet access for `npm ci`. `npm test` and `npm run test:unit` run offline; `node scripts/index_escrows.mjs` and `node src/test/soroban_sim.test.js --live` need Stellar Testnet access. `npm run test:db` tests local Supabase PostgreSQL guards inside a rolled-back transaction.
 
 ## Steps
 
 ```bash
 git clone https://github.com/MarkAngelGuevarra/gigpay.git
 cd gigpay
-npm ci          # installs exactly the versions in package-lock.json
-npm test        # 104 offline tests in 7 suites
-npm run build   # production build into dist/
-npm run dev     # optional: local app at http://localhost:5173
+npm ci              # installs exactly the versions in package-lock.json
+npm run lint        # ESLint across src/ and test/
+npm run typecheck   # tsc --noEmit verification
+npm test            # 91 offline tests in 7 suites
+npm run test:unit   # 53 Vitest unit, RTL component, and Edge Function tests
+npm run build       # production build into dist/
+npm run dev         # optional: local app at http://localhost:5173
 ```
 
 To regenerate the chain-verified escrow table in `EVIDENCE_TABLE.md`, run `node scripts/index_escrows.mjs --write`.

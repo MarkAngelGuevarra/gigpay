@@ -4,10 +4,10 @@ Thanks for helping. GigPay is a milestone escrow app for freelancers on the **St
 
 ## 1. Setup
 
-1. Node.js **20.19 or newer**.
+1. Node.js **20.19+ or 22.12+** (Vite 8 engine requirement; CI uses Node 22).
 2. `npm ci`
-3. Copy `.env.example` to `.env` and ask Mark for the values **privately** (not in an issue, PR or chat group). Only the Supabase URL, the publishable anon key and the network name are needed. Never ask for, use or commit a service-role key or a secret seed.
-4. `npm run dev` to run the app, `npm test` for the tests, `npm run build` for a production build.
+3. Copy `.env.example` to `.env` for shared pilot testing, or use `.env.local` for local Supabase (`npx supabase start`) and local Stellar Quickstart without touching live Testnet or production. Only the Supabase URL, publishable anon key, and network settings belong in frontend env files. Never ask for, use, or commit a service-role key or secret seed.
+4. `npm run dev` to run the app, `npm test` and `npm run test:unit` for the tests, `npm run lint` and `npm run typecheck` for static checks, `npm run build` for a production build.
 
 Everything runs on **Testnet with practice XLM**. Nothing in this project may touch Mainnet or real money.
 
@@ -19,9 +19,11 @@ Everything runs on **Testnet with practice XLM**. Nothing in this project may to
 
 ## 3. Before you open a PR
 
-- `npm test` passes: **104 tests in 7 suites**, all offline. If you add a test, update the counts in the docs that mention them (README, `docs/SPRINT2_EVIDENCE.md`, `CLEAN_INSTALL_LOGS.md`, `SETUP_VERIFICATION.md`).
+- `npm test` passes: **91 tests in 7 suites**, and `npm run test:unit` passes **53 Vitest tests in 10 suites**, all offline. If you add or remove tests, keep counts aligned across `README.md`, `SETUP_VERIFICATION.md`, `TESTING.md`, and `CLEAN_INSTALL_LOGS.md` (while preserving dated historical evidence snapshots).
+- `npm run lint` (`0` errors, `0` warnings) and `npm run typecheck` pass.
 - `npm run build` succeeds.
-- CI (`.github/workflows/ci.yml`) is green on your branch.
+- When changing migrations under `supabase/migrations/`, run `npx supabase db reset` locally and verify `npm run test:db`.
+- CI (`.github/workflows/ci.yml`) is green on your branch (including `cargo test --locked` with 10/10 Rust contract tests).
 - You checked your change in the browser if it affects the UI, including on a phone-sized screen (most testers use phones).
 
 ## 4. Scope: nothing new until a revised SOW is approved
@@ -81,7 +83,7 @@ Also:
 | Public ledger and CSV | `src/components/VerificationLedgerModal.jsx`, `src/lib/ledgerIntegrity.js` |
 | On-chain indexer | `scripts/index_escrows.mjs`, `src/data/onchainEscrows.json` |
 | Tests | `test/*.test.js` |
-| Evidence and rules | `docs/SPRINT2_EVIDENCE.md`, `EVIDENCE_TABLE.md`, `METRICS.md`, `DISPUTE_RESOLUTION.md`, `PRIVACY.md` |
+| Evidence and rules | `docs/SPRINT2_EVIDENCE.md`, `EVIDENCE_TABLE.md`, `METRICS.md`, `docs/DISPUTE_RESOLUTION.md`, `PRIVACY.md` |
 
 ## 10. Good places to help (ask before starting)
 

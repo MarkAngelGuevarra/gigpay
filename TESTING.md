@@ -14,10 +14,18 @@
 The test suite validates RPC health, contract schema, transaction footprint simulation, multi-wallet syntax, anti-self-dealing guards, and exponential backoff retry algorithms without requiring manual clicks.
 
 ### Running the Test Suite
-These 9 checks call Stellar Testnet, so they are not part of the offline `npm test` run:
+By default, `node src/test/soroban_sim.test.js` runs offline against mocked Horizon and Soroban RPC responses. Pass `--live` (or set `GIGPAY_LIVE_TESTNET=1`) to run the 9 checks directly against Stellar Testnet:
 ```bash
-node src/test/soroban_sim.test.js
+node src/test/soroban_sim.test.js          # offline mock RPC/Horizon (default)
+node src/test/soroban_sim.test.js --live   # live Stellar Testnet RPC/Horizon
 ```
+
+For full repository checks (all offline unless noted):
+- `npm test`: 91 tests across 7 Node suites.
+- `npm run test:unit`: 53 Vitest unit, React Testing Library, and Edge Function tests across 10 files.
+- `npm run lint` and `npm run typecheck`: ESLint (`0` warnings/errors) and `tsc --noEmit`.
+- `npm run test:db`: rolled-back PostgreSQL RLS, trigger, and constraint assertions against local Supabase Docker (`supabase_db_gigpay`).
+- `cargo test --locked` (in `contracts/gigpay_escrow`): 10 Soroban smart contract unit and authorization tests.
 
 ### Verified Assertions (9/9 Passing):
 1. **RPC Endpoint Health:** Queries `https://soroban-testnet.stellar.org` and asserts endpoint responsiveness.
@@ -63,7 +71,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Varial (formerly F
 
 ---
 
-### Step 2: Negative Test — Anti-Self-Dealing Prevention
+### Step 2: Negative Test: Anti-Self-Dealing Prevention
 1. Keep Persona A connected in Varial.
 2. In the "Create New Escrow Task" card, paste **Persona A's own address** into the Freelancer Wallet field.
 3. Click **Lock Funds in Escrow**.
@@ -75,7 +83,7 @@ To reproduce the multi-wallet lifecycle with $\ge 2$ separate Varial (formerly F
 
 ---
 
-### Step 3: Negative Test — Graceful User Signature Cancellation
+### Step 3: Negative Test: Graceful User Signature Cancellation
 1. Enter Persona B's valid public key.
 2. Click **Lock Funds in Escrow**.
 3. When the Varial signature pop-up opens, click **Reject / Decline**.

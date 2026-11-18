@@ -1,5 +1,5 @@
 # Runs on every push and pull request to main. Needs no secrets and never contacts Stellar or Supabase:
-# the JS suites are offline, and the latency test blocks every request that leaves its local server.
+# the JS and Vitest suites are offline, and the latency test blocks every request that leaves its local server.
 name: CI
 
 on:
@@ -26,11 +26,33 @@ jobs:
       - name: Clean install (D4)
         run: npm ci
 
-      - name: D1–D4 offline test suites
+      - name: Lint and typecheck
+        run: |
+          npm run lint
+          npx eslint scripts/*.mjs
+          npm run typecheck
+
+      - name: Offline Node suites
         run: npm test
 
+      - name: Vitest unit and component suites
+        run: npm run test:unit
+
+      - name: Standalone offline harnesses
+        run: |
+          node test/adversarial_challenger_m2.test.js
+          node test/mobile_layout_harness.test.js
+          node test/pilot_feedback_enforcement.test.js
+          node test/cross_device_ledger_sync.test.js
+          node test/milestone2_remediation.test.js
+          node test/onboarding_empirical_challenge.test.js
+          node test/adversarial_challenger_stress.test.js
+          node test/adversarial_stress_sync.test.js
+          node test/pilot_guide_widget.test.js
+          node src/test/soroban_sim.test.js
+
       - name: Production build
-        run: npx vite build
+        run: npm run build
 
       - name: Install Chromium for the latency test
         run: |
