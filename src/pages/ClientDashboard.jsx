@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, CheckCircle, Clock, ShieldAlert, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import { PlusCircle, CheckCircle, Clock, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { requestWalletSignature, formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, parseXlmToStroops, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
+import { formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, parseXlmToStroops, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { safeHttpsUrl } from '../lib/taskLifecycle';
 import { peekInvitePayout, clearInvitePayout } from '../lib/invite';
@@ -18,7 +18,7 @@ import { isPilotToolsEnabled } from '../lib/env';
 
 const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
-  const { tasks, isLoading, refreshTasks, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
+  const { tasks, refreshTasks, addTask, updateTaskStatus, raiseDispute, resolveDispute } = useTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -60,8 +60,8 @@ const ClientDashboard = () => {
   ));
   const totalEscrowed = fundedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
   const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length;
-  const totalReleased = fundedTasks.filter(t => t.status === 'Completed').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-  const completedTasks = fundedTasks.filter(t => t.status === 'Completed');
+  const completedTasks = fundedTasks.filter(t => t.status === 'Completed' || t.status === 'Paid');
+  const totalReleased = completedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
   const totalTasksCount = fundedTasks.length;
   const completionPercentage = totalTasksCount > 0 
     ? Math.round((completedTasks.length / totalTasksCount) * 100) 
@@ -164,13 +164,19 @@ const ClientDashboard = () => {
     }
   };
 
+  const suggestAmountTimerRef = useRef(null);
+  useEffect(() => () => {
+    if (suggestAmountTimerRef.current) clearTimeout(suggestAmountTimerRef.current);
+  }, []);
+
   const suggestAmount = () => {
     if (!newTaskTitle) {
       addToast("Enter a task title first to get a suggested amount.", "error");
       return;
     }
     setIsEstimating(true);
-    setTimeout(() => {
+    if (suggestAmountTimerRef.current) clearTimeout(suggestAmountTimerRef.current);
+    suggestAmountTimerRef.current = setTimeout(() => {
       const words = newTaskTitle.toLowerCase();
       let est = 2;
       if (words.includes('website') || words.includes('app')) est = 5;
@@ -189,7 +195,7 @@ const ClientDashboard = () => {
       connectTesterWallet();
     }
 
-    const targetTaskId = typeof taskToApprove === 'object' ? taskToApprove.id : taskToApprove;
+    const targetTaskId = taskToApprove.id;
     if (!targetTaskId) {
       addToast("Error: Missing task identifier for milestone release.", "error");
       return;
@@ -202,7 +208,7 @@ const ClientDashboard = () => {
       // submitApproveTask returns the release transaction as `hash` (there is no `txHash`), so the Sheet
       // used to get the text "Confirmed on Testnet" instead of the hash. Already-released escrows have none.
       const releaseHash = result?.alreadyReleased ? '' : (result?.hash || '');
-      const taskObj = typeof taskToApprove === 'object' ? taskToApprove : (ownTasks || []).find(t => t.id === targetTaskId);
+      const taskObj = taskToApprove;
       // The payment is already released on-chain; the Sheet log is best effort and never throws, so do not
       // keep the release window open on slow Wi-Fi waiting for it (wait at most 4 seconds).
       if (!isDemoAccount && isGoogleSheetsSyncEnabled()) {
@@ -254,8 +260,12 @@ const ClientDashboard = () => {
 
     // A Stellar address typed into the title is almost always meant for the payout field (seen in testing).
     if (/^G[A-Z2-7]{55}$/.test(trimmedTitle)) {
-      if (!freelancerWallet.trim()) setFreelancerWallet(trimmedTitle);
-      addToast("That looks like a payout address, not a title. It's now in Freelancer's Payout Address; give the task a short title like \"Logo design\".", "warning");
+      if (!freelancerWallet.trim()) {
+        setFreelancerWallet(trimmedTitle);
+        addToast("That looks like a payout address, not a title. It's now in Freelancer's Payout Address; give the task a short title like \"Logo design\".", "warning");
+      } else {
+        addToast("That looks like a payout address, not a title. Enter a short task title like \"Logo design\".", "warning");
+      }
       return;
     }
 
@@ -344,8 +354,6 @@ const ClientDashboard = () => {
             >
               {viewAllEscrows ? "👁️ All testers' escrows (view only)" : '👤 My escrows'}
             </button>
-            <span style={{ display: 'none' }}>
-            </span>
           </div>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>
             Lock a practice payment, check your partner's work, then release it.
@@ -425,11 +433,7 @@ const ClientDashboard = () => {
               <RotateCcw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh tasks'}
             </button>
           </div>
-          {isLoading ? (
-            <div className="glass-panel" style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--accent)' }}>
-              Loading your tasks...
-            </div>
-          ) : clientTasks.length === 0 ? (
+          {clientTasks.length === 0 ? (
             <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(0, 242, 254, 0.25)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
                 <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>
@@ -523,7 +527,7 @@ const ClientDashboard = () => {
             </div>
           ) : null}
 
-          {!isLoading && clientTasks.map(task => {
+          {clientTasks.map(task => {
             const isDisputed = task.status === 'Disputed';
             const dispute = getDisputeMetadata(task, user?.id);
             const safeGithubUrl = safeHttpsUrl(task.github_pr_url);

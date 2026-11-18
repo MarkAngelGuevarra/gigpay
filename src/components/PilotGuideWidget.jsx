@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -8,20 +8,13 @@ import {
   ArrowLeft,
   RotateCcw,
   CheckCircle2,
-  ChevronDown,
   X,
-  ExternalLink,
-  ShieldAlert,
   Landmark,
   FileCheck,
-  Compass,
   Check,
   UserCheck,
   Briefcase,
-  Play,
-  HelpCircle,
-  Eye,
-  Smartphone
+  Play
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -55,7 +48,7 @@ function waitForElement(selectorOrFn, timeout = 1200) {
           resolve(el);
           return;
         }
-      } catch (e) {
+      } catch {
         // ignore DOM query selector errors
       }
       if (Date.now() - startTime >= timeout) {
@@ -172,11 +165,11 @@ const FREELANCER_STEPS = [
     title: 'Submit Proof of Work',
     badge: 'Step 4 of 5 • Deliverable Proof',
     icon: Sparkles,
-    teacherVoice: 'Submit proof of your completed work! Tap below to auto-fill sample Google Docs and Loom demo links in 1 click.',
-    description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample filler to test quickly.',
+    teacherVoice: 'Submit proof of your completed work! Auto-fill a practice note, then attach a deliverable URL (Google Docs, GitHub, or Loom).',
+    description: 'Attach GitHub PRs, Loom videos, or document links. Non-dev testers can use the 1-click sample note and paste any https:// deliverable link.',
     actionLabel: '⚡ Auto-Fill Sample Deliverables',
     actionType: 'autofill_proof',
-    tip: 'Pre-fills Google Doc and Loom walkthrough links so you can test submission in seconds.'
+    tip: 'Proof of work requires at least one valid https:// deliverable link.'
   },
   {
     step: 5,
@@ -199,7 +192,7 @@ export default function PilotGuideWidget() {
   const { tasks } = useTasks();
   // The offline demo account sends nothing to Stellar: its progress toasts must say they are a simulation.
   const isSimUser = !!(user?.is_simulation_mode || user?.user_metadata?.is_simulation_mode || String(user?.id || '').startsWith('demo-'));
-  const sim = (real, simulated) => (isSimUser ? simulated : real);
+  const sim = useCallback((real, simulated) => (isSimUser ? simulated : real), [isSimUser]);
 
   const [state, setState] = useState(() => {
     try {
@@ -289,8 +282,19 @@ export default function PilotGuideWidget() {
       addToast(sim('🎉 Testnet Wallet Connected! Next: Lock Milestone Escrow.', 'Simulation: demo wallet connected (nothing on-chain). Next: Lock Milestone Escrow.'), sim('success', 'info'));
     }
 
-    // Client Step 2 -> Step 3 when client creates/funds task escrow
-    if (isClient && state.clientStep === 2 && currentTasks.length > prevTasksCountRef.current) {
+    // Client Step 2 -> Step 3 only when the signed-in client locks a newly created own task
+    const isOwnCreatedTask = (t) => !!t && (
+      isSimUser
+        ? (!t.client_id || String(t.client_id).startsWith('demo-') || t.client_id === user?.id)
+        : t.client_id === user?.id
+    );
+    const nowMs = Date.now();
+    const newlyLockedOwn = currentTasks.some((t) =>
+      isOwnCreatedTask(t) &&
+      !prevTasks.some((pt) => pt.id === t.id) &&
+      (isSimUser || (t.created_at && nowMs - Date.parse(t.created_at) < 120000))
+    );
+    if (isClient && state.clientStep === 2 && newlyLockedOwn) {
       setState(prev => ({ ...prev, clientStep: 3 }));
       addToast(sim('Payment locked. Next: your partner taps "Accept Work" on their phone, then submits their work.', 'Simulation: practice task saved, nothing locked on-chain. Step 3: Switch to Freelancer to accept.'), 'info');
     }
@@ -333,7 +337,7 @@ export default function PilotGuideWidget() {
     prevTasksCountRef.current = currentTasks.length;
     prevTasksRef.current = currentTasks;
     prevWalletRef.current = publicKey;
-  }, [tasks, publicKey, isClient, state.clientStep, state.freelancerStep]);
+  }, [tasks, publicKey, isClient, isSimUser, user?.id, state.clientStep, state.freelancerStep, addToast, sim]);
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -388,9 +392,6 @@ export default function PilotGuideWidget() {
     switch (actionType) {
       case 'connect_wallet': {
         try {
-          if (!user && typeof switchRole === 'function') {
-            switchRole('client');
-          }
           if (typeof connectTesterWallet === 'function') {
             await connectTesterWallet();
             addToast('Practice Testnet wallet connected. Test XLM may take up to 30 seconds to arrive.', 'success');
@@ -407,9 +408,6 @@ export default function PilotGuideWidget() {
       }
 
       case 'fill_sample_task': {
-        if (!user && typeof switchRole === 'function') {
-          switchRole('client');
-        }
         if (location.pathname !== '/client') {
           navigate('/client');
         }
@@ -452,20 +450,7 @@ export default function PilotGuideWidget() {
         break;
       }
 
-      case 'switch_to_freelancer': {
-        if (typeof switchRole === 'function') {
-          switchRole('freelancer');
-        }
-        navigate('/freelancer');
-        addToast('Switched to Freelancer Mode! Discover tasks and submit deliverables.', 'info');
-        setState(prev => ({ ...prev, activeTour: 'freelancer' }));
-        break;
-      }
-
       case 'scroll_escrows': {
-        if (!user && typeof switchRole === 'function') {
-          switchRole('client');
-        }
         if (location.pathname !== '/client') {
           navigate('/client');
         }
@@ -490,13 +475,18 @@ export default function PilotGuideWidget() {
       }
 
       case 'switch_to_freelancer_role': {
-        if (typeof switchRole === 'function') {
-          switchRole('freelancer');
+        if (isSimUser) {
+          if (typeof switchRole === 'function') {
+            switchRole('freelancer');
+          }
+          if (location.pathname !== '/freelancer') {
+            navigate('/freelancer');
+          }
+          addToast('Freelancer Role active! Discover funded tasks below.', 'success');
+        } else {
+          setState(prev => ({ ...prev, activeTour: 'freelancer' }));
+          addToast('Real accounts keep one role. Open GigPay as Freelancer on a second device or browser.', 'info');
         }
-        if (location.pathname !== '/freelancer') {
-          navigate('/freelancer');
-        }
-        addToast('Freelancer Role active! Discover funded tasks below.', 'success');
         break;
       }
 
@@ -566,7 +556,6 @@ export default function PilotGuideWidget() {
           autoFillBtn.click();
           spotlightElement(autoFillBtn);
         } else {
-          const docInput = document.querySelector('input[placeholder*="docs.google.com"]');
           const notesInput = document.querySelector('textarea[placeholder*="description of work"]');
           if (notesInput) setNativeValue(notesInput, 'Test submission: no real deliverable (GigPay practice run).');
           if (notesInput) {

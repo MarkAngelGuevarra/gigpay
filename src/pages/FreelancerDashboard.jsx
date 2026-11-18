@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X, RotateCcw } from 'lucide-react';
@@ -16,7 +16,7 @@ import { isPilotToolsEnabled } from '../lib/env';
 
 const FreelancerDashboard = () => {
   const { user, publicKey, switchRole, isSimulationMode } = useAuth();
-  const { tasks, isLoading, refreshTasks, updateTaskStatus, submitProofOfWork } = useTasks();
+  const { tasks, refreshTasks, updateTaskStatus, submitProofOfWork } = useTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ const FreelancerDashboard = () => {
     setSubmissionNotes(task.submission_notes || '');
   };
 
-  const handleAcceptWork = async (id, amount) => {
+  const handleAcceptWork = async (id) => {
     if (acceptInFlightRef.current || isAccepting) return;
     acceptInFlightRef.current = true;
     setIsAccepting(true);
@@ -108,8 +108,6 @@ const FreelancerDashboard = () => {
       setAcceptingTaskId(null);
     }
   };
-
-  const handleAcceptTask = handleAcceptWork;
 
   const handleSubmitProof = async (taskId) => {
     if (powInFlightRef.current || isSubmittingPoW) return;
@@ -407,14 +405,10 @@ const FreelancerDashboard = () => {
         </button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {isLoading ? (
-          <div className="glass-panel" style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--accent)' }}>
-            Loading your tasks...
-          </div>
-        ) : availableTasks.length === 0 ? (
+        {availableTasks.length === 0 && (
           <p style={{ color: 'var(--text-muted)' }}>Waiting for your partner to lock the payment. It appears here within a few seconds; tap Refresh tasks if it doesn't.</p>
-        ) : null}
-        {!isLoading && availableTasks.map(task => {
+        )}
+        {availableTasks.map(task => {
           // The contract pays the address the client entered when funding; whoever accepts cannot change it.
           const payout = describePayout(task, publicKey);
           const fundedOnChain = !isNonEvidenceHash(task.tx_hash) && !task.is_simulated;
@@ -433,7 +427,7 @@ const FreelancerDashboard = () => {
                 <button
                   className="btn btn-outline"
                   style={{ padding: '0.5rem 1rem', opacity: !publicKey || isAccepting || !payout.canAccept ? 0.5 : 1 }}
-                  onClick={() => handleAcceptWork(task.id, task.amount)}
+                  onClick={() => handleAcceptWork(task.id)}
                   disabled={!publicKey || isAccepting || !payout.canAccept}
                   title={!publicKey ? "Connect wallet to accept work" : (!payout.canAccept ? "This payment is reserved for another freelancer" : "")}
                 >

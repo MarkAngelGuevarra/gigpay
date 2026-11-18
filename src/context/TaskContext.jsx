@@ -1,9 +1,9 @@
-import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from 'react';
+import { createContext, useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 import { requestWalletSignature, submitFundTask, submitApproveTask, getFundTaskOutcome, resolveConfirmingFunding, statusAfterDisputeResolved, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME, isValidStellarAddress, buildExplorerTxUrl, isStaticTestnetSnapshotEnabled } from '../lib/stellar';
-import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash, csvCell } from '../lib/ledgerIntegrity';
+import { isNonEvidenceHash, buildCompletedTaskLedgerRow, labelLedgerRecord, dedupeLedgerByTxHash } from '../lib/ledgerIntegrity';
 import onchainEscrows from '../data/onchainEscrows.json';
 import { mergeTaskRecords, isDisputeActive, safeHttpsUrl } from '../lib/taskLifecycle';
 import { isOfflineDemoEnabled } from '../lib/env';
@@ -150,7 +150,6 @@ export const TaskProvider = ({ children }) => {
   const publicKeyRef = useRef(publicKey);
   publicKeyRef.current = publicKey;
   const confirmingInFlightRef = useRef(new Set());
-  const [isLoading, setIsLoading] = useState(false);
 
   // Raw stored ledger records (filtering out any unverified demo/simulated hashes)
   const [storedLedgerRecords, setStoredLedgerRecords] = useState(() => {
@@ -163,17 +162,8 @@ export const TaskProvider = ({ children }) => {
     }
   });
 
-  // BroadcastChannel instance for real-time inter-tab communications
-  const broadcastChannel = useMemo(() => {
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        return new BroadcastChannel('gigpay_sync_channel');
-      }
-    } catch (e) {
-      console.warn("BroadcastChannel not supported, falling back to storage listener", e);
-    }
-    return null;
-  }, []);
+  // BroadcastChannel instance managed inside cross-tab sync effect (StrictMode-safe)
+  const broadcastChannelRef = useRef(null);
 
   // Lifecycle Monotonic Merge: higher lifecycle status (Completed > In Progress > Available) is permanent.
   // Authoritative snapshots (pruneMissing) prune tasks removed from the server except very recently created local rows.
@@ -239,9 +229,9 @@ export const TaskProvider = ({ children }) => {
     tasksRef.current = next;
     setTasks(next);
     setLocalTasks(next);
-    if (broadcastChannel && broadcastPayload) {
+    if (broadcastChannelRef.current && broadcastPayload) {
       try {
-        broadcastChannel.postMessage(broadcastPayload);
+        broadcastChannelRef.current.postMessage(broadcastPayload);
       } catch (e) {
         console.warn("BroadcastChannel postMessage error:", e);
       }
@@ -259,12 +249,16 @@ export const TaskProvider = ({ children }) => {
     const next = mergeTaskLists(prev, nextRaw, options);
     commitTaskList(next, { type: 'SYNC_TASKS', tasks: next });
   };
+  const updateTasksAndCacheRef = useRef(updateTasksAndCache);
+  updateTasksAndCacheRef.current = updateTasksAndCache;
 
   const removeTask = (id) => {
     if (!id) return;
     const next = tasksRef.current.filter((t) => t.id !== id);
     commitTaskList(next, { type: 'DELETE_TASK', taskId: id });
   };
+  const removeTaskRef = useRef(removeTask);
+  removeTaskRef.current = removeTask;
 
   // Puts one task back exactly as it was, bypassing the merge. The merge never lowers a status (so a stale
   // copy can't undo progress), which also meant a failed release or claim could never be rolled back:
@@ -280,7 +274,7 @@ export const TaskProvider = ({ children }) => {
   // supabase-js returns errors instead of throwing; every write must check them, or the user is told an
   // action worked when the database (RLS / guard trigger) rejected it.
   const writeTask = async (id, fields) => {
-    if (!isUuid(id) || isOfflineOrSimulationSession(user)) return null;
+    if (!isUuid(id) || isOfflineOrSimulationSession(userRef.current)) return null;
     try {
       const updateQuery = supabase.from('tasks').update(fields).eq('id', id);
       const res = typeof updateQuery?.select === 'function'
@@ -310,15 +304,33 @@ export const TaskProvider = ({ children }) => {
 
   // 2. Real-Time Cross-Tab / Multi-Window Synchronization (Storage Events + BroadcastChannel)
   useEffect(() => {
+    const notifyIfSettled = (prevList, nextList) => {
+      const prevById = new Map((prevList || []).map((t) => [t.id, t]));
+      const activeUserId = userRef.current?.id || null;
+      const activeWallet = publicKeyRef.current || null;
+      const settled = (nextList || []).some((t) => {
+        if (!t || t.is_simulated || (t.status !== 'Completed' && t.status !== 'Paid')) return false;
+        const isRecipient =
+          (activeUserId && t.freelancer_id === activeUserId) ||
+          (activeWallet && t.freelancer_wallet === activeWallet);
+        if (!isRecipient) return false;
+        const prev = prevById.get(t.id);
+        return Boolean(prev && prev.status !== 'Completed' && prev.status !== 'Paid');
+      });
+      if (settled) emitBalanceRefresh();
+    };
+
     const handleStorageChange = (e) => {
       if (!userRef.current) return;
       if ((e.key === GIGPAY_SHARED_TASKS_KEY || e.key === GIGPAY_LEGACY_CACHE_KEY) && e.newValue) {
         try {
           const syncedTasks = JSON.parse(e.newValue);
           if (Array.isArray(syncedTasks)) {
-            const next = mergeTaskLists(tasksRef.current, syncedTasks);
+            const prev = tasksRef.current;
+            const next = mergeTaskLists(prev, syncedTasks);
             tasksRef.current = next;
             setTasks(next);
+            notifyIfSettled(prev, next);
           }
         } catch (err) {
           console.warn("[GigPay Sync] Cross-tab storage parse exception:", err);
@@ -328,34 +340,55 @@ export const TaskProvider = ({ children }) => {
 
     window.addEventListener('storage', handleStorageChange);
 
-    if (broadcastChannel) {
-      broadcastChannel.onmessage = (event) => {
-        if (!userRef.current) return;
-        if (event.data?.type === 'SYNC_TASKS' && Array.isArray(event.data.tasks)) {
-          const next = mergeTaskLists(tasksRef.current, event.data.tasks);
-          tasksRef.current = next;
-          setTasks(next);
-        }
-        if (event.data?.type === 'DELETE_TASK' && event.data.taskId) {
-          const next = tasksRef.current.filter((t) => t.id !== event.data.taskId);
-          tasksRef.current = next;
-          setTasks(next);
-        }
-        if (event.data?.type === 'RESTORE_TASK' && event.data.task?.id) {
-          const next = tasksRef.current.map((t) => (t.id === event.data.task.id ? event.data.task : t));
-          tasksRef.current = next;
-          setTasks(next);
-        }
-      };
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('gigpay_sync_channel');
+        broadcastChannelRef.current = channel;
+        channel.onmessage = (event) => {
+          if (!userRef.current) return;
+          if (event.data?.type === 'SYNC_TASKS' && Array.isArray(event.data.tasks)) {
+            const prev = tasksRef.current;
+            const next = mergeTaskLists(prev, event.data.tasks);
+            tasksRef.current = next;
+            setTasks(next);
+            notifyIfSettled(prev, next);
+          }
+          if (event.data?.type === 'DELETE_TASK' && event.data.taskId) {
+            const next = tasksRef.current.filter((t) => t.id !== event.data.taskId);
+            tasksRef.current = next;
+            setTasks(next);
+          }
+          if (event.data?.type === 'RESTORE_TASK' && event.data.task?.id) {
+            const prev = tasksRef.current;
+            const exists = prev.some((t) => t.id === event.data.task.id);
+            const next = exists
+              ? prev.map((t) => (t.id === event.data.task.id ? event.data.task : t))
+              : [event.data.task, ...prev];
+            tasksRef.current = next;
+            setTasks(next);
+          }
+        };
+      }
+    } catch (e) {
+      console.warn("BroadcastChannel not supported, falling back to storage listener", e);
     }
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      if (broadcastChannel) {
-        broadcastChannel.onmessage = null;
+      if (channel) {
+        channel.onmessage = null;
+        try {
+          channel.close();
+        } catch {
+          // channel already closed
+        }
+      }
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
       }
     };
-  }, [broadcastChannel]);
+  }, []);
 
   // 2b. Resolve escrows whose funding was sent but not confirmed while the client waited ("Confirming").
   // The chain is the source of truth (see resolveConfirmingFunding): SUCCESS opens the task, with its escrow
@@ -371,7 +404,8 @@ export const TaskProvider = ({ children }) => {
     const check = async () => {
       if (running) return;
       running = true;
-      for (const t of tasks.filter((x) => confirmingKey.split(',').includes(x.id))) {
+      const confirmingIds = confirmingKey.split(',');
+      for (const t of tasksRef.current.filter((x) => confirmingIds.includes(x.id))) {
         if (confirmingInFlightRef.current.has(t.id)) continue;
         try {
           const outcome = await getFundTaskOutcome(t.tx_hash);
@@ -444,6 +478,7 @@ export const TaskProvider = ({ children }) => {
     lastUserIdRef.current = currentId;
 
     if (!currentId) {
+      tasksRef.current = [];
       setTasks([]);
       setStoredLedgerRecords([]);
       clearLocalTaskCaches();
@@ -459,6 +494,7 @@ export const TaskProvider = ({ children }) => {
       (Boolean(initialOwner) && initialOwner !== currentId && !(isDemoAccountId(initialOwner) && isDemoAccountId(currentId)));
 
     if (ownerChanged) {
+      tasksRef.current = [];
       setTasks([]);
       setStoredLedgerRecords([]);
       clearLocalTaskCaches();
@@ -475,6 +511,7 @@ export const TaskProvider = ({ children }) => {
     // arrives a moment after render, keeps its own cached tasks instead of flashing an empty list.
     if (previousId && currentId !== previousId) {
       if (!switchingDemoRole) {
+        tasksRef.current = [];
         setTasks([]);
         setStoredLedgerRecords([]);
         clearLocalTaskCaches();
@@ -487,8 +524,11 @@ export const TaskProvider = ({ children }) => {
     }
   }, [user, authLoading]);
 
+  const syncSessionUserId = user?.id || null;
+  const syncSessionOffline = isOfflineOrSimulationSession(user);
+
   useEffect(() => {
-    if (isOfflineOrSimulationSession(user)) {
+    if (syncSessionOffline) {
       fetchTasksRef.current = () => Promise.resolve(true);
       return undefined;
     }
@@ -512,7 +552,7 @@ export const TaskProvider = ({ children }) => {
           }
           if (Array.isArray(data)) {
             const scoped = data.filter((t) => isMatchingContract(t) && t.status !== 'Failed');
-            updateTasksAndCache(scoped, { pruneMissing: true, keepRecentlyCreatedSince: fetchStartedAt });
+            updateTasksAndCacheRef.current(scoped, { pruneMissing: true, keepRecentlyCreatedSince: fetchStartedAt });
           }
           return true;
         } catch (err) {
@@ -548,15 +588,19 @@ export const TaskProvider = ({ children }) => {
         (payload) => {
           if (cancelled) return;
           if (payload.eventType === 'INSERT') {
-            if (isMatchingContract(payload.new)) {
-              updateTasksAndCache((prev) => [payload.new, ...prev.filter(t => t.id !== payload.new.id)]);
+            if (isMatchingContract(payload.new) && payload.new?.status !== 'Failed') {
+              updateTasksAndCacheRef.current((prev) => [payload.new, ...prev.filter(t => t.id !== payload.new.id)]);
             }
           } else if (payload.eventType === 'UPDATE') {
             if (isMatchingContract(payload.new)) {
-              updateTasksAndCache((prev) => prev.map((t) => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+              if (payload.new?.status === 'Failed') {
+                removeTaskRef.current(payload.new.id);
+              } else {
+                updateTasksAndCacheRef.current((prev) => prev.map((t) => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+              }
             }
           } else if (payload.eventType === 'DELETE') {
-            removeTask(payload.old?.id);
+            removeTaskRef.current(payload.old?.id);
           }
         }
       )
@@ -572,7 +616,7 @@ export const TaskProvider = ({ children }) => {
       }
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [syncSessionUserId, syncSessionOffline]);
 
   // 4. Add Task with Optimistic Local Cache & Background DB Sync
   // One lock at a time per page: a second tap (or a second form submit) while a lock is in flight would
@@ -777,7 +821,7 @@ export const TaskProvider = ({ children }) => {
 
   // 5. Submit Proof of Work
   const submitProofOfWork = async (id, { githubPrUrl, docUrl, loomUrl, notes }) => {
-    const task = tasks.find(t => t.id === id);
+    const task = tasksRef.current.find(t => t.id === id);
     if (!task) throw new Error("Task not found");
 
     // A client can release while this phone still shows In Progress (BCC Day 1, escrow #55). Check the
@@ -833,7 +877,7 @@ export const TaskProvider = ({ children }) => {
 
   // 6. Raise Dispute Freeze Action
   const raiseDispute = async (id, reason = "Deliverables do not match agreed specifications.") => {
-    const task = tasks.find(t => t.id === id);
+    const task = tasksRef.current.find(t => t.id === id);
     if (!task) throw new Error("Task not found");
 
     const disputeData = {
@@ -857,7 +901,7 @@ export const TaskProvider = ({ children }) => {
 
   // 7. Resolve Dispute Action
   const resolveDispute = async (id) => {
-    const task = tasks.find(t => t.id === id);
+    const task = tasksRef.current.find(t => t.id === id);
     if (!task) return;
 
     // Proof already submitted before the dispute goes back to the client's review, not to In Progress.
@@ -1106,47 +1150,9 @@ export const TaskProvider = ({ children }) => {
     return dedupeLedgerByTxHash([...completedRows, ...liveRows, ...baselineRows]);
   }, [tasks, storedLedgerRecords]);
 
-  // 10. 1-Click CSV Export for Public Verification Ledger
-  const exportVerificationCsv = () => {
-    try {
-      const headers = ["Transaction ID", "Task Title", "Method", "Amount", "Contract ID", "Client Wallet", "Freelancer Wallet", "Transaction Hash", "Status", "Timestamp (UTC)", "Explorer URL", "Counts As Outside User", "Wallet Note"];
-      const rows = ledgerRecords.map((r) => [
-        r.id,
-        r.taskId || '',
-        r.method || '',
-        r.amount || '',
-        r.contractId || '',
-        r.clientWallet || '',
-        r.freelancerWallet || '',
-        r.txHash || '',
-        r.status || '',
-        r.timestamp || '',
-        buildExplorerTxUrl(r.txHash) || '',
-        r.countsAsOutsideUser ? 'Yes' : 'No',
-        r.walletNote || ''
-      ].map(csvCell).join(','));
-
-      const csvString = [headers.map(csvCell).join(','), ...rows].join('\n');
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `gigpay_onchain_verification_ledger_${Date.now()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      addToast("Verification Ledger exported to CSV successfully!", "success");
-    } catch (err) {
-      console.error("CSV Export failed:", err);
-      addToast("Failed to export verification ledger.", "error");
-    }
-  };
-
   return (
     <TaskContext.Provider value={{ 
       tasks, 
-      isLoading, 
       refreshTasks,
       addTask, 
       updateTaskStatus, 
@@ -1155,8 +1161,7 @@ export const TaskProvider = ({ children }) => {
       submitProofOfWork, 
       raiseDispute, 
       resolveDispute,
-      ledgerRecords,
-      exportVerificationCsv
+      ledgerRecords
     }}>
       {children}
     </TaskContext.Provider>
