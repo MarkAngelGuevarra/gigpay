@@ -169,7 +169,14 @@ begin
     elsif new.status is distinct from old.status then
       raise exception 'GigPay: a released task cannot change status' using errcode = '42501';
     end if;
-    if uid <> old.client_id and coalesce(old.proof_attached, false) then
+    if new.title is distinct from old.title
+       or new.dispute_reason is distinct from old.dispute_reason
+       or new.disputed_at is distinct from old.disputed_at
+       or new.disputed_by is distinct from old.disputed_by
+       or new.dispute_resolved_at is distinct from old.dispute_resolved_at then
+      raise exception 'GigPay: completed task metadata cannot be altered' using errcode = '42501';
+    end if;
+    if uid is distinct from old.client_id and coalesce(old.proof_attached, false) then
       if new.github_pr_url is distinct from old.github_pr_url
          or new.doc_url is distinct from old.doc_url
          or new.loom_url is distinct from old.loom_url
@@ -188,7 +195,7 @@ begin
       raise exception 'GigPay: client role required to manage escrow' using errcode = '42501';
     end if;
 
-    if (old.freelancer_id is not null and new.freelancer_id is distinct from old.freelancer_id)
+    if new.freelancer_id is distinct from old.freelancer_id
        or new.freelancer_id = old.client_id then
       raise exception 'GigPay: the assigned freelancer cannot be changed' using errcode = '42501';
     end if;
