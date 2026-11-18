@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Zap, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const features = [
   {
@@ -37,7 +39,17 @@ const features = [
 ];
 
 const LandingPage = () => {
+  const { user, activeRole, isSimulationMode, switchRole } = useAuth();
   const [selectedFeature, setSelectedFeature] = useState(null);
+
+  useEffect(() => {
+    if (!selectedFeature || typeof window === 'undefined') return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedFeature(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFeature]);
 
   return (
     <div style={{ paddingTop: '2rem', overflowX: 'hidden' }}>
@@ -108,12 +120,30 @@ const LandingPage = () => {
           className="hero-cta-group"
           style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}
         >
-          <Link to="/freelancer" className="btn btn-primary hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}>
-            I'm a Freelancer <ArrowRight size={20} />
-          </Link>
-          <Link to="/client" className="btn btn-outline hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.03)' }}>
-            I'm a Client
-          </Link>
+          {user && !isSimulationMode ? (
+            <Link to={activeRole === 'freelancer' ? '/freelancer' : '/client'} className="btn btn-primary hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}>
+              Go to {activeRole === 'freelancer' ? 'Freelancer' : 'Client'} Dashboard <ArrowRight size={20} />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to={user ? '/freelancer' : '/auth?mode=signup&role=freelancer'}
+                onClick={user ? () => switchRole('freelancer') : undefined}
+                className="btn btn-primary hero-btn"
+                style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}
+              >
+                I'm a Freelancer <ArrowRight size={20} />
+              </Link>
+              <Link
+                to={user ? '/client' : '/auth?mode=signup&role=client'}
+                onClick={user ? () => switchRole('client') : undefined}
+                className="btn btn-outline hero-btn"
+                style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.03)' }}
+              >
+                I'm a Client
+              </Link>
+            </>
+          )}
         </motion.div>
       </motion.div>
 
@@ -122,7 +152,16 @@ const LandingPage = () => {
         {features.map((feature) => (
           <motion.div 
             key={feature.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Learn more about ${feature.title}`}
             onClick={() => setSelectedFeature(feature)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSelectedFeature(feature);
+              }
+            }}
             whileHover={{ y: -10, scale: 1.02, boxShadow: `0 20px 40px -10px ${feature.shadowColor}` }}
             whileTap={{ scale: 0.98 }}
             className="glass-panel"
@@ -137,60 +176,70 @@ const LandingPage = () => {
       </motion.div>
 
       {/* Trendy Feature Modal */}
-      <AnimatePresence>
-        {selectedFeature && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-              zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
-            }}
-            onClick={() => setSelectedFeature(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="glass-panel"
-              style={{
-                maxWidth: '550px', width: '100%', position: 'relative',
-                borderTop: `4px solid ${selectedFeature.accentColor}`,
-                boxShadow: `0 25px 50px -12px ${selectedFeature.shadowColor}`,
-                cursor: 'pointer'
-              }}
-              onClick={() => setSelectedFeature(null)}
-            >
-              <button 
-                onClick={() => setSelectedFeature(null)} 
-                style={{ position: 'absolute', top: '1rem', right: '1.5rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '2rem', lineHeight: 1 }}
+      {(() => {
+        const modalContent = (
+          <AnimatePresence>
+            {selectedFeature && (
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-label={selectedFeature.title}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+                  zIndex: 100000, display: 'flex', alignItems: 'safe center', justifyContent: 'center',
+                  overflowY: 'auto', padding: '1rem', boxSizing: 'border-box'
+                }}
+                onClick={() => setSelectedFeature(null)}
               >
-                &times;
-              </button>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '50%' }}>
-                  {React.cloneElement(selectedFeature.icon, { style: { marginBottom: 0 } })}
-                </div>
-                <h2 style={{ fontSize: '2rem', margin: 0 }}>{selectedFeature.title}</h2>
-              </div>
-              
-              <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                {selectedFeature.shortDesc}
-              </p>
-              
-              <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <p style={{ color: 'white', lineHeight: 1.7, fontSize: '1.05rem', margin: 0 }}>
-                  {selectedFeature.longDesc}
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="glass-panel"
+                  style={{
+                    maxWidth: '550px', width: '100%', position: 'relative', boxSizing: 'border-box',
+                    borderTop: `4px solid ${selectedFeature.accentColor}`,
+                    boxShadow: `0 25px 50px -12px ${selectedFeature.shadowColor}`
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button 
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setSelectedFeature(null)} 
+                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '2rem', lineHeight: 1, minWidth: '44px', minHeight: '44px' }}
+                  >
+                    &times;
+                  </button>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', paddingRight: '3rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '50%' }}>
+                      {React.cloneElement(selectedFeature.icon, { style: { marginBottom: 0 } })}
+                    </div>
+                    <h2 style={{ fontSize: '2rem', margin: 0 }}>{selectedFeature.title}</h2>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    {selectedFeature.shortDesc}
+                  </p>
+                  
+                  <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p style={{ color: 'white', lineHeight: 1.7, fontSize: '1.05rem', margin: 0 }}>
+                      {selectedFeature.longDesc}
+                    </p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        );
+        return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
+      })()}
       
     </div>
   );
