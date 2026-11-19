@@ -85,6 +85,14 @@
     line-height: 1;
   }
 
+  .gp-brand-lockup--light .gp-brand-wordmark {
+    color: #09090b;
+  }
+
+  .gp-brand-lockup--dark .gp-brand-wordmark {
+    color: #fafafa;
+  }
+
   .gp-brand-mark {
     display: block;
     flex-shrink: 0;

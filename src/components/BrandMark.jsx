@@ -39,11 +39,20 @@ export const BrandMark = ({ size = 32, variant = 'auto', className = '' }) => {
   );
 };
 
-export const BrandLockup = ({ size = 30, variant = 'auto', className = '' }) => (
-  <span className={`gp-brand-lockup${className ? ` ${className}` : ''}`}>
-    <BrandMark size={size} variant={variant} />
-    <span className="gp-brand-wordmark">GigPay</span>
-  </span>
-);
+export const BrandLockup = ({ size = 30, variant = 'auto', className = '' }) => {
+  const variantClass =
+    variant === 'light'
+      ? ' gp-brand-lockup--light'
+      : variant === 'dark'
+        ? ' gp-brand-lockup--dark'
+        : '';
+
+  return (
+    <span className={`gp-brand-lockup${variantClass}${className ? ` ${className}` : ''}`}>
+      <BrandMark size={size} variant={variant} />
+      <span className="gp-brand-wordmark">GigPay</span>
+    </span>
+  );
+};
 
 export default BrandMark;
