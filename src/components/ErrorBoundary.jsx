@@ -12,7 +12,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("[GigPay ErrorBoundary caught error]:", error, errorInfo);
+    console.error('[GigPay ErrorBoundary caught error]:', error, errorInfo);
   }
 
   handleReload = () => {
@@ -22,27 +22,18 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          minHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-          textAlign: 'center'
-        }}>
-          <div className="glass-panel" style={{ maxWidth: '500px', padding: '2rem', border: '1px solid #ef4444' }}>
-            <AlertTriangle size={48} style={{ color: '#ef4444', marginBottom: '1rem' }} />
-            <h2 style={{ color: 'white', marginBottom: '0.75rem' }}>Something went wrong</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-              An unexpected display error occurred. Click below to reload cleanly.
+        <div className="flex min-h-[75vh] items-center justify-center px-4 py-12">
+          <div className="gp-card max-w-md border-[var(--signal-danger-border)] p-7 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--signal-danger-bg)] text-[var(--signal-danger)]">
+              <AlertTriangle size={24} />
+            </div>
+            <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">Something went wrong</h2>
+            <p className="mt-2 mb-6 text-[14px] text-[var(--text-muted)]">
+              An unexpected display error occurred. Reload to restore your workspace cleanly.
             </p>
-            <button 
-              onClick={this.handleReload} 
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <RefreshCw size={16} /> Reload Page
+            <button type="button" onClick={this.handleReload} className="gp-btn gp-btn-primary gp-btn-lg">
+              <RefreshCw size={15} />
+              Reload page
             </button>
           </div>
         </div>

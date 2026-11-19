@@ -11,17 +11,18 @@ import {
   STELLAR_NETWORK_NAME,
   buildExplorerAccountUrl,
   buildExplorerTxUrl,
-  isStaticTestnetSnapshotEnabled
+  isStaticTestnetSnapshotEnabled,
 } from '../lib/stellar';
 
 const isOutside = (w) => !!w && !isTeamWallet(w) && !isScriptedTestWallet(w);
 const computeChainStats = (rows) => {
   const outside = new Set();
-  let outsideFunded = 0, outsideReleased = 0;
+  let outsideFunded = 0;
+  let outsideReleased = 0;
   for (const r of rows) {
-    // Same rule as EVIDENCE_TABLE.md: only escrows where both sides are outside wallets count.
     if (isOutside(r.clientWallet) && isOutside(r.freelancerWallet)) {
-      outside.add(r.clientWallet); outside.add(r.freelancerWallet);
+      outside.add(r.clientWallet);
+      outside.add(r.freelancerWallet);
       outsideFunded += 1;
       if (r.released) outsideReleased += 1;
     }
@@ -30,31 +31,48 @@ const computeChainStats = (rows) => {
 };
 
 const shortKey = (k) => (k ? `${k.slice(0, 6)}…${k.slice(-4)}` : 'not recorded');
+
 const WalletLink = ({ address }) => {
-  if (!address) return <span style={{ color: 'var(--text-muted)' }}>not recorded</span>;
+  if (!address) return <span className="text-[var(--text-muted)]">not recorded</span>;
   const accountUrl = buildExplorerAccountUrl(address);
-  return accountUrl
-    ? <a href={accountUrl} target="_blank" rel="noopener noreferrer" title={address} style={{ color: '#cbd5e1', textDecoration: 'none' }}><code>{shortKey(address)}</code></a>
-    : <code title={address} style={{ color: '#cbd5e1' }}>{shortKey(address)}</code>;
+  return accountUrl ? (
+    <a
+      href={accountUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={address}
+      className="gp-mono text-[var(--text-primary)] no-underline hover:underline"
+    >
+      {shortKey(address)}
+    </a>
+  ) : (
+    <code title={address} className="gp-mono text-[var(--text-primary)]">
+      {shortKey(address)}
+    </code>
+  );
 };
 
 const VerificationLedgerModal = ({ isOpen, onClose }) => {
   const { tasks, ledgerRecords } = useTasks();
   const { addToast } = useToast() || {};
   const snapshotActive = isStaticTestnetSnapshotEnabled();
+
   const staticEscrows = useMemo(
     () => (snapshotActive ? (onchainData.escrows || []) : []),
     [snapshotActive]
   );
   const chainStats = useMemo(() => computeChainStats(staticEscrows), [staticEscrows]);
 
-  // Each on-chain escrow exactly once (enriched with its Supabase task), then database-only rows.
-  const records = useMemo(() => buildPublicLedger({
-    escrows: staticEscrows,
-    tasks,
-    otherRecords: ledgerRecords,
-    generatedAt: snapshotActive ? onchainData.generatedAt : ''
-  }), [staticEscrows, tasks, ledgerRecords, snapshotActive]);
+  const records = useMemo(
+    () =>
+      buildPublicLedger({
+        escrows: staticEscrows,
+        tasks,
+        otherRecords: ledgerRecords,
+        generatedAt: snapshotActive ? onchainData.generatedAt : '',
+      }),
+    [staticEscrows, tasks, ledgerRecords, snapshotActive]
+  );
 
   const exportVerificationCsv = () => {
     try {
@@ -74,19 +92,15 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Escape key listener for keyboard dismissal
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent background scrolling when modal is open without disturbing unrelated scroll state while closed
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') return undefined;
     const previousOverflow = document.body.style.overflow;
@@ -98,6 +112,9 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const networkLabel = STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local';
+  const hasAnyDispute = records.some((r) => Boolean(r.dispute));
+
   const modalContent = (
     <div
       role="dialog"
@@ -106,275 +123,202 @@ const VerificationLedgerModal = ({ isOpen, onClose }) => {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(5, 10, 24, 0.94)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        zIndex: 99999,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        padding: '3rem 1rem 4rem 1rem',
-        overflowY: 'auto'
-      }}
+      className="fixed inset-0 flex items-start justify-center overflow-y-auto bg-[var(--bg-scrim)] px-4 py-8 backdrop-blur-md sm:py-12"
+      style={{ zIndex: 100000 }}
     >
       <div
-        style={{
-          width: '100%',
-          maxWidth: '1020px',
-          backgroundColor: '#0d1527',
-          border: '1px solid rgba(0, 242, 254, 0.35)',
-          borderRadius: '16px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 242, 254, 0.12)',
-          padding: 'clamp(1.25rem, 3.5vw, 2rem)',
-          boxSizing: 'border-box',
-          position: 'relative',
-          margin: '0 auto',
-          color: '#f8fafc'
-        }}
         onClick={(e) => e.stopPropagation()}
+        className="relative mx-auto w-full max-w-[1100px] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 text-[var(--text-primary)] shadow-[var(--shadow-lg)] sm:p-7"
       >
-        {/* Prominent Floating Close Button */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Close Verification Ledger"
-          title="Exit Public Ledger (Esc)"
-          style={{
-            position: 'absolute',
-            top: '0.75rem',
-            right: '0.75rem',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            borderRadius: '50%',
-            width: '44px',
-            height: '44px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#f8fafc',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            zIndex: 20
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-            e.currentTarget.style.borderColor = '#ef4444';
-            e.currentTarget.style.color = '#ef4444';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.18)';
-            e.currentTarget.style.color = '#f8fafc';
-          }}
+          title="Close (Esc)"
+          className="gp-modal-close"
         >
-          <X size={20} />
+          <X size={19} />
         </button>
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', paddingRight: '3.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ maxWidth: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-              <ShieldCheck color="#00f2fe" size={24} style={{ flexShrink: 0 }} />
-              <h3 style={{ margin: 0, fontSize: 'clamp(1.1rem, 4vw, 1.4rem)', color: '#ffffff', fontWeight: 700, wordBreak: 'break-word' }}>
+        {/* Header with reserved right clearance for floating close button */}
+        <div
+          className="mb-5 flex items-start justify-between gap-4"
+          style={{ paddingRight: '3.5rem', flexWrap: 'wrap' }}
+        >
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <ShieldCheck size={22} className="shrink-0 text-[var(--signal-money)]" />
+              <h2 className="m-0 text-xl font-semibold tracking-tight text-[var(--text-primary)]">
                 Public On-Chain Verification Ledger
-              </h3>
-              <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0, 242, 254, 0.3)', whiteSpace: 'nowrap' }}>
-                {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
-              </span>
+              </h2>
+              <span className="gp-status gp-status--money whitespace-nowrap">{networkLabel}</span>
             </div>
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              Every escrow on the GigPay contract ({STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}), with each wallet labeled as outside user or team/test.
+            <p className="mt-1.5 mb-0 text-[13.5px] text-[var(--text-muted)]">
+              Every escrow on the GigPay Soroban contract ({networkLabel}), with each wallet labeled as outside user or team/test.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button
-              onClick={exportVerificationCsv}
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', fontSize: '0.85rem', borderColor: '#00f2fe', color: '#00f2fe', background: 'rgba(0, 242, 254, 0.05)' }}
-            >
-              <Download size={15} /> Export CSV
-            </button>
-          </div>
+          <button type="button" onClick={exportVerificationCsv} className="gp-btn gp-btn-secondary shrink-0">
+            <Download size={15} />
+            Export CSV
+          </button>
         </div>
 
-        {/* On-chain counts, generated from Stellar Testnet by scripts/index_escrows.mjs (src/data/onchainEscrows.json) */}
-        <div style={{
-          background: 'rgba(0, 242, 254, 0.04)',
-          border: '1px solid rgba(0, 242, 254, 0.22)',
-          borderRadius: '10px',
-          padding: '1rem',
-          marginBottom: '0.5rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-          gap: '1rem'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Escrows on the contract</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.total}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>All wallets, including team tests</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Outside wallets</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideWallets}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>In escrows where both sides are outside</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Funded outside ↔ outside</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideFunded}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-              {snapshotActive
-                ? 'Client and freelancer both outside (3 look like duplicate locks: #52, #53, #66)'
-                : 'Client and freelancer both outside'}
+        {/* On-chain summary metrics */}
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] lg:grid-cols-4">
+          {[
+            { label: 'Escrows on contract', val: chainStats.total, hint: 'All wallets including team tests' },
+            { label: 'Outside wallets', val: chainStats.outsideWallets, hint: 'Both sides are outside wallets' },
+            {
+              label: 'Funded outside',
+              val: chainStats.outsideFunded,
+              hint: snapshotActive ? 'Includes 3 duplicate locks (#52, #53, #66)' : 'Client and freelancer outside',
+            },
+            { label: 'Released outside', val: chainStats.outsideReleased, hint: 'Completed fund to release flows' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-[var(--bg-surface)] p-4">
+              <div className="text-[12px] font-medium text-[var(--text-muted)]">{stat.label}</div>
+              <div className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">
+                {stat.val}
+              </div>
+              <div className="mt-1 text-[12px] text-[var(--text-muted)]">{stat.hint}</div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Released outside ↔ outside</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.15rem' }}>{chainStats.outsideReleased}</div>
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Full fund → release workflows</div>
-          </div>
+          ))}
         </div>
-        <p style={{ margin: '0 0 1.25rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+
+        <p className="mt-2.5 mb-5 text-[12.5px] text-[var(--text-muted)]">
           {snapshotActive
-            ? `Counted from Stellar Testnet on ${onchainData.generatedAt} by scripts/index_escrows.mjs. Wallets are counted, not verified people. Team and scripted test wallets are labeled in the table below.`
+            ? `Counted from Stellar Testnet on ${onchainData.generatedAt} by scripts/index_escrows.mjs. Wallets are counted, not verified people. Team and scripted test wallets are labeled below.`
             : 'Static Testnet snapshot disabled in offline, local, or custom-contract mode; displaying locally recorded verification rows only.'}
         </p>
 
-        {/* Contract Metadata Banner */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '8px',
-          padding: '1rem',
-          marginBottom: '1.5rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-          fontSize: '0.82rem'
-        }}>
-          <div>
-            <span style={{ color: 'var(--text-muted)' }}>Contract ID:</span><br />
-            <code style={{ color: '#00f2fe', wordBreak: 'break-all' }}>{GIGPAY_ESCROW_CONTRACT_ID}</code>
+        {/* Contract metadata strip */}
+        <div className="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-4 text-[13px] md:grid-cols-3">
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-[var(--text-muted)]">Contract ID</div>
+            <code className="gp-mono mt-0.5 block break-all text-[12.5px] text-[var(--text-primary)]">
+              {GIGPAY_ESCROW_CONTRACT_ID}
+            </code>
           </div>
-          <div>
-            <span style={{ color: 'var(--text-muted)' }}>Network RPC:</span><br />
-            <span style={{ color: 'white' }}>{SOROBAN_RPC_URL}</span>
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-[var(--text-muted)]">Network RPC</div>
+            <div className="mt-0.5 break-all text-[12.5px] text-[var(--text-primary)]">{SOROBAN_RPC_URL}</div>
           </div>
-          <div>
-            <span style={{ color: 'var(--text-muted)' }}>Data source:</span><br />
-            <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-[var(--text-muted)]">Data source</div>
+            <div className="mt-0.5 text-[12.5px] font-medium text-[var(--signal-money-fg)]">
               scripts/index_escrows.mjs (read-only, chain + Horizon)
-            </span>
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div style={{ overflowX: 'auto', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+        {/* Ledger Table */}
+        <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
+          <table className="w-full border-collapse text-left text-[12.5px]">
             <thead>
-              <tr style={{ background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Timestamp</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Task / Method</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Amount</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Client → Freelancer</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Status</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Dispute</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Tx Hash</th>
-                <th style={{ padding: '0.85rem 0.75rem' }}>Explorer Link</th>
+              <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[11.5px] font-semibold text-[var(--text-muted)]">
+                <th className="px-3 py-2.5">Timestamp</th>
+                <th className="px-3 py-2.5">Task / Method</th>
+                <th className="px-3 py-2.5">Amount</th>
+                <th className="px-3 py-2.5">Client → Freelancer</th>
+                <th className="px-3 py-2.5">Status</th>
+                {hasAnyDispute && <th className="px-3 py-2.5">Dispute</th>}
+                <th className="px-3 py-2.5 text-right">Tx / Verify</th>
               </tr>
             </thead>
-            <tbody>
-              {records.map((record) => (
-                <tr key={record.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <td style={{ padding: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Clock size={12} /> {record.timestamp}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0.75rem' }}>
-                    <div style={{ fontWeight: 600, color: 'white' }}>{record.taskId}</div>
-                    {record.source === 'Database only' && (
-                      <div style={{ fontSize: '0.72rem', color: '#fbbf24' }}>Database only: not in the on-chain index yet, not counted</div>
+            <tbody className="divide-y divide-[var(--border-subtle)] bg-[var(--bg-surface)]">
+              {records.map((record) => {
+                const isCompleted = record.status.includes('Completed');
+                const txExplorerUrl = buildExplorerTxUrl(record.txHash);
+                return (
+                  <tr key={record.id}>
+                    <td className="max-w-[116px] px-2.5 py-2.5 text-[11.5px] leading-snug text-[var(--text-muted)]">
+                      <span className="inline-flex items-start gap-1 tabular-nums">
+                        <Clock size={12} className="mt-0.5 shrink-0" />
+                        <span>{record.timestamp}</span>
+                      </span>
+                    </td>
+                    <td className="max-w-[205px] px-2.5 py-2.5">
+                      <div className="font-semibold leading-snug text-[var(--text-primary)]">{record.taskId}</div>
+                      {record.source === 'Database only' && (
+                        <div className="mt-0.5 text-[11.5px] text-[var(--signal-warn)]">
+                          Database only: not in the on-chain index yet, not counted
+                        </div>
+                      )}
+                      <code className="gp-mono text-[11px] text-[var(--text-muted)]">{record.method}</code>
+                    </td>
+                    <td className="px-2.5 py-2.5 font-semibold whitespace-nowrap text-[var(--text-primary)] tabular-nums">
+                      {record.amount}
+                    </td>
+                    <td className="px-2.5 py-2.5 text-[11.5px]">
+                      <div className="whitespace-nowrap">
+                        <WalletLink address={record.clientWallet} /> → <WalletLink address={record.freelancerWallet} />
+                      </div>
+                      <div
+                        className={`mt-0.5 text-[11px] ${
+                          record.countsAsOutsideUser ? 'text-[var(--signal-money-fg)]' : 'text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {record.walletNote}
+                      </div>
+                    </td>
+                    <td className="px-2.5 py-2.5 whitespace-nowrap">
+                      <span
+                        className={`gp-status whitespace-nowrap !px-2 !py-0.5 !text-[11px] ${
+                          isCompleted ? 'gp-status--money' : ''
+                        }`}
+                      >
+                        <span className="gp-status-dot" />
+                        {record.status}
+                      </span>
+                    </td>
+                    {hasAnyDispute && (
+                      <td
+                        className={`max-w-[160px] px-2.5 py-2.5 text-[11px] ${
+                          record.dispute?.includes('(open') ? 'text-[var(--signal-danger)]' : 'text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {record.dispute || '—'}
+                      </td>
                     )}
-                    <code style={{ fontSize: '0.75rem', color: '#00f2fe' }}>{record.method}</code>
-                  </td>
-                  <td style={{ padding: '0.75rem', fontWeight: 600, color: '#00f2fe' }}>
-                    {record.amount}
-                  </td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>
-                    <div style={{ whiteSpace: 'nowrap' }}><WalletLink address={record.clientWallet} /> → <WalletLink address={record.freelancerWallet} /></div>
-                    <div style={{ color: record.countsAsOutsideUser ? '#34d399' : '#94a3b8', marginTop: '0.2rem', minWidth: '180px' }}>{record.walletNote}</div>
-                  </td>
-                  <td style={{ padding: '0.75rem' }}>
-                    <span style={{
-                      padding: '0.2rem 0.55rem',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      background: record.status.includes('Completed') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 242, 254, 0.15)',
-                      color: record.status.includes('Completed') ? '#10b981' : '#00f2fe',
-                      border: record.status.includes('Completed') ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(0, 242, 254, 0.3)'
-                    }}>
-                      {record.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.75rem', color: record.dispute?.includes('(open') ? '#fca5a5' : 'var(--text-muted)', minWidth: record.dispute ? '180px' : undefined }}>
-                    {record.dispute || ''}
-                  </td>
-                  <td style={{ padding: '0.75rem' }}>
-                    <code style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {record.txHash ? record.txHash.substring(0, 10) + '...' : 'Pending'}
-                    </code>
-                  </td>
-                  <td style={{ padding: '0.75rem' }}>
-                    {(() => {
-                      const txExplorerUrl = buildExplorerTxUrl(record.txHash);
-                      return txExplorerUrl ? (
+                    <td className="px-2.5 py-2.5 text-right whitespace-nowrap">
+                      {txExplorerUrl ? (
                         <a
                           href={txExplorerUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: '#00f2fe', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', fontWeight: 600 }}
+                          className="gp-mono inline-flex items-center justify-end gap-1 text-[12px] font-medium text-[var(--signal-money-fg)] no-underline hover:underline"
+                          title={record.txHash}
                         >
-                          Verify <ExternalLink size={12} />
+                          {record.txHash ? `${record.txHash.substring(0, 8)}…` : 'Verify'}
+                          <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>N/A</span>
-                      );
-                    })()}
-                  </td>
-                </tr>
-              ))}
+                        <code className="gp-mono text-[11.5px] text-[var(--text-muted)]">
+                          {record.txHash ? `${record.txHash.substring(0, 8)}…` : 'Pending'}
+                        </code>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        {/* Modal Footer with Explicit Close Action */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', flexWrap: 'wrap', gap: '1rem' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Every escrow on the contract, from {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-4">
+          <span className="text-[13px] text-[var(--text-muted)]">
+            Every escrow on the contract, from {networkLabel}
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-primary"
-            style={{ padding: '0.6rem 1.4rem', fontSize: '0.9rem', borderRadius: '8px', cursor: 'pointer' }}
-          >
-            Exit Public Ledger ✕
+          <button type="button" onClick={onClose} className="gp-btn gp-btn-primary">
+            Close ledger
           </button>
         </div>
       </div>
     </div>
   );
 
-  return typeof document !== 'undefined'
-    ? createPortal(modalContent, document.body)
-    : modalContent;
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
 
 export default VerificationLedgerModal;

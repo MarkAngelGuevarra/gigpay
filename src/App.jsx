@@ -1,25 +1,36 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import MobileBottomNav from './components/MobileBottomNav';
 import LandingPage from './pages/LandingPage';
 import ClientDashboard from './pages/ClientDashboard';
 import FreelancerDashboard from './pages/FreelancerDashboard';
 import ProfilePage from './pages/ProfilePage';
-import { TaskProvider } from './context/TaskContext';
-import { ToastProvider } from './context/ToastContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
 import AuthPage from './pages/AuthPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import PilotGuideWidget from './components/PilotGuideWidget';
 import PilotIntakeBanner from './components/PilotIntakeBanner';
+import { TaskProvider } from './context/TaskContext';
+import { ToastProvider } from './context/ToastContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Analytics } from '@vercel/analytics/react';
+import { captureInviteFromUrl } from './lib/invite';
 import { isLocalhostHostname, isOfflineDemoEnabled, isPilotToolsEnabled, isProdMode } from './lib/env';
 import './index.css';
 
 export const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, isLoading, activeRole, isSimulationMode } = useAuth();
+  const location = useLocation();
 
-  if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading session...</div>;
+  if (location.search) captureInviteFromUrl(location.search);
+
+  if (isLoading) {
+    return (
+      <div className="py-16 text-center text-[14px] text-[var(--text-muted)]">
+        Loading session...
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/auth" />;
@@ -42,16 +53,16 @@ const AppShell = ({ pilotToolsEnabled }) => {
   const isLanding = location.pathname === '/';
 
   return (
-    <>
+    <div className={isLanding ? 'min-h-screen' : 'min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]'}>
       {pilotToolsEnabled && <PilotIntakeBanner />}
+      {!isLanding && <Navbar />}
       {isLanding ? (
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (
-        <div className="container">
-          <Navbar />
+        <main className="mx-auto max-w-[1120px] px-4 pt-6 pb-24 sm:px-6 sm:pb-12">
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route
@@ -78,13 +89,13 @@ const AppShell = ({ pilotToolsEnabled }) => {
                 </ProtectedRoute>
               }
             />
-            {/* Unknown or mistyped URLs (e.g. /ledger) go home instead of rendering a blank page. */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
+        </main>
       )}
+      {!isLanding && <MobileBottomNav />}
       {pilotToolsEnabled && <PilotGuideWidget />}
-    </>
+    </div>
   );
 };
 

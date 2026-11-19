@@ -1,60 +1,108 @@
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowUpRight, CheckCircle, ShieldAlert, FileCode, Video, FileText, UploadCloud, ExternalLink, CheckCircle2, ChevronDown, ChevronUp, ArrowLeft, Copy, Share2, QrCode, X, RotateCcw } from 'lucide-react';
+import {
+  Wallet,
+  ArrowUpRight,
+  CheckCircle,
+  ShieldAlert,
+  FileCode,
+  Video,
+  FileText,
+  UploadCloud,
+  ExternalLink,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeft,
+  Share2,
+  QrCode,
+  RotateCcw,
+} from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { isDemoWallet, isSimulatorWallet, buildExplorerAccountUrl } from '../lib/stellar';
 import { isNonEvidenceHash, describePayout, onChainEarnings } from '../lib/ledgerIntegrity';
 import { safeHttpsUrl } from '../lib/taskLifecycle';
-import { buildInviteLink, buildInviteQrDataUrl } from '../lib/invite';
+import { buildInviteLink, shortStellarAddress } from '../lib/invite';
 import TaskProgress from '../components/TaskProgress';
+import PayQrModal from '../components/PayQrModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
 import { isPilotToolsEnabled } from '../lib/env';
+
+const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
 
 const FreelancerDashboard = () => {
   const { user, publicKey, switchRole, isSimulationMode } = useAuth();
   const { tasks, refreshTasks, updateTaskStatus, submitProofOfWork } = useTasks();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showPayQrModal, setShowPayQrModal] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const { addToast } = useToast();
   const navigate = useNavigate();
   const pilotToolsEnabled = isPilotToolsEnabled();
-  // Invite QR: the partner scans it with the camera app, so the link opens in the phone's real browser
-  // (never a chat app's in-app browser) and the client signs up, locks and releases in that one browser.
-  const [inviteQr, setInviteQr] = useState(null);
-  useEffect(() => {
-    if (!inviteQr || typeof window === 'undefined') return undefined;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setInviteQr(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inviteQr]);
-  const showInviteQr = async () => {
-    try {
-      setInviteQr({ src: await buildInviteQrDataUrl(publicKey), link: buildInviteLink(publicKey) });
-    } catch {
-      addToast("Couldn't draw the QR code. Use Share invite link instead.", 'warning');
-    }
-  };
 
   const {
     isCompleted: isPilotCompleted,
     openFormLink,
-    markCompleted: markPilotCompleted
+    markCompleted: markPilotCompleted,
   } = usePilotFeedbackState();
 
-  // Tasks that pay this freelancer's own wallet come first: in a busy session the open list holds everyone's
-  // tasks, and students kept accepting (or searching for) the wrong one.
+  // Open Pay QR modal when triggered from MobileBottomNav
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const openQr = () => setShowPayQrModal(true);
+    window.addEventListener('gigpay:open-pay-qr', openQr);
+    return () => window.removeEventListener('gigpay:open-pay-qr', openQr);
+  }, []);
+
+  // Load freelancer display name quietly for the branded QR Ph Save-to-Photos card
+  useEffect(() => {
+    let active = true;
+    const fallbackName =
+      user?.user_metadata?.display_name ||
+      (user?.email ? user.email.split('@')[0] : '');
+
+    if (!user?.id || isSimulationMode || !isUuid(user.id)) {
+      setDisplayName(fallbackName);
+      return undefined;
+    }
+
+    try {
+      const profileQuery = supabase?.from?.('profiles')?.select?.('display_name');
+      if (typeof profileQuery?.eq === 'function') {
+        Promise.resolve(profileQuery.eq('id', user.id).single())
+          .then(({ data } = {}) => {
+            if (!active) return;
+            setDisplayName(data?.display_name?.trim() || fallbackName);
+          })
+          .catch(() => {
+            if (active) setDisplayName(fallbackName);
+          });
+      } else {
+        setDisplayName(fallbackName);
+      }
+    } catch {
+      if (active) setDisplayName(fallbackName);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, user?.email, user?.user_metadata?.display_name, isSimulationMode]);
+
   const isMine = (t) => !!publicKey && t.freelancer_wallet === publicKey;
   const availableTasks = tasks
-    .filter(t => t.status === 'Available')
+    .filter((t) => t.status === 'Available')
     .sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
-  const acceptedTasks = tasks.filter(t => (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') && (t.freelancer_id === user?.id || (isSimulationMode && t.freelancer_id === 'demo-freelancer-uuid-002')));
-  
-  // Only escrows the contract actually released to this payout address (see onChainEarnings).
+  const acceptedTasks = tasks.filter(
+    (t) =>
+      (t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed') &&
+      (t.freelancer_id === user?.id || (isSimulationMode && t.freelancer_id === 'demo-freelancer-uuid-002'))
+  );
+
   const earnings = onChainEarnings(tasks, publicKey);
   const totalEarned = Number(earnings.total.toFixed(7));
 
@@ -62,8 +110,7 @@ const FreelancerDashboard = () => {
   const [acceptingTaskId, setAcceptingTaskId] = useState(null);
   const acceptInFlightRef = useRef(false);
   const powInFlightRef = useRef(false);
-  
-  // Proof of Work Submission State (Sprint 2 draft D3)
+
   const [expandedPoWTask, setExpandedPoWTask] = useState(null);
   const [githubPrUrl, setGithubPrUrl] = useState('');
   const [docUrl, setDocUrl] = useState('');
@@ -94,14 +141,15 @@ const FreelancerDashboard = () => {
     setIsAccepting(true);
     setAcceptingTaskId(id);
     try {
-      // updateTaskStatus asks for the one wallet confirmation itself; asking here too made students sign twice.
       await updateTaskStatus(id, 'In Progress', true);
-      const isSimUser = isSimulationMode;
-      addToast(isSimUser
-        ? "Simulation only: task accepted in this browser. Nothing is locked on Stellar Testnet."
-        : "Task accepted. The payment stays locked in the escrow until the client releases it.", isSimUser ? "info" : "success");
+      addToast(
+        isSimulationMode
+          ? 'Simulation only: task accepted in this browser. Nothing is locked on Stellar Testnet.'
+          : 'Task accepted. Funds stay locked in Soroban escrow until your client approves release.',
+        isSimulationMode ? 'info' : 'success'
+      );
     } catch (err) {
-      addToast("Failed to accept task: " + (err?.message || err), "error");
+      addToast(`Failed to accept task: ${err?.message || err}`, 'error');
     } finally {
       acceptInFlightRef.current = false;
       setIsAccepting(false);
@@ -111,21 +159,23 @@ const FreelancerDashboard = () => {
 
   const handleSubmitProof = async (taskId) => {
     if (powInFlightRef.current || isSubmittingPoW) return;
-    let finalDocUrl = docUrl ? docUrl.trim() : '';
-    let finalGithubUrl = githubPrUrl ? githubPrUrl.trim() : '';
-    let finalLoomUrl = loomUrl ? loomUrl.trim() : '';
+    const finalDocUrl = docUrl ? docUrl.trim() : '';
+    const finalGithubUrl = githubPrUrl ? githubPrUrl.trim() : '';
+    const finalLoomUrl = loomUrl ? loomUrl.trim() : '';
     const finalNotes = submissionNotes ? submissionNotes.trim() : '';
 
-    // Sprint 2 draft D3(a): proof of work is at least one link (GitHub PR, document or Loom). A note alone isn't proof;
-    // the walkthrough recording on Nov 15, 2026 (escrow #73) showed a note-only submission was accepted.
     if (!finalGithubUrl && !finalDocUrl && !finalLoomUrl) {
-      addToast("Add at least one link to your work: a GitHub PR, a document, or a Loom video. The note is optional.", "warning");
+      addToast(
+        'Add at least one deliverable link (Document, GitHub PR, or Loom walkthrough). Notes are optional.',
+        'warning'
+      );
       return;
     }
-    // Only real web links are saved as proof; nothing is filled in on the freelancer's behalf.
-    const badLink = [finalGithubUrl, finalDocUrl, finalLoomUrl].find((u) => u && (!/^https:\/\//i.test(u) || !safeHttpsUrl(u)));
+    const badLink = [finalGithubUrl, finalDocUrl, finalLoomUrl].find(
+      (u) => u && (!/^https:\/\//i.test(u) || !safeHttpsUrl(u))
+    );
     if (badLink) {
-      addToast("Work links must be valid https:// URLs so your client can open them.", "warning");
+      addToast('Deliverable links must be valid https:// URLs so your client can open them safely.', 'warning');
       return;
     }
 
@@ -136,7 +186,7 @@ const FreelancerDashboard = () => {
         githubPrUrl: finalGithubUrl,
         docUrl: finalDocUrl,
         loomUrl: finalLoomUrl,
-        notes: finalNotes || 'Completed milestone deliverables per project requirements.'
+        notes: finalNotes || 'Completed milestone deliverables per project requirements.',
       });
       setExpandedPoWTask(null);
       setGithubPrUrl('');
@@ -144,309 +194,297 @@ const FreelancerDashboard = () => {
       setLoomUrl('');
       setSubmissionNotes('');
     } catch (err) {
-      addToast("Failed to submit proof of work: " + err.message, "error");
+      addToast(`Failed to submit proof of work: ${err.message}`, 'error');
     } finally {
       powInFlightRef.current = false;
       setIsSubmittingPoW(false);
     }
   };
 
+  const handleQuickShareLink = async () => {
+    if (!publicKey || isDemoWallet(publicKey)) {
+      setShowPayQrModal(true);
+      return;
+    }
+    const link = buildInviteLink(publicKey, { name: displayName });
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: displayName ? `Pay ${displayName} on GigPay` : 'Pay me on GigPay',
+          text: 'Lock milestone funds in GigPay escrow:',
+          url: link,
+        });
+        return;
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+    try {
+      await navigator.clipboard.writeText(link);
+      addToast('Invite link copied. Send it to your client to pre-fill your payout address.', 'success');
+    } catch {
+      addToast(`Send your client this link: ${link}`, 'warning');
+    }
+  };
+
+  const hasShareableWallet = Boolean(publicKey && !isDemoWallet(publicKey));
+  const explorerAccountUrl = hasShareableWallet ? buildExplorerAccountUrl(publicKey) : null;
+
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="animate-fade-in flex flex-col gap-6">
+      {/* Action-First Workspace Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-            <h2 style={{ margin: 0 }}>Freelancer Portal</h2>
-            <span style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(139, 92, 246, 0.4)' }}>
-              Freelancer View
-            </span>
-          </div>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Show your partner your invite QR, accept their task, then submit your work to get paid.
+          <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+            Freelancer Workspace
+          </h1>
+          <p className="mt-1 mb-0 text-[14px] text-[var(--text-muted)]">
+            Share your Pay QR, accept funded milestones, and submit deliverables to settle in five seconds.
           </p>
         </div>
-        {user?.is_simulation_mode && (
-        <button
-          type="button"
-          onClick={() => {
-            switchRole('client');
-            addToast("Switched to Client Mode! Create escrow tasks and approve payouts.", "info");
-            navigate('/client');
-          }}
-          className="btn btn-outline"
-          style={{
-            borderColor: 'rgba(59, 130, 246, 0.5)',
-            background: 'rgba(59, 130, 246, 0.1)',
-            color: '#60a5fa',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            fontSize: '0.82rem',
-            padding: '0.5rem 0.85rem'
-          }}
-        >
-          <ArrowLeft size={14} /> Switch to Client Portal
-        </button>
-        )}
-      </div>
 
-      {/* Payout address: the contract fixes the recipient when the client funds the escrow, so the
-          freelancer must give the client this address BEFORE the task is funded. */}
-      {publicKey && !isDemoWallet(publicKey) && (
-        <div className="glass-panel" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #a78bfa' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-            <h4 style={{ margin: 0 }}>Your payout address</h4>
-            {isSimulatorWallet(publicKey) && (
-              <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 'bold', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
-                Practice wallet · Testnet only
-              </span>
-            )}
-          </div>
-          <p style={{ color: 'var(--text-muted)', margin: '0 0 0.6rem', fontSize: '0.88rem' }}>
-            GigPay pays you at this address when your partner approves your work.
-          </p>
-          <ol data-testid="freelancer-invite-steps" style={{ margin: '0 0 0.75rem', paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: 1.55 }}>
-            <li>Wait until the top bar shows your balance (usually 10,000 XLM, up to 30 seconds).</li>
-            <li>Tap <strong>Show invite QR</strong>.</li>
-            <li>Your partner scans it with their phone's camera app and signs up as <strong>Client</strong>.</li>
-          </ol>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <code style={{ flex: '1 1 260px', minWidth: 0, overflowWrap: 'anywhere', background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.8rem' }}>
-              {publicKey}
-            </code>
-            <button
-              type="button"
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(publicKey);
-                  addToast("Payout address copied. Send it to your client.", "success");
-                } catch {
-                  addToast("Couldn't copy automatically. Select the address and copy it.", "warning");
-                }
-              }}
-            >
-              <Copy size={14} /> Copy
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
-              onClick={async () => {
-                // One link instead of a 56-character address: the client's task form is pre-filled with it.
-                const link = buildInviteLink(publicKey);
-                try {
-                  if (navigator.share) {
-                    await navigator.share({ title: 'Pay me on GigPay', text: 'Create our GigPay task here. My payout address is already filled in:', url: link });
-                    return;
-                  }
-                } catch (err) {
-                  if (err?.name === 'AbortError') return;
-                }
-                try {
-                  await navigator.clipboard.writeText(link);
-                  addToast('Invite link copied. Send it to your client: it fills in your payout address for them.', 'success');
-                } catch {
-                  addToast(`Couldn't copy automatically. Send your client this link: ${link}`, 'warning');
-                }
-              }}
-            >
-              <Share2 size={14} /> Share invite link
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              data-testid="show-invite-qr"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
-              onClick={showInviteQr}
-            >
-              <QrCode size={14} /> Show invite QR
-            </button>
-          </div>
-        </div>
-      )}
-
-      {inviteQr && typeof document !== 'undefined' && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Invite QR code"
-          onClick={() => setInviteQr(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(3, 7, 18, 0.88)', display: 'flex', alignItems: 'safe center', justifyContent: 'center', overflowY: 'auto', padding: '1rem', boxSizing: 'border-box' }}
-        >
-          <div
-            className="glass-panel"
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '360px', textAlign: 'center', position: 'relative', padding: '1.25rem' }}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPayQrModal(true)}
+            data-testid="show-invite-qr"
+            className="gp-btn gp-btn-primary"
           >
+            <QrCode size={16} />
+            My Pay QR
+          </button>
+          {hasShareableWallet && (
+            <button type="button" onClick={handleQuickShareLink} className="gp-btn gp-btn-secondary">
+              <Share2 size={15} />
+              Share link
+            </button>
+          )}
+
+          {user?.is_simulation_mode && (
             <button
               type="button"
-              aria-label="Close"
-              onClick={() => setInviteQr(null)}
-              style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.75rem', minWidth: '44px', minHeight: '44px' }}
+              onClick={() => {
+                switchRole('client');
+                addToast('Switched to Client mode.', 'info');
+                navigate('/client');
+              }}
+              className="gp-btn gp-btn-secondary"
             >
-              <X size={20} />
+              <ArrowLeft size={14} />
+              Client view
             </button>
-            <h4 style={{ margin: '0 0 0.75rem' }}>Your partner scans this</h4>
-            <img
-              src={inviteQr.src}
-              alt="QR code of your GigPay invite link"
-              data-testid="invite-qr-image"
-              style={{ width: '100%', maxWidth: '280px', aspectRatio: '1 / 1', background: '#fff', borderRadius: '0.6rem', padding: '0.4rem' }}
-            />
-            <p style={{ margin: '0.85rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-              <strong style={{ color: 'white' }}>Partner:</strong> scan with your <strong style={{ color: 'white' }}>camera app</strong>, then sign up as <strong style={{ color: 'white' }}>Client</strong> and do everything (lock and release) in that same browser.
-            </p>
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{inviteQr.link}</p>
-          </div>
-        </div>,
-        // Rendered on <body>: the dashboard's fade-in animation uses a transform, which would otherwise
-        // trap this fixed overlay inside the page column instead of covering the screen.
-        document.body
-      )}
-
-      {/* Earnings Overview Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', marginBottom: '3rem' }}>
-        <div className="glass-panel" style={{ flex: '1 1 250px', borderLeft: '4px solid var(--accent)' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total Earned <span style={{ fontWeight: 'normal', fontSize: '0.85rem' }}>(paid on-chain)</span></h4>
-          <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{totalEarned} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span></div>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            {earnings.count > 0
-              ? `From ${earnings.count} escrow${earnings.count === 1 ? '' : 's'} released to your payout address.`
-              : 'Escrows released to your payout address appear here.'}
-          </p>
-        </div>
-        <div className="glass-panel" style={{ flex: '1 1 250px' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Escrows</h4>
-          <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{acceptedTasks.length}</div>
-        </div>
-        <div className="glass-panel" style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem' }}>
-          <h4 style={{ color: 'var(--text-muted)', margin: 0 }}>Where your payment goes</h4>
-          <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-            Approved payments go straight to your payout address on Stellar Testnet. Testnet XLM is practice money with no cash value. Bank or GCash withdrawal is not part of this pilot.
-          </p>
-          {publicKey && !isDemoWallet(publicKey) && buildExplorerAccountUrl(publicKey) && (
-            <a className="btn btn-outline" href={buildExplorerAccountUrl(publicKey)} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
-              <Wallet size={16} /> Check my balance on Stellar Expert <ExternalLink size={13} />
-            </a>
           )}
         </div>
       </div>
 
-      {/* Pilot Tester Notice Card */}
-      {pilotToolsEnabled && !isPilotCompleted && (
-        <div 
-          className="glass-panel" 
-          style={{ 
-            marginBottom: '1.5rem', 
-            padding: '1.25rem 1.5rem', 
-            border: '1px solid rgba(0, 242, 254, 0.3)', 
-            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(9, 13, 22, 0.85) 100%)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ flex: '1 1 300px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', border: '1px solid rgba(0, 242, 254, 0.35)', textTransform: 'uppercase' }}>
-                  ⚡ Freelancer Pilot Cohort
-                </span>
-                <h4 style={{ margin: 0, fontSize: '1rem', color: '#fff' }}>Early Tester Feedback</h4>
-              </div>
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
-                Tried a full payment? Tell us what worked and what confused you. It takes about a minute.
-              </p>
+      {/* Compact Earnings & Payout Strip */}
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] md:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,1.4fr)]">
+        <div className="bg-[var(--bg-surface)] p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Total Earned (paid on-chain)</div>
+          <div className="gp-amount gp-amount--money mt-1 text-3xl">
+            {totalEarned}{' '}
+            <span className="text-[14px] font-medium text-[var(--text-muted)]">XLM</span>
+          </div>
+          <p className="mt-1 mb-0 text-[12.5px] text-[var(--text-muted)]">
+            {earnings.count > 0
+              ? `From ${earnings.count} escrow${earnings.count === 1 ? '' : 's'} released to your wallet.`
+              : 'Released escrows appear here.'}
+          </p>
+        </div>
+
+        <div className="bg-[var(--bg-surface)] p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Active Escrows</div>
+          <div className="gp-amount mt-1 text-3xl">{acceptedTasks.length}</div>
+          {hasShareableWallet && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-[var(--text-muted)]">
+              <span className="gp-mono">{shortStellarAddress(publicKey)}</span>
+              {isSimulatorWallet(publicKey) && <span>· Practice</span>}
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          )}
+        </div>
+
+        <div className="flex flex-col justify-between gap-3 bg-[var(--bg-surface)] p-5">
+          <div>
+            <div className="text-[13px] font-semibold text-[var(--text-primary)]">Where your payment goes</div>
+            <p className="mt-1 mb-0 text-[13px] leading-relaxed text-[var(--text-muted)]">
+              Approved payments go straight to your Stellar Testnet address. Testnet XLM is practice money with no cash value; bank or GCash withdrawal is not part of this pilot.
+            </p>
+          </div>
+          {explorerAccountUrl && (
+            <div>
               <a
-                href={PILOT_FORM_URL}
+                href={explorerAccountUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => openFormLink('freelancer_card_clicked')}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem', textDecoration: 'none' }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--signal-money-fg)] no-underline hover:underline"
               >
-                <span>Complete 60s Form</span> <ExternalLink size={13} />
+                <Wallet size={14} />
+                Check balance on Stellar Expert
+                <ExternalLink size={12} />
               </a>
-              <button
-                type="button"
-                onClick={() => {
-                  markPilotCompleted();
-                  addToast('🎉 Thanks for your feedback!', 'success');
-                }}
-                className="btn btn-outline"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.85rem', borderColor: 'rgba(0, 245, 160, 0.4)', background: 'rgba(0, 245, 160, 0.08)', color: 'var(--accent, #00f5a0)' }}
-              >
-                <CheckCircle2 size={13} /> I've Completed It
-              </button>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pilot Feedback Banner (strictly gated behind VITE_ENABLE_PILOT_TOOLS) */}
+      {pilotToolsEnabled && !isPilotCompleted && (
+        <div className="gp-card flex flex-wrap items-center justify-between gap-4 p-4">
+          <div>
+            <div className="text-[14px] font-semibold text-[var(--text-primary)]">Early Tester Feedback</div>
+            <p className="mt-0.5 mb-0 text-[13px] text-[var(--text-muted)]">
+              Completed an escrow run? Share quick feedback to help refine GigPay.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={PILOT_FORM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => openFormLink('freelancer_card_clicked')}
+              className="gp-btn gp-btn-primary"
+            >
+              Complete 60s Form
+              <ExternalLink size={13} />
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                markPilotCompleted();
+                addToast('Thanks for your feedback.', 'success');
+              }}
+              className="gp-btn gp-btn-secondary"
+            >
+              <CheckCircle2 size={14} />
+              I&apos;ve Completed It
+            </button>
           </div>
         </div>
       )}
 
-      {/* Available Jobs */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        <h3 style={{ margin: 0 }}>Available Funded Tasks</h3>
-        <button
-          type="button"
-          className="btn btn-outline"
-          data-testid="refresh-tasks"
-          disabled={isRefreshing}
-          onClick={async () => {
-            setIsRefreshing(true);
-            const ok = await refreshTasks();
-            setIsRefreshing(false);
-            addToast(ok ? 'Tasks refreshed.' : "Couldn't refresh. Check your connection and try again.", ok ? 'success' : 'warning');
-          }}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', padding: '0.45rem 0.9rem' }}
-        >
-          <RotateCcw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh tasks'}
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {availableTasks.length === 0 && (
-          <p style={{ color: 'var(--text-muted)' }}>Waiting for your partner to lock the payment. It appears here within a few seconds; tap Refresh tasks if it doesn't.</p>
-        )}
-        {availableTasks.map(task => {
-          // The contract pays the address the client entered when funding; whoever accepts cannot change it.
-          const payout = describePayout(task, publicKey);
-          const fundedOnChain = !isNonEvidenceHash(task.tx_hash) && !task.is_simulated;
-          return (
-          <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <div>
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{task.title}</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Client: {task.client_id ? task.client_id.slice(0, 8) + '...' : 'Unknown'}</p>
-                <p style={{ color: payout.color, fontSize: '0.82rem', margin: '0.3rem 0 0' }}>{payout.text}</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <div style={{ fontWeight: 'bold', color: fundedOnChain ? 'var(--accent)' : 'var(--text-muted)' }}>
-                  {task.amount} XLM {fundedOnChain ? 'locked on-chain' : '(not funded on-chain)'}
-                </div>
-                <button
-                  className="btn btn-outline"
-                  style={{ padding: '0.5rem 1rem', opacity: !publicKey || isAccepting || !payout.canAccept ? 0.5 : 1 }}
-                  onClick={() => handleAcceptWork(task.id)}
-                  disabled={!publicKey || isAccepting || !payout.canAccept}
-                  title={!publicKey ? "Connect wallet to accept work" : (!payout.canAccept ? "This payment is reserved for another freelancer" : "")}
-                >
-                  {acceptingTaskId === task.id ? 'Signing...' : <>Accept Work <ArrowUpRight size={16} /></>}
-                </button>
-              </div>
-            </div>
-            <TaskProgress status={task.status} />
-          </div>
-          );
-        })}
-      </div>
+      {/* Available Funded Tasks */}
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">Available Funded Tasks</h2>
+          <button
+            type="button"
+            className="gp-btn gp-btn-secondary"
+            data-testid="refresh-tasks"
+            disabled={isRefreshing}
+            onClick={async () => {
+              setIsRefreshing(true);
+              const ok = await refreshTasks();
+              setIsRefreshing(false);
+              addToast(
+                ok ? 'Tasks refreshed.' : "Couldn't refresh. Check your connection and try again.",
+                ok ? 'success' : 'warning'
+              );
+            }}
+          >
+            <RotateCcw size={14} />
+            {isRefreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
 
-      {/* Active Jobs & Proof of Work Submission (Sprint 2 draft D3) */}
+        {availableTasks.length === 0 ? (
+          <div className="gp-card flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+              <h3 className="m-0 text-base font-semibold text-[var(--text-primary)]">No funded tasks waiting</h3>
+              <p className="mt-1 mb-0 text-[14px] text-[var(--text-muted)]">
+                Share your Pay QR card so a client can lock funds straight to your wallet. New escrows sync automatically.
+              </p>
+            </div>
+            {hasShareableWallet && (
+              <button
+                type="button"
+                onClick={() => setShowPayQrModal(true)}
+                className="gp-btn gp-btn-primary"
+              >
+                <QrCode size={15} />
+                Open My Pay QR
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {availableTasks.map((task) => {
+              const payout = describePayout(task, publicKey);
+              const fundedOnChain = !isNonEvidenceHash(task.tx_hash) && !task.is_simulated;
+              const paysMe = isMine(task);
+              return (
+                <article key={task.id} className="gp-card flex flex-col gap-4 p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="m-0 text-base font-semibold text-[var(--text-primary)]">{task.title}</h4>
+                        {paysMe && (
+                          <span className="gp-status gp-status--money !text-[12px]">
+                            <span className="gp-status-dot" />
+                            Reserved for your wallet
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-[13px] text-[var(--text-muted)]">
+                        Client: {task.client_id ? `${task.client_id.slice(0, 8)}…` : 'Unknown'}
+                      </div>
+                      <p
+                        className={`mt-1 mb-0 text-[13px] ${
+                          payout.canAccept ? 'text-[var(--signal-money-fg)]' : 'text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {payout.text}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="text-right">
+                        <div className={`gp-amount text-lg ${fundedOnChain ? 'gp-amount--money' : ''}`}>
+                          {task.amount} XLM
+                        </div>
+                        <div className="text-[12px] text-[var(--text-muted)]">
+                          {fundedOnChain ? 'Locked on-chain' : 'Not funded on-chain'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className={payout.canAccept ? 'gp-btn gp-btn-primary' : 'gp-btn gp-btn-secondary'}
+                        onClick={() => handleAcceptWork(task.id)}
+                        disabled={!publicKey || isAccepting || !payout.canAccept}
+                        title={
+                          !publicKey
+                            ? 'Connect wallet to accept work'
+                            : !payout.canAccept
+                              ? 'This payment is reserved for another freelancer'
+                              : ''
+                        }
+                      >
+                        {acceptingTaskId === task.id ? (
+                          'Accepting…'
+                        ) : (
+                          <>
+                            Accept Work
+                            <ArrowUpRight size={16} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <TaskProgress status={task.status} />
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Active Milestones & Deliverables */}
       {acceptedTasks.length > 0 && (
-        <>
-          <h3 style={{ marginTop: '3rem', marginBottom: '1.5rem' }}>Your Active Jobs & Deliverables</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {acceptedTasks.map(task => {
+        <section className="flex flex-col gap-4 pt-2">
+          <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
+            Active Milestones &amp; Deliverables
+          </h2>
+          <div className="flex flex-col gap-4">
+            {acceptedTasks.map((task) => {
               const isDisputed = task.status === 'Disputed';
               const dispute = getDisputeMetadata(task);
               const safeGithubUrl = safeHttpsUrl(task.github_pr_url);
@@ -456,231 +494,230 @@ const FreelancerDashboard = () => {
               const isExpanded = expandedPoWTask === task.id;
 
               return (
-                <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: isDisputed ? '4px solid #ef4444' : '4px solid #10b981' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                <article
+                  key={task.id}
+                  className={`gp-card flex flex-col gap-4 p-5 ${isDisputed ? 'gp-card--disputed' : ''}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{task.title}</h4>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        Client: {task.client_id ? task.client_id.slice(0, 8) + '...' : 'Unknown'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                      <div style={{ fontWeight: 'bold', color: isDisputed ? '#ef4444' : 'var(--accent)' }}>
-                        {task.amount} XLM Locked
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="m-0 text-base font-semibold text-[var(--text-primary)]">{task.title}</h4>
+                        <span
+                          className={`gp-status ${
+                            isDisputed
+                              ? 'gp-status--danger'
+                              : task.status === 'Under Review'
+                                ? 'gp-status--warn'
+                                : 'gp-status--money'
+                          }`}
+                        >
+                          {isDisputed ? <ShieldAlert size={13} /> : <CheckCircle size={13} />}
+                          {isDisputed
+                            ? 'Release paused (app-level)'
+                            : task.status === 'Under Review'
+                              ? 'Under review'
+                              : 'In progress'}
+                        </span>
                       </div>
-                      <span style={{ 
-                        color: isDisputed ? '#ef4444' : '#10b981', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.4rem', 
-                        fontWeight: 'bold',
-                        background: isDisputed ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                        padding: '0.25rem 0.65rem',
-                        borderRadius: '999px',
-                        fontSize: '0.8rem'
-                      }}>
-                        {isDisputed ? <ShieldAlert size={14} /> : <CheckCircle size={14} />} 
-                        {isDisputed ? 'Release paused (app-level)' : task.status === 'Under Review' ? 'Submitted: waiting for client approval' : 'In Progress'}
-                      </span>
+                      <div className="mt-1 text-[13px] text-[var(--text-muted)]">
+                        Client: {task.client_id ? `${task.client_id.slice(0, 8)}…` : 'Unknown'}
+                      </div>
+                    </div>
+
+                    <div className={`gp-amount text-xl ${isDisputed ? 'gp-amount--danger' : 'gp-amount--money'}`}>
+                      {task.amount} XLM
                     </div>
                   </div>
 
-                  {/* Dispute Banner if flagged */}
                   {isDisputed && (
-                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.75rem', fontSize: '0.85rem', color: '#fca5a5' }}>
-                      <strong>⚠️ Release paused (app-level):</strong> The client flagged this task as Disputed ({task.dispute_reason || 'reason not recorded'}). Standard release is paused until resolved.
-                      <div data-testid="dispute-metadata" style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: '0.3rem' }}>
+                    <div className="rounded-xl border border-[var(--signal-danger-border)] bg-[var(--signal-danger-bg)] p-3.5 text-[13px]">
+                      <div className="font-semibold text-[var(--signal-danger)]">
+                        Release paused (app-level): {task.dispute_reason || 'reason not recorded'}
+                      </div>
+                      <div data-testid="dispute-metadata" className="mt-1 text-[12.5px] text-[var(--text-secondary)]">
                         <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
                       </div>
                     </div>
                   )}
+
                   {!isDisputed && dispute.resolvedAt && (
-                    <div data-testid="dispute-history" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.6rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by {dispute.raisedBy}
+                    <div
+                      data-testid="dispute-history"
+                      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3.5 py-2.5 text-[12.5px] text-[var(--text-muted)]"
+                    >
+                      <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by{' '}
+                      {dispute.raisedBy}
                       {task.dispute_reason ? ` ("${task.dispute_reason}")` : ''}; resolved {dispute.resolvedAt}.
                     </div>
                   )}
 
-                  {/* Attached Deliverables Badge Section */}
                   {hasProof && (
-                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10b981', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-                        <CheckCircle2 size={14} /> Proof of Work Deliverables Attached:
+                    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3.5">
+                      <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--signal-money-fg)]">
+                        <CheckCircle2 size={14} />
+                        Attached deliverables
                       </div>
-                      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
                         {safeGithubUrl && (
-                          <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
-                            <FileCode size={13} /> GitHub PR <ExternalLink size={11} />
+                          <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                            <FileCode size={13} />
+                            GitHub PR
+                            <ExternalLink size={11} />
                           </a>
                         )}
                         {safeDocUrl && (
-                          <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
-                            <FileText size={13} /> Deliverable Doc <ExternalLink size={11} />
+                          <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                            <FileText size={13} />
+                            Deliverable Doc
+                            <ExternalLink size={11} />
                           </a>
                         )}
                         {safeLoomUrl && (
-                          <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
-                            <Video size={13} /> Loom Walkthrough <ExternalLink size={11} />
+                          <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                            <Video size={13} />
+                            Loom Walkthrough
+                            <ExternalLink size={11} />
                           </a>
                         )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Expandable Submission Form Button (hidden while a dispute freezes the task) */}
-                  {isDisputed ? (
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingTop: '0.25rem' }}>
-                      Proof of work is paused while this dispute is open. Once your client resolves it, you can submit proof again.
-                    </div>
-                  ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.25rem' }}>
-                    <button
-                      type="button"
-                      disabled={isSubmittingPoW}
-                      onClick={() => togglePowForm(task)}
-                      className="btn btn-outline"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.4rem 0.8rem', borderColor: 'var(--accent)', color: 'var(--accent)', opacity: isSubmittingPoW ? 0.55 : 1, cursor: isSubmittingPoW ? 'not-allowed' : 'pointer' }}
-                    >
-                      <UploadCloud size={15} />
-                      {hasProof ? 'Update Proof of Work' : 'Attach Proof of Work Deliverables'}
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      Required before client milestone release
-                    </span>
-                  </div>
-                  )}
-
-                  {/* Expandable PoW Form */}
-                  {isExpanded && !isDisputed && (
-                    <div style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
-                      borderRadius: '8px',
-                      padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.85rem',
-                      marginTop: '0.5rem'
-                    }}>
-                      <h5 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <UploadCloud size={16} color="var(--accent)" /> Submit Milestone Deliverables & Proof
-                      </h5>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          Attach your work link (Google Drive, Canva, Figma, Docs, or GitHub) for client verification.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSubmissionNotes('Test submission: no real deliverable (GigPay practice run).');
-                            addToast('Filled a practice note. Add a real link if you have one.', 'info');
-                          }}
-                          style={{
-                            background: 'rgba(0, 242, 254, 0.12)',
-                            border: '1px solid rgba(0, 242, 254, 0.4)',
-                            color: '#00f2fe',
-                            padding: '0.28rem 0.65rem',
-                            borderRadius: '6px',
-                            fontSize: '0.74rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                          }}
-                        >
-                          ⚡ 1-Click Auto-Fill Sample (For Non-Dev Testers)
-                        </button>
-                      </div>
-
-                      <div>
-                        <label htmlFor={`pow-doc-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-                          1. Document, Design, or Work Link (Google Drive, Canva, Figma, Notion, Docs)
-                        </label>
-                        <input
-                          id={`pow-doc-${task.id}`}
-                          type="url"
-                          placeholder="https://docs.google.com/... or Google Drive / Canva link"
-                          value={docUrl}
-                          onChange={(e) => setDocUrl(e.target.value)}
-                          style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '0.82rem' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`pow-github-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-                          2. GitHub Pull Request URL (Optional — For Software Developers)
-                        </label>
-                        <input
-                          id={`pow-github-${task.id}`}
-                          type="url"
-                          placeholder="https://github.com/organization/repo/pull/12"
-                          value={githubPrUrl}
-                          onChange={(e) => setGithubPrUrl(e.target.value)}
-                          style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '0.82rem' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`pow-loom-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-                          3. Loom / Demo Walkthrough Video URL
-                        </label>
-                        <input
-                          id={`pow-loom-${task.id}`}
-                          type="url"
-                          placeholder="https://www.loom.com/share/..."
-                          value={loomUrl}
-                          onChange={(e) => setLoomUrl(e.target.value)}
-                          style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '0.82rem' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`pow-notes-${task.id}`} style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-                          4. Summary Notes / Changelog
-                        </label>
-                        <textarea
-                          id={`pow-notes-${task.id}`}
-                          rows={2}
-                          placeholder="Brief description of work completed for client verification..."
-                          value={submissionNotes}
-                          onChange={(e) => setSubmissionNotes(e.target.value)}
-                          style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '0.82rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.25rem' }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() => togglePowForm(null)}
-                          disabled={isSubmittingPoW}
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => handleSubmitProof(task.id)}
-                          disabled={isSubmittingPoW}
-                          style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}
-                        >
-                          {isSubmittingPoW ? 'Attaching Proof...' : 'Submit Deliverables'}
-                        </button>
                       </div>
                     </div>
                   )}
 
                   <TaskProgress status={task.status} />
-                </div>
+
+                  {isDisputed ? (
+                    <div className="border-t border-[var(--border-subtle)] pt-3 text-[13px] text-[var(--text-muted)]">
+                      Proof of work is paused while this dispute is open. Once your client resolves it, you can submit deliverables again.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3.5">
+                      <span className="text-[12.5px] text-[var(--text-muted)]">
+                        Attach at least one deliverable link before requesting release.
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isSubmittingPoW}
+                        onClick={() => togglePowForm(task)}
+                        className="gp-btn gp-btn-secondary"
+                      >
+                        <UploadCloud size={15} />
+                        {hasProof ? 'Update Proof of Work' : 'Attach Proof of Work Deliverables'}
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    </div>
+                  )}
+
+                  {isExpanded && !isDisputed && (
+                    <div className="mt-1 flex flex-col gap-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h5 className="m-0 text-[14px] font-semibold text-[var(--text-primary)]">
+                          Submit Milestone Deliverables
+                        </h5>
+                        {pilotToolsEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSubmissionNotes('Test submission: practice note without deliverable link.');
+                              addToast('Filled a practice note. Add an https:// deliverable link to submit.', 'info');
+                            }}
+                            className="gp-btn gp-btn-ghost !min-h-[32px] !px-2.5 !text-[12px]"
+                          >
+                            Fill sample note
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="gp-field">
+                        <label htmlFor={`pow-doc-${task.id}`} className="gp-label">
+                          Document, Design, or Work Link (Figma, Google Drive, Canva, Notion)
+                        </label>
+                        <input
+                          id={`pow-doc-${task.id}`}
+                          type="url"
+                          placeholder="https://www.figma.com/file/… or Google Drive link"
+                          value={docUrl}
+                          onChange={(e) => setDocUrl(e.target.value)}
+                          className="gp-input"
+                        />
+                      </div>
+
+                      <div className="gp-field">
+                        <label htmlFor={`pow-github-${task.id}`} className="gp-label">
+                          GitHub Pull Request URL (optional)
+                        </label>
+                        <input
+                          id={`pow-github-${task.id}`}
+                          type="url"
+                          placeholder="https://github.com/org/repo/pull/12"
+                          value={githubPrUrl}
+                          onChange={(e) => setGithubPrUrl(e.target.value)}
+                          className="gp-input"
+                        />
+                      </div>
+
+                      <div className="gp-field">
+                        <label htmlFor={`pow-loom-${task.id}`} className="gp-label">
+                          Loom / Demo Walkthrough Video URL (optional)
+                        </label>
+                        <input
+                          id={`pow-loom-${task.id}`}
+                          type="url"
+                          placeholder="https://www.loom.com/share/…"
+                          value={loomUrl}
+                          onChange={(e) => setLoomUrl(e.target.value)}
+                          className="gp-input"
+                        />
+                      </div>
+
+                      <div className="gp-field">
+                        <label htmlFor={`pow-notes-${task.id}`} className="gp-label">
+                          Summary Notes (optional)
+                        </label>
+                        <textarea
+                          id={`pow-notes-${task.id}`}
+                          rows={2}
+                          placeholder="Brief summary of completed deliverables…"
+                          value={submissionNotes}
+                          onChange={(e) => setSubmissionNotes(e.target.value)}
+                          className="gp-textarea"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          className="gp-btn gp-btn-secondary"
+                          onClick={() => togglePowForm(null)}
+                          disabled={isSubmittingPoW}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="gp-btn gp-btn-money"
+                          onClick={() => handleSubmitProof(task.id)}
+                          disabled={isSubmittingPoW}
+                        >
+                          {isSubmittingPoW ? 'Submitting…' : 'Submit Deliverables'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
               );
             })}
           </div>
-        </>
+        </section>
       )}
 
+      {/* Branded QR Ph-Grade Save-to-Photos Pay QR Modal */}
+      <PayQrModal
+        isOpen={showPayQrModal}
+        onClose={() => setShowPayQrModal(false)}
+        payoutAddress={publicKey}
+        displayName={displayName}
+        onToast={addToast}
+      />
     </div>
   );
 };

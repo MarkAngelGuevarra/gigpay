@@ -1,20 +1,62 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, CheckCircle, Clock, AlertTriangle, Sparkles, ExternalLink, FileCode, FileText, Video, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import {
+  PlusCircle,
+  CheckCircle,
+  AlertTriangle,
+  Sparkles,
+  ExternalLink,
+  FileCode,
+  FileText,
+  Video,
+  CheckCircle2,
+  RotateCcw,
+  ArrowRight,
+  ScanLine,
+  X,
+} from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { formatStellarError, isSimulatedTxHash, buildExplorerTxUrl, parseXlmToStroops, GIGPAY_ESCROW_CONTRACT_ID, STELLAR_NETWORK_NAME } from '../lib/stellar';
+import {
+  formatStellarError,
+  isSimulatedTxHash,
+  buildExplorerTxUrl,
+  parseXlmToStroops,
+  GIGPAY_ESCROW_CONTRACT_ID,
+  STELLAR_NETWORK_NAME,
+} from '../lib/stellar';
 import { isNonEvidenceHash } from '../lib/ledgerIntegrity';
 import { safeHttpsUrl } from '../lib/taskLifecycle';
-import { peekInvitePayout, clearInvitePayout } from '../lib/invite';
+import { peekInvitePayload, clearInvitePayout, shortStellarAddress } from '../lib/invite';
 import { getDisputeMetadata } from '../lib/disputeMetadata';
 import { findRecentDuplicateLock, duplicateKey } from '../lib/duplicateLock';
 import TaskProgress from '../components/TaskProgress';
+import QrScannerModal from '../components/QrScannerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { recordStudentToGoogleSheet, isGoogleSheetsSyncEnabled } from '../lib/sheetsSync';
 import { isPilotToolsEnabled } from '../lib/env';
+
+const statusBadgeMeta = (status) => {
+  switch (status) {
+    case 'Completed':
+    case 'Paid':
+      return { label: 'Paid', cls: 'gp-status gp-status--money' };
+    case 'Under Review':
+      return { label: 'Under Review', cls: 'gp-status gp-status--warn' };
+    case 'Disputed':
+      return { label: 'Disputed', cls: 'gp-status gp-status--danger' };
+    case 'In Progress':
+      return { label: 'In Progress', cls: 'gp-status' };
+    case 'Confirming':
+      return { label: 'Confirming', cls: 'gp-status gp-status--warn' };
+    case 'Failed':
+      return { label: 'Failed', cls: 'gp-status gp-status--danger' };
+    default:
+      return { label: 'Funded', cls: 'gp-status gp-status--money' };
+  }
+};
 
 const ClientDashboard = () => {
   const { user, publicKey, connectTesterWallet, switchRole, isSimulationMode } = useAuth();
@@ -27,71 +69,90 @@ const ClientDashboard = () => {
   const {
     isCompleted: isPilotCompleted,
     openFormLink,
-    markCompleted: markPilotCompleted
+    markCompleted: markPilotCompleted,
   } = usePilotFeedbackState();
 
-  // Auto-connect testnet wallet on mount for mobile/tablet testers so session never resets to disconnected
+  // Auto-connect practice wallet on mount when needed so mobile sessions stay ready
   useEffect(() => {
     if (!publicKey && typeof connectTesterWallet === 'function') {
       connectTesterWallet();
     }
   }, [publicKey, connectTesterWallet]);
 
-  // Each client sees their own escrows by default. "All testers' escrows" is a read-only overview:
-  // only the client who funded an escrow can release it (database guard + contract auth).
   const [viewAllEscrows, setViewAllEscrows] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
 
-  // A task is yours only when its client_id is your account id. The offline demo account (no database)
-  // also owns local tasks saved without a client_id; a real account never claims those or demo tasks.
+  // Open QR scanner when triggered from MobileBottomNav
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const openScanner = () => setShowQrScanner(true);
+    window.addEventListener('gigpay:open-qr-scanner', openScanner);
+    return () => window.removeEventListener('gigpay:open-qr-scanner', openScanner);
+  }, []);
+
   const isDemoAccount = isSimulationMode || user?.id === 'demo-client-uuid-001';
-  const isOwnTask = (t) => !!user?.id && (
-    t.client_id === user.id ||
-    (isDemoAccount && (!t.client_id || String(t.client_id).startsWith('demo-')))
-  );
+  const isOwnTask = (t) =>
+    !!user?.id &&
+    (t.client_id === user.id ||
+      (isDemoAccount && (!t.client_id || String(t.client_id).startsWith('demo-'))));
   const ownTasks = tasks.filter(isOwnTask);
   const clientTasks = viewAllEscrows ? tasks : ownTasks;
 
-  // Metrics count only tasks whose funding transaction is real on Stellar Testnet. Summing every database
-  // row showed 6,770 XLM "escrowed" when about 3 XLM of those tasks was actually locked on-chain
-  // (19 demo/July tasks were never funded), which would misstate the evidence to anyone viewing the page.
-  // They count only your own tasks, even in the "All testers' escrows" overview.
-  const fundedTasks = ownTasks.filter(t => !t.is_simulated && t.status !== 'Confirming' && t.status !== 'Failed' && (
-    t.on_chain_task_id != null || (/^[0-9a-f]{64}$/.test(t.tx_hash || '') && !isSimulatedTxHash(t.tx_hash) && !isNonEvidenceHash(t.tx_hash))
-  ));
+  // Metrics count only escrows with verifiable on-chain funding
+  const fundedTasks = ownTasks.filter(
+    (t) =>
+      !t.is_simulated &&
+      t.status !== 'Confirming' &&
+      t.status !== 'Failed' &&
+      (t.on_chain_task_id != null ||
+        (/^[0-9a-f]{64}$/.test(t.tx_hash || '') &&
+          !isSimulatedTxHash(t.tx_hash) &&
+          !isNonEvidenceHash(t.tx_hash)))
+  );
   const totalEscrowed = fundedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-  const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length;
-  const completedTasks = fundedTasks.filter(t => t.status === 'Completed' || t.status === 'Paid');
+  const activeEscrows = fundedTasks.filter(
+    (t) => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed'
+  ).length;
+  const completedTasks = fundedTasks.filter((t) => t.status === 'Completed' || t.status === 'Paid');
   const totalReleased = completedTasks.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
   const totalTasksCount = fundedTasks.length;
-  const completionPercentage = totalTasksCount > 0 
-    ? Math.round((completedTasks.length / totalTasksCount) * 100) 
-    : 0;
-  
+  const completionPercentage = totalTasksCount > 0 ? Math.round((completedTasks.length / totalTasksCount) * 100) : 0;
+
   const [isTransacting, setIsTransacting] = useState(false);
-  // Refs prevent duplicate rapid taps before React commits disabled state.
   const lockInFlight = useRef(false);
   const actionInFlightRef = useRef(false);
   const duplicateConfirm = useRef({ key: '', until: 0 });
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskAmount, setNewTaskAmount] = useState('');
   const [freelancerWallet, setFreelancerWallet] = useState('');
-  // Freelancer invite link (/client?pay=G...): pre-fill the payout address so nobody retypes 56 characters.
-  // Kept (not consumed) until a lock succeeds, so a reload or a failed lock doesn't lose the address.
+
+  // Pre-fill from freelancer QR or invite link (?pay=G...&name=...&title=...&amount=...)
   useEffect(() => {
-    const invited = peekInvitePayout();
-    if (invited) {
-      setFreelancerWallet(invited);
-      addToast("Payout address filled in from your freelancer's invite link. Check it matches what they sent you.", 'success');
+    const invited = peekInvitePayload();
+    if (invited?.address) {
+      setFreelancerWallet(invited.address);
+      if (invited.name) setRecipientName(invited.name);
+      if (invited.title) setNewTaskTitle((prev) => prev || invited.title);
+      if (invited.amount) setNewTaskAmount((prev) => prev || invited.amount);
+      addToast(
+        invited.name
+          ? `Recipient ${invited.name} loaded from invite link.`
+          : "Payout address filled in from your freelancer's invite link. Check it matches what they sent you.",
+        'success'
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
 
-  // Dispute Modal State (Sprint 2 draft D3)
   const [taskToDispute, setTaskToDispute] = useState(null);
-  const [disputeReason, setDisputeReason] = useState('Deliverables require revision or do not match agreed specification.');
+  const [disputeReason, setDisputeReason] = useState(
+    'Deliverables require revision or do not match agreed specification.'
+  );
 
   const closeDisputeModal = () => {
     setTaskToDispute(null);
@@ -110,20 +171,31 @@ const ClientDashboard = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [taskToDispute, taskToApprove, isTransacting]);
 
+  const handleQrConfirmed = ({ address, name, title, amount }) => {
+    setFreelancerWallet(address);
+    setRecipientName(name || '');
+    if (title) setNewTaskTitle(title);
+    if (amount) setNewTaskAmount(amount);
+    addToast(
+      name ? `Recipient ${name} verified from QR.` : 'Recipient address verified from QR.',
+      'success'
+    );
+  };
+
   const initiateApproval = (taskOrId) => {
-    // If wallet not yet connected, auto-connect demo wallet so mobile/tablet testers are never blocked
     if (!publicKey && typeof connectTesterWallet === 'function') {
       connectTesterWallet();
     }
-    const taskObj = (taskOrId && typeof taskOrId === 'object') 
-      ? taskOrId 
-      : (ownTasks.find(t => t.id === taskOrId) || { id: taskOrId });
+    const taskObj =
+      taskOrId && typeof taskOrId === 'object'
+        ? taskOrId
+        : ownTasks.find((t) => t.id === taskOrId) || { id: taskOrId };
     if (!isOwnTask(taskObj)) {
-      addToast("Only the client who funded this escrow can release it.", "warning");
+      addToast('Only the client who funded this escrow can release it.', 'warning');
       return;
     }
     if (taskObj.status === 'Available') {
-      addToast("Cannot release escrow: Task must first be accepted by a freelancer.", "warning");
+      addToast('Cannot release escrow: task must first be accepted by a freelancer.', 'warning');
       return;
     }
     setTaskToApprove(taskObj);
@@ -132,8 +204,8 @@ const ClientDashboard = () => {
 
   const handleDisputeSubmit = async () => {
     if (!taskToDispute || isTransacting || actionInFlightRef.current) return;
-    if (!ownTasks.some(t => t.id === taskToDispute)) {
-      addToast("Only the client who funded this escrow can dispute it.", "warning");
+    if (!ownTasks.some((t) => t.id === taskToDispute)) {
+      addToast('Only the client who funded this escrow can dispute it.', 'warning');
       closeDisputeModal();
       return;
     }
@@ -143,7 +215,7 @@ const ClientDashboard = () => {
       await raiseDispute(taskToDispute, disputeReason);
       closeDisputeModal();
     } catch (error) {
-      addToast("Failed to raise dispute: " + error.message, "error");
+      addToast(`Failed to raise dispute: ${error.message}`, 'error');
     } finally {
       actionInFlightRef.current = false;
       setIsTransacting(false);
@@ -151,13 +223,13 @@ const ClientDashboard = () => {
   };
 
   const handleResolve = async (id) => {
-    if (!ownTasks.some(t => t.id === id) || isTransacting || actionInFlightRef.current) return;
+    if (!ownTasks.some((t) => t.id === id) || isTransacting || actionInFlightRef.current) return;
     actionInFlightRef.current = true;
     setIsTransacting(true);
     try {
       await resolveDispute(id);
     } catch (error) {
-      addToast("Failed to resolve dispute: " + (error?.message || error), "error");
+      addToast(`Failed to resolve dispute: ${error?.message || error}`, 'error');
     } finally {
       actionInFlightRef.current = false;
       setIsTransacting(false);
@@ -165,13 +237,16 @@ const ClientDashboard = () => {
   };
 
   const suggestAmountTimerRef = useRef(null);
-  useEffect(() => () => {
-    if (suggestAmountTimerRef.current) clearTimeout(suggestAmountTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (suggestAmountTimerRef.current) clearTimeout(suggestAmountTimerRef.current);
+    },
+    []
+  );
 
   const suggestAmount = () => {
     if (!newTaskTitle) {
-      addToast("Enter a task title first to get a suggested amount.", "error");
+      addToast('Enter a task title first to get a suggested amount.', 'error');
       return;
     }
     setIsEstimating(true);
@@ -182,11 +257,11 @@ const ClientDashboard = () => {
       if (words.includes('website') || words.includes('app')) est = 5;
       if (words.includes('logo') || words.includes('design')) est = 2;
       if (words.includes('smart contract') || words.includes('blockchain')) est = 10;
-      
+
       setNewTaskAmount(est.toString());
       setIsEstimating(false);
-      addToast(`Suggested Testnet amount for this kind of task: ${est} XLM.`, "success");
-    }, 1000);
+      addToast(`Suggested Testnet amount for this milestone: ${est} XLM.`, 'success');
+    }, 600);
   };
 
   const handleApprove = async () => {
@@ -197,7 +272,7 @@ const ClientDashboard = () => {
 
     const targetTaskId = taskToApprove.id;
     if (!targetTaskId) {
-      addToast("Error: Missing task identifier for milestone release.", "error");
+      addToast('Error: Missing task identifier for milestone release.', 'error');
       return;
     }
 
@@ -205,36 +280,36 @@ const ClientDashboard = () => {
     setIsTransacting(true);
     try {
       const result = await updateTaskStatus(targetTaskId, 'Completed');
-      // submitApproveTask returns the release transaction as `hash` (there is no `txHash`), so the Sheet
-      // used to get the text "Confirmed on Testnet" instead of the hash. Already-released escrows have none.
-      const releaseHash = result?.alreadyReleased ? '' : (result?.hash || '');
+      const releaseHash = result?.alreadyReleased ? '' : result?.hash || '';
       const taskObj = taskToApprove;
-      // The payment is already released on-chain; the Sheet log is best effort and never throws, so do not
-      // keep the release window open on slow Wi-Fi waiting for it (wait at most 4 seconds).
       if (!isDemoAccount && isGoogleSheetsSyncEnabled()) {
-        await Promise.race([recordStudentToGoogleSheet({
-          emailForSourceDetection: user?.email || '',
-          programSection: 'Client (Milestone Payout Released)',
-          walletAddress: typeof publicKey === 'string' ? publicKey : (publicKey?.address || 'N/A'),
-          taskTitle: taskObj?.title || 'Milestone Escrow Release',
-          amount: String(taskObj?.amount || '2.0'),
-          releaseTxHash: releaseHash,
-          feedbackSubmitted: false,
-        }), new Promise((resolve) => setTimeout(resolve, 4000))]);
+        await Promise.race([
+          recordStudentToGoogleSheet({
+            emailForSourceDetection: user?.email || '',
+            programSection: 'Client (Milestone Payout Released)',
+            walletAddress: typeof publicKey === 'string' ? publicKey : publicKey?.address || 'N/A',
+            taskTitle: taskObj?.title || 'Milestone Escrow Release',
+            amount: String(taskObj?.amount || '2.0'),
+            releaseTxHash: releaseHash,
+            feedbackSubmitted: false,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
       }
       setTaskToApprove(null);
       setConfirmText('');
-      // updateTaskStatus already reports a confirmed on-chain release (with its transaction) or an
-      // already-released escrow; here we only add what it does not say.
       if (isDemoAccount || result?.isDemo) {
-        addToast("Simulation only: task marked Completed in this browser. No payment was sent on Stellar.", "info");
+        addToast('Simulation only: task marked Completed in this browser. No payment was sent on Stellar.', 'info');
       } else if (!result?.alreadyReleased && !result?.hash) {
-        addToast(`Release submitted. The task card shows its status on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}.`, "info");
+        addToast(
+          `Release submitted. The task card shows its status on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}.`,
+          'info'
+        );
       }
     } catch (error) {
       const formatted = formatStellarError(error);
-      const isWarning = formatted.includes("rejected") || formatted.includes("declined");
-      addToast(formatted, isWarning ? "warning" : "error");
+      const isWarning = formatted.includes('rejected') || formatted.includes('declined');
+      addToast(formatted, isWarning ? 'warning' : 'error');
     } finally {
       actionInFlightRef.current = false;
       setIsTransacting(false);
@@ -246,7 +321,7 @@ const ClientDashboard = () => {
     const trimmedTitle = newTaskTitle.trim();
     if (!trimmedTitle || !newTaskAmount) {
       if (newTaskTitle && !trimmedTitle) {
-        addToast("Enter a task title before locking funds in escrow.", "warning");
+        addToast('Enter a task title before locking funds in escrow.', 'warning');
       }
       return;
     }
@@ -254,37 +329,36 @@ const ClientDashboard = () => {
     try {
       parseXlmToStroops(newTaskAmount);
     } catch (amountErr) {
-      addToast(amountErr.message || "Enter a valid positive amount in XLM.", "warning");
+      addToast(amountErr.message || 'Enter a valid positive amount in XLM.', 'warning');
       return;
     }
 
-    // A Stellar address typed into the title is almost always meant for the payout field (seen in testing).
     if (/^G[A-Z2-7]{55}$/.test(trimmedTitle)) {
       if (!freelancerWallet.trim()) {
         setFreelancerWallet(trimmedTitle);
-        addToast("That looks like a payout address, not a title. It's now in Freelancer's Payout Address; give the task a short title like \"Logo design\".", "warning");
+        addToast(
+          'That looks like a payout address, not a title. It is now in Freelancer\'s Payout Address; enter a short task title like "Logo design".',
+          'warning'
+        );
       } else {
-        addToast("That looks like a payout address, not a title. Enter a short task title like \"Logo design\".", "warning");
+        addToast('That looks like a payout address, not a title. Enter a short task title like "Logo design".', 'warning');
       }
       return;
     }
 
-    // Real escrows need the freelancer's own payout address; only the offline demo account (nothing
-    // on-chain) may leave it blank and use a demo payout.
     if (!isDemoAccount && !freelancerWallet.trim()) {
-      addToast("Enter your freelancer's payout address (starts with G, 56 characters). Ask them for it or for their invite link.", "warning");
+      addToast("Enter your freelancer's payout address (starts with G, 56 characters) or scan their Pay QR.", 'warning');
       return;
     }
 
-    const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : (publicKey?.address?.trim() || '');
+    const safeClientKey = typeof publicKey === 'string' ? publicKey.trim() : publicKey?.address?.trim() || '';
     if (freelancerWallet && safeClientKey && freelancerWallet.trim() === safeClientKey) {
-      addToast("Self-dealing prevented: Client and Freelancer wallets cannot be identical.", "warning");
+      addToast('Self-dealing prevented: Client and Freelancer wallets cannot be identical.', 'warning');
       return;
     }
 
     if (lockInFlight.current) return;
 
-    // Same freelancer and amount, still unreleased, locked in the last 15 minutes: ask for a second tap.
     if (!isDemoAccount) {
       const recent = findRecentDuplicateLock(ownTasks, { freelancerWallet, amount: newTaskAmount });
       const key = duplicateKey(freelancerWallet, newTaskAmount);
@@ -292,7 +366,10 @@ const ClientDashboard = () => {
       if (recent && !confirmed) {
         duplicateConfirm.current = { key, until: Date.now() + 60 * 1000 };
         const ref = recent.on_chain_task_id ? ` (escrow #${recent.on_chain_task_id})` : '';
-        addToast(`You already locked ${recent.amount} XLM for this freelancer a few minutes ago${ref}; it is in your task list. Only if you want a second escrow, tap Lock Funds in Escrow again.`, "warning");
+        addToast(
+          `You already locked ${recent.amount} XLM for this freelancer a few minutes ago${ref}; it is in your task list. Only if you want a second escrow, tap Lock Funds in Escrow again.`,
+          'warning'
+        );
         return;
       }
       duplicateConfirm.current = { key: '', until: 0 };
@@ -300,28 +377,34 @@ const ClientDashboard = () => {
 
     lockInFlight.current = true;
     setIsTransacting(true);
-    
     try {
       const newTask = {
         title: trimmedTitle,
         amount: newTaskAmount,
-        freelancer_wallet: freelancerWallet.trim() || undefined
+        freelancer_wallet: freelancerWallet.trim() || undefined,
       };
       const created = await addTask(newTask);
       clearInvitePayout();
       setNewTaskTitle('');
       setNewTaskAmount('');
       setFreelancerWallet('');
-      // addTask itself reports a confirmed or still-confirming on-chain escrow; only surface demo notice here.
+      setRecipientName('');
       if (isDemoAccount || created?.isDemo) {
-        addToast("Simulation only: practice task saved in this browser. Nothing was sent to Stellar.", "info");
+        addToast('Simulation only: practice task saved in this browser. Nothing was sent to Stellar.', 'info');
       } else if (!created?.hash && !created?.isPending) {
-        addToast(`Funding sent. It is being confirmed on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'} (about 5 seconds); the task card shows its status.`, "info");
+        addToast(
+          `Funding sent. It is confirming on ${STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'} (about 5 seconds).`,
+          'info'
+        );
       }
     } catch (error) {
       const formatted = formatStellarError(error);
-      const isWarning = formatted.includes("rejected") || formatted.includes("declined") || formatted.includes("Self-dealing") || formatted.includes("Insufficient balance");
-      addToast(formatted, isWarning ? "warning" : "error");
+      const isWarning =
+        formatted.includes('rejected') ||
+        formatted.includes('declined') ||
+        formatted.includes('Self-dealing') ||
+        formatted.includes('Insufficient balance');
+      addToast(formatted, isWarning ? 'warning' : 'error');
     } finally {
       lockInFlight.current = false;
       setIsTransacting(false);
@@ -329,487 +412,531 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="animate-fade-in flex flex-col gap-6">
+      {/* Action-First Workspace Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-            <h2 style={{ margin: 0 }}>Client Portal</h2>
-            <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', padding: '0.2rem 0.55rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 'bold', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
-              Client View
-            </span>
-            <button
-              type="button"
-              onClick={() => setViewAllEscrows(prev => !prev)}
-              style={{
-                cursor: 'pointer',
-                background: viewAllEscrows ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.05)',
-                color: viewAllEscrows ? '#34d399' : 'var(--text-muted)',
-                border: '1px solid ' + (viewAllEscrows ? '#10b981' : 'var(--border)'),
-                borderRadius: '999px',
-                fontSize: '0.72rem',
-                padding: '0.2rem 0.6rem',
-                fontWeight: 600
-              }}
-              title="Switch between your own escrows and a read-only view of every tester's escrows"
-            >
-              {viewAllEscrows ? "👁️ All testers' escrows (view only)" : '👤 My escrows'}
-            </button>
-          </div>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Lock a practice payment, check your partner's work, then release it.
+          <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+            Client Workspace
+          </h1>
+          <p className="mt-1 mb-0 text-[14px] text-[var(--text-muted)]">
+            Scan a freelancer QR, lock milestone funds on Stellar Testnet, and release on approval.
           </p>
         </div>
-        {user?.is_simulation_mode && (
-        <button
-          type="button"
-          onClick={() => {
-            switchRole('freelancer');
-            addToast("Switched to Freelancer Mode! Discover available tasks and accept jobs.", "info");
-            navigate('/freelancer');
-          }}
-          className="btn btn-outline"
-          style={{
-            borderColor: 'rgba(139, 92, 246, 0.5)',
-            background: 'rgba(139, 92, 246, 0.1)',
-            color: '#c084fc',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            fontSize: '0.82rem',
-            padding: '0.5rem 0.85rem'
-          }}
-        >
-          Switch to Freelancer Portal <ArrowRight size={14} />
-        </button>
-        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="gp-segmented" role="tablist" aria-label="Escrow visibility filter">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!viewAllEscrows}
+              onClick={() => setViewAllEscrows(false)}
+              className="gp-segmented-btn"
+            >
+              My escrows
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewAllEscrows}
+              onClick={() => setViewAllEscrows(true)}
+              className="gp-segmented-btn"
+            >
+              All escrows
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowQrScanner(true)}
+            className="gp-btn gp-btn-money"
+          >
+            <ScanLine size={16} />
+            Scan QR
+          </button>
+
+          {user?.is_simulation_mode && (
+            <button
+              type="button"
+              onClick={() => {
+                switchRole('freelancer');
+                addToast('Switched to Freelancer mode.', 'info');
+                navigate('/freelancer');
+              }}
+              className="gp-btn gp-btn-secondary"
+            >
+              Freelancer view
+              <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Aggregate Balance & Escrow Metrics Cards (R2 & R3 Pilot Requirement) */}
-      <div className="client-metrics" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
-        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid var(--accent)' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Escrowed <span style={{ fontWeight: 'normal' }}>(locked on-chain)</span></h4>
-          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
-            {totalEscrowed.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
+      {/* Compact Unified Metric Strip (visible on both desktop and mobile) */}
+      <div className="client-metrics grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] lg:grid-cols-4">
+        <div className="bg-[var(--bg-surface)] p-4 sm:p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Escrowed on-chain</div>
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums">
+            {totalEscrowed.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}{' '}
+            <span className="text-[13px] font-medium text-[var(--text-muted)]">XLM</span>
           </div>
         </div>
-        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #38bdf8' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Active Escrows</h4>
-          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+        <div className="bg-[var(--bg-surface)] p-4 sm:p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Active escrows</div>
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums">
             {activeEscrows}
           </div>
         </div>
-        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #10b981' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Total Released <span style={{ fontWeight: 'normal' }}>(on-chain)</span></h4>
-          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
-            {totalReleased.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>XLM</span>
+        <div className="bg-[var(--bg-surface)] p-4 sm:p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Released on-chain</div>
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-[var(--signal-money-fg)] tabular-nums">
+            {totalReleased.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}{' '}
+            <span className="text-[13px] font-medium text-[var(--text-muted)]">XLM</span>
           </div>
         </div>
-        <div className="glass-panel" style={{ flex: '1 1 200px', borderLeft: '4px solid #f59e0b' }}>
-          <h4 style={{ color: 'var(--text-muted)', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Completion Rate</h4>
-          <div style={{ fontSize: '2.2rem', fontWeight: 'bold' }}>
+        <div className="bg-[var(--bg-surface)] p-4 sm:p-5">
+          <div className="text-[12.5px] font-medium text-[var(--text-muted)]">Completion rate</div>
+          <div className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums">
             {completionPercentage}%
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
-        {/* Task List */}
-        <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0 }}>Your tasks</h3>
+      {/* Main Two-Column Workspace */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Left: Milestone Feed */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">
+              {viewAllEscrows ? 'All escrows (read-only)' : 'Your escrows'}
+            </h2>
             <button
               type="button"
-              className="btn btn-outline"
+              className="gp-btn gp-btn-secondary"
               data-testid="refresh-tasks"
               disabled={isRefreshing}
               onClick={async () => {
                 setIsRefreshing(true);
                 const ok = await refreshTasks();
                 setIsRefreshing(false);
-                addToast(ok ? 'Tasks refreshed.' : "Couldn't refresh. Check your connection and try again.", ok ? 'success' : 'warning');
+                addToast(
+                  ok ? 'Tasks refreshed.' : "Couldn't refresh. Check your connection and try again.",
+                  ok ? 'success' : 'warning'
+                );
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', padding: '0.45rem 0.9rem' }}
             >
-              <RotateCcw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh tasks'}
+              <RotateCcw size={14} />
+              {isRefreshing ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
-          {clientTasks.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(0, 242, 254, 0.25)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                <span style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>
-                  🚀 PILOT TESTER QUICK-START
-                </span>
+
+          {clientTasks.length === 0 && (
+            <div className="gp-card flex flex-col gap-4 p-6">
+              <div>
+                <h3 className="m-0 text-base font-semibold text-[var(--text-primary)]">No active escrows yet</h3>
+                <p className="mt-1.5 mb-0 text-[14px] text-[var(--text-muted)]">
+                  Scan a freelancer&apos;s Pay QR card or enter their Stellar Testnet address on the right to lock your first milestone. Practice XLM only.
+                </p>
               </div>
-              <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>No Active Escrows Yet — Ready to Test!</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                Welcome to the GigPay Client Portal on <strong>Stellar Testnet</strong> (practice money). Follow these 3 quick steps to complete your pilot evaluation:
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.86rem', color: 'var(--text-main)' }}>
-                <div><strong>1️⃣ Check your partner's address:</strong> if you scanned their QR or opened their invite link, the payout address is already filled in below. Your own practice wallet shows in the top bar.</div>
-                <div><strong>2️⃣ Lock the payment:</strong> tap <strong>Fill Sample Task (2 XLM)</strong>, then tap <strong>Lock Funds in Escrow</strong> once.</div>
-                <div><strong>3️⃣ Release:</strong> when your partner has submitted their work, tap <strong>Approve &amp; Release</strong> on this page.</div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setNewTaskTitle('Sample task: poster design');
-                    setNewTaskAmount('2');
-                    addToast('Sample task loaded. Now tap "Lock Funds in Escrow" once.', 'success');
-                  }}
-                  style={{ fontSize: '0.85rem', padding: '0.55rem 1rem' }}
+                  onClick={() => setShowQrScanner(true)}
+                  className="gp-btn gp-btn-primary"
                 >
-                  ⚡ Fill Sample Task (2 XLM)
+                  <ScanLine size={15} />
+                  Scan freelancer QR
                 </button>
-                {pilotToolsEnabled && (isPilotCompleted ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      fontSize: '0.85rem',
-                      padding: '0.55rem 1rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(0, 245, 160, 0.12)',
-                      border: '1px solid rgba(0, 245, 160, 0.45)',
-                      color: 'var(--accent, #00f5a0)',
-                      fontWeight: 600
-                    }}
-                  >
-                    <CheckCircle2 size={14} /> Feedback sent, thank you
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <a
-                      href={PILOT_FORM_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => openFormLink('client_card_clicked')}
-                      className="btn btn-outline"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        fontSize: '0.85rem',
-                        padding: '0.55rem 1rem',
-                        borderColor: 'rgba(0, 242, 254, 0.45)',
-                        color: '#00f2fe',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      📝 Submit 60s Pilot Feedback <ExternalLink size={14} />
-                    </a>
+                {pilotToolsEnabled && (
+                  <>
                     <button
                       type="button"
+                      className="gp-btn gp-btn-secondary"
                       onClick={() => {
-                        markPilotCompleted();
-                        addToast('🎉 Thanks for your feedback!', 'success');
-                      }}
-                      className="btn btn-outline"
-                      title="Confirm you completed the form"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        fontSize: '0.85rem',
-                        padding: '0.55rem 0.85rem',
-                        borderColor: 'rgba(0, 245, 160, 0.4)',
-                        background: 'rgba(0, 245, 160, 0.08)',
-                        color: 'var(--accent, #00f5a0)'
+                        setNewTaskTitle('Sample task: poster design');
+                        setNewTaskAmount('2');
+                        addToast('Sample task loaded. Tap Lock Funds in Escrow when ready.', 'success');
                       }}
                     >
-                      <CheckCircle2 size={14} /> I've Completed It
+                      Fill Sample Task (2 XLM)
                     </button>
-                  </div>
-                ))}
+                    {isPilotCompleted ? (
+                      <span className="gp-status gp-status--money">
+                        <CheckCircle2 size={14} />
+                        Feedback sent
+                      </span>
+                    ) : (
+                      <>
+                        <a
+                          href={PILOT_FORM_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => openFormLink('client_card_clicked')}
+                          className="gp-btn gp-btn-secondary"
+                        >
+                          Submit 60s Pilot Feedback
+                          <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            markPilotCompleted();
+                            addToast('Thanks for your feedback.', 'success');
+                          }}
+                          className="gp-btn gp-btn-ghost"
+                        >
+                          <CheckCircle2 size={14} />
+                          I&apos;ve Completed It
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-          ) : null}
+          )}
 
-          {clientTasks.map(task => {
+          {clientTasks.map((task) => {
             const isDisputed = task.status === 'Disputed';
             const dispute = getDisputeMetadata(task, user?.id);
             const safeGithubUrl = safeHttpsUrl(task.github_pr_url);
             const safeDocUrl = safeHttpsUrl(task.doc_url);
             const safeLoomUrl = safeHttpsUrl(task.loom_url);
             const hasProof = task.proof_attached || safeGithubUrl || safeDocUrl || safeLoomUrl;
-            // Only the client who funded an escrow can release or dispute it; other testers' tasks are view only.
             const isMine = isOwnTask(task);
-            // Link a transaction only when it really exists on Stellar Testnet (demo/failed tasks have none).
-            const hasRealFundTx = !task.is_simulated && task.status !== 'Failed' && !isSimulatedTxHash(task.tx_hash) && !isNonEvidenceHash(task.tx_hash);
+            const hasRealFundTx =
+              !task.is_simulated &&
+              task.status !== 'Failed' &&
+              !isSimulatedTxHash(task.tx_hash) &&
+              !isNonEvidenceHash(task.tx_hash);
+            const badge = statusBadgeMeta(task.status);
+            const explorerTxUrl = hasRealFundTx ? buildExplorerTxUrl(task.tx_hash) : null;
 
             return (
-              <div key={task.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderLeft: isDisputed ? '4px solid #ef4444' : '4px solid var(--accent)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <h3 style={{ marginBottom: '0.25rem', color: isDisputed ? '#ef4444' : 'white' }}>{task.title}</h3>
-                    <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={14} /> {task.status}
+              <article
+                key={task.id}
+                className={`gp-card flex flex-col gap-4 p-5 ${isDisputed ? 'gp-card--disputed' : ''}`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="m-0 text-base font-semibold text-[var(--text-primary)]">{task.title}</h3>
+                      <span className={badge.cls}>
+                        <span className="gp-status-dot" />
+                        {badge.label}
                       </span>
-                      <span>Freelancer: {task.freelancer_id ? task.freelancer_id.slice(0, 8) + '...' : 'Unassigned'}</span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[var(--text-muted)]">
+                      <span>
+                        Freelancer: {task.freelancer_id ? `${task.freelancer_id.slice(0, 8)}…` : 'Unassigned'}
+                      </span>
+                      {task.freelancer_wallet && (
+                        <span className="gp-mono">{shortStellarAddress(task.freelancer_wallet)}</span>
+                      )}
+                      {explorerTxUrl && (
+                        <a
+                          href={explorerTxUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-[var(--signal-money-fg)] no-underline hover:underline"
+                        >
+                          Stellar Expert
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: isDisputed ? '#ef4444' : 'var(--accent)' }}>
+
+                  <div className="text-right">
+                    <div
+                      className={`gp-amount text-xl ${
+                        isDisputed ? 'gp-amount--danger' : 'gp-amount--money'
+                      }`}
+                    >
                       {task.amount} XLM
                     </div>
-                    
-                    {/* Action Buttons: 100% Active for In Progress and Available tasks */}
                     {!isMine && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>View only: another tester's escrow</span>
-                    )}
-
-                    {isMine && (task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {(task.status === 'In Progress' || task.status === 'Under Review') && (
-                          <button 
-                            className="btn btn-outline" 
-                            onClick={() => setTaskToDispute(task.id)}
-                            disabled={isTransacting}
-                            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#ef4444', color: '#ef4444' }}
-                            title="Pause release in GigPay (app-level) and log a dispute"
-                          >
-                            <AlertTriangle size={13} /> Pause Release & Dispute
-                          </button>
-                        )}
-                        <button 
-                          className="btn btn-primary" 
-                          onClick={() => initiateApproval(task)}
-                          disabled={isTransacting || task.status === 'Available'}
-                          title={task.status === 'Available' ? "Cannot release escrow before task is accepted by a freelancer" : undefined}
-                          style={{ 
-                            padding: '0.45rem 0.95rem', 
-                            fontSize: '0.8rem', 
-                            opacity: (isTransacting || task.status === 'Available') ? 0.45 : 1,
-                            cursor: (isTransacting || task.status === 'Available') ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          <CheckCircle size={14} /> {isTransacting ? 'Processing...' : 'Approve & Release'}
-                        </button>
-                        {!hasProof && task.status !== 'Available' && (
-                          <span style={{ flexBasis: '100%', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Wait for your freelancer to submit their work first.</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Disputed State Freeze Notice & Resolution Button */}
-                    {isMine && isDisputed && (
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          disabled={isTransacting}
-                          onClick={() => handleResolve(task.id)}
-                          style={{
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.78rem',
-                            borderColor: '#10b981',
-                            color: '#10b981',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            opacity: isTransacting ? 0.5 : 1,
-                            cursor: isTransacting ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          <RotateCcw size={12} /> Resolve Dispute
-                        </button>
-                      </div>
-                    )}
-
-                    {hasRealFundTx && buildExplorerTxUrl(task.tx_hash) && (
-                      <a
-                        href={buildExplorerTxUrl(task.tx_hash)}
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#4ade80', fontSize: '0.78rem', background: 'rgba(74, 222, 128, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', textDecoration: 'none', border: '1px solid rgba(74, 222, 128, 0.3)' }}
-                      >
-                        View payment on Stellar Expert <ExternalLink size={11} />
-                      </a>
+                      <div className="mt-1 text-[12px] text-[var(--text-muted)]">View only</div>
                     )}
                   </div>
                 </div>
 
-                {/* Dispute Metadata Freeze Alert (Sprint 2 draft D3 b & c) */}
+                {/* App-level dispute notice */}
                 {isDisputed && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.85rem', fontSize: '0.85rem', color: '#fca5a5' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>
-                      <AlertTriangle size={15} color="#ef4444" /> ⛔ Release paused (app-level, disputed)
+                  <div className="rounded-xl border border-[var(--signal-danger-border)] bg-[var(--signal-danger-bg)] p-3.5 text-[13px]">
+                    <div className="flex items-center gap-2 font-semibold text-[var(--signal-danger)]">
+                      <AlertTriangle size={15} />
+                      Release paused (app-level, disputed)
                     </div>
-                    <div style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>
-                      <strong>Dispute reason:</strong> {task.dispute_reason || 'Not recorded'}
+                    <div className="mt-1.5 text-[var(--text-primary)]">
+                      <strong>Reason:</strong> {task.dispute_reason || 'Not recorded'}
                     </div>
-                    <div data-testid="dispute-metadata" style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                    <div data-testid="dispute-metadata" className="mt-1 text-[12.5px] text-[var(--text-secondary)]">
                       <strong>Disputed:</strong> {dispute.raisedAt || 'time not recorded'} by {dispute.raisedBy}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                      Release is paused until the client who raised the dispute resolves it. The freelancer can see the dispute but cannot change the task while it is disputed.
-                    </div>
+                    <p className="mt-1.5 mb-0 text-[12.5px] text-[var(--text-muted)]">
+                      Release stays paused until the client who raised the dispute resolves it.
+                    </p>
                   </div>
                 )}
+
                 {!isDisputed && dispute.resolvedAt && (
-                  <div data-testid="dispute-history" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.6rem 0.85rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by {dispute.raisedBy}
+                  <div
+                    data-testid="dispute-history"
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3.5 py-2.5 text-[12.5px] text-[var(--text-muted)]"
+                  >
+                    <strong>Dispute history:</strong> disputed {dispute.raisedAt || '(time not recorded)'} by{' '}
+                    {dispute.raisedBy}
                     {task.dispute_reason ? ` ("${task.dispute_reason}")` : ''}; resolved {dispute.resolvedAt}.
                   </div>
                 )}
 
-                {/* Attached Freelancer Proof of Work (Sprint 2 draft D3) */}
+                {/* Attached Proof of Work */}
                 {hasProof && (
-                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#00f2fe', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-                      <CheckCircle2 size={14} /> Freelancer Proof of Work Attached:
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3.5">
+                    <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--signal-money-fg)]">
+                      <CheckCircle2 size={14} />
+                      Deliverables submitted for review
                     </div>
-                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: task.submission_notes ? '0.5rem' : 0 }}>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
                       {safeGithubUrl && (
-                        <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#00f2fe', borderColor: 'rgba(0, 242, 254, 0.4)' }}>
-                          <FileCode size={13} /> Inspect GitHub PR <ExternalLink size={11} />
+                        <a href={safeGithubUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                          <FileCode size={13} />
+                          Inspect GitHub PR
+                          <ExternalLink size={11} />
                         </a>
                       )}
                       {safeDocUrl && (
-                        <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.4)' }}>
-                          <FileText size={13} /> Inspect Document <ExternalLink size={11} />
+                        <a href={safeDocUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                          <FileText size={13} />
+                          Inspect Document
+                          <ExternalLink size={11} />
                         </a>
                       )}
                       {safeLoomUrl && (
-                        <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
-                          <Video size={13} /> Watch Loom Demo <ExternalLink size={11} />
+                        <a href={safeLoomUrl} target="_blank" rel="noopener noreferrer" className="gp-btn gp-btn-secondary !min-h-[34px] !px-3 !text-[12.5px]">
+                          <Video size={13} />
+                          Watch Loom Demo
+                          <ExternalLink size={11} />
                         </a>
                       )}
                     </div>
                     {task.submission_notes && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.4rem' }}>
-                        <strong>Freelancer Note:</strong> {task.submission_notes}
-                      </div>
+                      <p className="mt-2.5 mb-0 border-t border-[var(--border-subtle)] pt-2 text-[13px] text-[var(--text-secondary)]">
+                        <strong>Note:</strong> {task.submission_notes}
+                      </p>
                     )}
                   </div>
                 )}
 
                 <TaskProgress status={task.status} />
-              </div>
+
+                {/* Action Footer */}
+                {isMine && (task.status === 'In Progress' || task.status === 'Under Review' || task.status === 'Available') && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3.5">
+                    <span className="text-[12.5px] text-[var(--text-muted)]">
+                      {task.status === 'Available'
+                        ? 'Waiting for freelancer to accept milestone.'
+                        : !hasProof
+                          ? 'Waiting for deliverables before release.'
+                          : 'Deliverables ready for review.'}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(task.status === 'In Progress' || task.status === 'Under Review') && (
+                        <button
+                          type="button"
+                          className="gp-btn gp-btn-danger"
+                          onClick={() => setTaskToDispute(task.id)}
+                          disabled={isTransacting}
+                          title="Pause release in GigPay (app-level) and log a dispute"
+                        >
+                          <AlertTriangle size={13} />
+                          Pause Release &amp; Dispute
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`gp-btn ${task.status === 'Available' ? 'gp-btn-secondary' : 'gp-btn-money'}`}
+                        onClick={() => initiateApproval(task)}
+                        disabled={isTransacting || task.status === 'Available'}
+                        title={
+                          task.status === 'Available'
+                            ? 'Cannot release escrow before task is accepted by a freelancer'
+                            : undefined
+                        }
+                      >
+                        <CheckCircle size={14} />
+                        {isTransacting ? 'Processing…' : 'Approve & Release'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isMine && isDisputed && (
+                  <div className="flex justify-end border-t border-[var(--border-subtle)] pt-3.5">
+                    <button
+                      type="button"
+                      className="gp-btn gp-btn-money"
+                      disabled={isTransacting}
+                      onClick={() => handleResolve(task.id)}
+                    >
+                      <RotateCcw size={13} />
+                      Resolve Dispute
+                    </button>
+                  </div>
+                )}
+              </article>
             );
           })}
         </div>
 
-        {/* Create Task Form */}
-        <div className="glass-panel create-task-panel" style={{ flex: '1 1 300px', height: 'fit-content' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>Create Task Escrow</h3>
-          <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} onSubmit={handleCreateTask}>
+        {/* Right: Lock New Escrow Sheet / Panel */}
+        <aside className="gp-card create-task-panel order-first p-5 sm:p-6 lg:sticky lg:top-20 lg:order-none">
+          <div className="mb-5 flex items-center justify-between gap-2">
             <div>
-              <label htmlFor="client-task-title" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Task Title</label>
-              <input 
+              <h2 className="m-0 text-base font-semibold text-[var(--text-primary)]">Lock New Escrow</h2>
+              <p className="mt-0.5 mb-0 text-[12.5px] text-[var(--text-muted)]">0% GigPay commission</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowQrScanner(true)}
+              className="gp-btn gp-btn-secondary !min-h-[36px] !px-3 !text-[12.5px]"
+            >
+              <ScanLine size={14} />
+              Scan QR
+            </button>
+          </div>
+
+          {recipientName && freelancerWallet.trim() && (
+            <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-[var(--signal-money-border)] bg-[var(--signal-money-bg)] px-3.5 py-2.5 text-[13px]">
+              <div className="min-w-0">
+                <div className="font-semibold text-[var(--text-primary)]">{recipientName}</div>
+                <div className="gp-mono text-[12px] text-[var(--signal-money-fg)]">
+                  {shortStellarAddress(freelancerWallet)}
+                </div>
+              </div>
+              <CheckCircle2 size={16} className="shrink-0 text-[var(--signal-money)]" />
+            </div>
+          )}
+
+          <form className="flex flex-col gap-4" onSubmit={handleCreateTask}>
+            <div className="gp-field">
+              <label htmlFor="client-task-title" className="gp-label">
+                Task Title
+              </label>
+              <input
                 id="client-task-title"
-                type="text" 
-                placeholder="e.g. Logo Design" 
+                type="text"
+                placeholder="e.g., Landing page UI"
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} 
+                className="gp-input"
                 required
               />
             </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label htmlFor="client-task-amount" style={{ color: 'var(--text-muted)', margin: 0 }}>Milestone Amount (XLM)</label>
+            <div className="gp-field">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="client-task-amount" className="gp-label">
+                  Milestone Amount (XLM)
+                </label>
                 <button
                   type="button"
                   onClick={suggestAmount}
                   disabled={isEstimating}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--accent)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: 0
-                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[12.5px] font-medium text-[var(--signal-money-fg)] hover:underline"
                 >
-                  <Sparkles size={14} /> {isEstimating ? 'Suggesting...' : 'Suggest amount'}
+                  <Sparkles size={13} />
+                  {isEstimating ? 'Suggesting…' : 'Suggest amount'}
                 </button>
               </div>
-              <input 
+              <input
                 id="client-task-amount"
-                type="number" 
-                placeholder="e.g. 5" 
+                type="number"
+                placeholder="e.g., 5"
                 min="0.1"
                 step="any"
                 value={newTaskAmount}
                 onChange={(e) => setNewTaskAmount(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} 
+                className="gp-input tabular-nums"
                 required
               />
             </div>
 
-            <div>
-              <label htmlFor="client-freelancer-wallet" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
-                Freelancer's Payout Address
+            <div className="gp-field">
+              <label htmlFor="client-freelancer-wallet" className="gp-label">
+                Freelancer&apos;s Payout Address
               </label>
               <input
                 id="client-freelancer-wallet"
                 type="text"
-                placeholder="G... (your freelancer copies this from their dashboard)"
+                placeholder="Scan QR or paste G... address"
                 value={freelancerWallet}
-                onChange={(e) => setFreelancerWallet(e.target.value)}
+                onChange={(e) => {
+                  setFreelancerWallet(e.target.value);
+                  if (recipientName) setRecipientName('');
+                }}
                 required={!isDemoAccount}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'white', fontSize: '0.85rem' }}
+                className="gp-input gp-mono text-[13px]"
               />
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: freelancerWallet.trim() ? 'var(--text-muted)' : '#fbbf24' }}>
+              <p className="gp-hint">
                 {freelancerWallet.trim()
-                  ? "The locked payment can only be released to this address. Check every character matches what your freelancer sent you:"
+                  ? 'Funds lock strictly for this recipient address. Verify it matches your freelancer.'
                   : isDemoAccount
-                    ? "Demo account: left blank, the practice task uses a demo payout address. Nothing is sent on-chain."
-                    : "Required: your freelancer's payout address (starts with G, 56 characters). They copy it from their dashboard or send you an invite link."}
+                    ? 'Demo mode: leave blank to use an offline practice recipient.'
+                    : 'Scan their Pay QR card above or paste their 56-character Stellar address.'}
               </p>
               {freelancerWallet.trim() && (
-                <code data-testid="fund-payout-address" style={{ display: 'block', marginTop: '0.3rem', padding: '0.45rem 0.55rem', borderRadius: '0.4rem', background: 'rgba(0,0,0,0.3)', color: 'white', wordBreak: 'break-all', fontSize: '0.85rem' }}>
+                <code
+                  data-testid="fund-payout-address"
+                  className="gp-mono mt-1 block break-all rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2.5 py-2 text-[12px] text-[var(--text-primary)]"
+                >
                   {freelancerWallet.trim()}
                 </code>
               )}
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                You cannot pay your own address.
-              </span>
             </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
-              disabled={isTransacting}
-              style={{ marginTop: '0.5rem', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <PlusCircle size={18} /> {isTransacting ? 'Locking payment (about 10 seconds)...' : 'Lock Funds in Escrow'}
-            </button>
-          </form>
-
-          {/* Fee Comparison Widget */}
-          {newTaskAmount && Number(newTaskAmount) > 0 && (
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>💡 No platform commission</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Example: a 20% platform fee would be:</span>
-                  <span style={{ color: '#ff4444' }}>{(Number(newTaskAmount) * 0.2).toFixed(2)} XLM</span>
+            {newTaskAmount && Number(newTaskAmount) > 0 && (
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3.5 text-[13px]">
+                <div className="flex items-center justify-between text-[var(--text-muted)]">
+                  <span>Typical 20% platform cut</span>
+                  <span className="text-[var(--signal-danger)] tabular-nums">
+                    -{(Number(newTaskAmount) * 0.2).toFixed(2)} XLM
+                  </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Stellar network fees, paid by you (lock + release, approx.):</span>
-                  <span style={{ color: '#4ade80' }}>~0.06 XLM</span>
+                <div className="mt-1.5 flex items-center justify-between text-[var(--text-muted)]">
+                  <span>Stellar network fee (lock + release)</span>
+                  <span className="tabular-nums">~0.06 XLM</span>
                 </div>
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontWeight: 'bold' }}>
-                  <span>Freelancer receives (full amount):</span>
-                  <span>{Number(newTaskAmount).toFixed(2)} XLM</span>
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 font-semibold text-[var(--text-primary)]">
+                  <span>Freelancer receives (0% fee)</span>
+                  <span className="text-[var(--signal-money-fg)] tabular-nums">
+                    {Number(newTaskAmount).toFixed(2)} XLM
+                  </span>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            <button
+              type="submit"
+              className="gp-btn gp-btn-money gp-btn-lg mt-1 w-full"
+              disabled={isTransacting}
+            >
+              <PlusCircle size={18} />
+              {isTransacting ? 'Locking payment…' : 'Lock Funds in Escrow'}
+            </button>
+          </form>
+        </aside>
       </div>
 
-      {/* Dispute Reason Modal (Sprint 2 draft D3) */}
+      {/* QR Ph-Grade Scanner Modal */}
+      <QrScannerModal
+        isOpen={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onConfirm={handleQrConfirmed}
+      />
+
+      {/* Raise Escrow Dispute Sheet */}
       {taskToDispute && typeof document !== 'undefined' && createPortal(
         <div
           role="dialog"
@@ -818,44 +945,61 @@ const ClientDashboard = () => {
           onClick={(e) => {
             if (e.target === e.currentTarget && !isTransacting) closeDisputeModal();
           }}
-          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}
+          className="gp-modal-backdrop"
+          style={{ position: 'fixed', padding: '1rem' }}
         >
-          <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #ef4444' }}>
-            <h3 style={{ color: '#ef4444', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertTriangle size={20} /> Raise Escrow Dispute
+          <div
+            className="gp-modal border-[var(--signal-danger-border)]"
+            style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => { if (!isTransacting) closeDisputeModal(); }}
+              aria-label="Close dispute dialog"
+              className="gp-modal-close"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="m-0 flex items-center gap-2 pr-8 text-lg font-semibold text-[var(--signal-danger)]">
+              <AlertTriangle size={19} />
+              Raise Escrow Dispute
             </h3>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Pauses release in GigPay (app-level). The escrow contract has no dispute state; the funds stay locked until the client releases them. The dispute reason and time are logged to the task record.
+            <p className="mt-2 mb-4 text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+              Pauses release in GigPay (app-level). The Soroban v1 contract has no on-chain dispute state; funds remain locked until the client releases them. Reason and timestamp are logged to the task record.
             </p>
-            <label htmlFor="client-dispute-reason" style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
-              Dispute Reason / Required Revisions:
-            </label>
-            <textarea 
-              id="client-dispute-reason"
-              rows={3} 
-              value={disputeReason} 
-              onChange={(e) => setDisputeReason(e.target.value)} 
-              disabled={isTransacting}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ef4444', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', fontSize: '0.85rem' }} 
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button 
-                type="button"
-                className="btn btn-outline" 
-                onClick={() => { if (!isTransacting) closeDisputeModal(); }} 
+
+            <div className="gp-field">
+              <label htmlFor="client-dispute-reason" className="gp-label">
+                Dispute Reason / Required Revisions
+              </label>
+              <textarea
+                id="client-dispute-reason"
+                rows={3}
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
                 disabled={isTransacting}
-                style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)', padding: '0.45rem 0.9rem', fontSize: '0.8rem', opacity: isTransacting ? 0.5 : 1 }}
+                className="gp-textarea"
+              />
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="gp-btn gp-btn-secondary"
+                onClick={() => { if (!isTransacting) closeDisputeModal(); }}
+                disabled={isTransacting}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
-                className="btn" 
-                onClick={handleDisputeSubmit} 
+                className="gp-btn gp-btn-danger"
+                onClick={handleDisputeSubmit}
                 disabled={isTransacting}
-                style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', backgroundColor: '#b91c1c', color: 'white', border: 'none', borderRadius: '6px', cursor: isTransacting ? 'not-allowed' : 'pointer', opacity: isTransacting ? 0.65 : 1 }}
               >
-                {isTransacting ? 'Submitting Dispute...' : 'Confirm Dispute (Pause Release)'}
+                {isTransacting ? 'Submitting…' : 'Confirm Dispute (Pause Release)'}
               </button>
             </div>
           </div>
@@ -863,7 +1007,7 @@ const ClientDashboard = () => {
         document.body
       )}
 
-      {/* Release Confirmation Modal: Strict CONFIRM Requirement */}
+      {/* Milestone Release Confirmation Sheet (Strict uppercase CONFIRM guard preserved) */}
       {taskToApprove && typeof document !== 'undefined' && createPortal(
         <div
           role="dialog"
@@ -872,74 +1016,98 @@ const ClientDashboard = () => {
           onClick={(e) => {
             if (e.target === e.currentTarget && !isTransacting) setTaskToApprove(null);
           }}
-          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', zIndex: 100000, backdropFilter: 'blur(5px)', padding: '1rem', boxSizing: 'border-box' }}
+          className="gp-modal-backdrop"
+          style={{ position: 'fixed', padding: '1rem' }}
         >
-          <div className="glass-panel" style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box', padding: '1.75rem', border: '1px solid #10b981' }}>
-            <h3 style={{ color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckCircle size={22} /> Milestone Release Confirmation
+          <div
+            className="gp-modal border-[var(--signal-money-border)]"
+            style={{ width: '100%', maxWidth: 'min(450px, calc(100vw - 2rem))', boxSizing: 'border-box' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => { if (!isTransacting) setTaskToApprove(null); }}
+              aria-label="Close release confirmation"
+              className="gp-modal-close"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="m-0 flex items-center gap-2 pr-8 text-lg font-semibold text-[var(--signal-money-fg)]">
+              <CheckCircle size={20} />
+              Milestone Release Confirmation
             </h3>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              You are about to release funds from the Soroban escrow contract (<code>{GIGPAY_ESCROW_CONTRACT_ID.slice(0, 6)}...{GIGPAY_ESCROW_CONTRACT_ID.slice(-4)}</code>) to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
+            <p className="mt-2 mb-4 text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+              Releases locked funds from Soroban contract{' '}
+              <code className="gp-mono text-[var(--text-primary)]">
+                {GIGPAY_ESCROW_CONTRACT_ID.slice(0, 6)}…{GIGPAY_ESCROW_CONTRACT_ID.slice(-4)}
+              </code>{' '}
+              directly to the freelancer. This on-chain settlement is <strong>irreversible</strong>.
             </p>
+
             {taskToApprove?.title && (
-              <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ color: 'white', fontWeight: 600 }}>{taskToApprove.title}</div>
-                <div style={{ marginTop: '0.25rem', color: '#10b981', fontWeight: 'bold' }}>
-                  Release Amount: {taskToApprove.amount} XLM
+              <div className="mb-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3.5">
+                <div className="text-[13.5px] font-medium text-[var(--text-secondary)]">{taskToApprove.title}</div>
+                <div className="gp-amount gp-amount--money mt-1 text-2xl">
+                  {taskToApprove.amount} XLM
+                </div>
+                <div className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+                  0% GigPay commission · 100% paid directly to recipient
                 </div>
               </div>
             )}
-            {/* Show exactly who gets paid, so a student on a shared PC can check it against the freelancer's address. */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.04)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Paid to (freelancer's payout address):</div>
+
+            <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3.5 text-[12.5px]">
+              <div className="mb-1 font-medium text-[var(--text-muted)]">Recipient payout address</div>
               {taskToApprove?.freelancer_wallet ? (
-                <code data-testid="release-payout-address" style={{ color: 'white', wordBreak: 'break-all', fontSize: '0.85rem' }}>{taskToApprove.freelancer_wallet}</code>
+                <code
+                  data-testid="release-payout-address"
+                  className="gp-mono block break-all text-[12.5px] text-[var(--text-primary)]"
+                >
+                  {taskToApprove.freelancer_wallet}
+                </code>
               ) : (
-                <span style={{ color: '#fbbf24' }}>Not stored with this task (practice-mode and older tasks have none). An on-chain escrow pays the address set when it was funded.</span>
+                <span className="text-[var(--signal-warn)]">
+                  Not stored with this task (demo or legacy row). On-chain escrows always pay the address set when funded.
+                </span>
               )}
             </div>
-            <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-              <strong>⚠️ Safety check:</strong> To prevent accidental releases, please type <strong>CONFIRM</strong> in all-caps below:
+
+            <div className="gp-field">
+              <label htmlFor="confirm-release-input" className="gp-label">
+                Type <strong>CONFIRM</strong> to authorize release
+              </label>
+              <input
+                id="confirm-release-input"
+                type="text"
+                aria-label="Type CONFIRM to release the payment"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="CONFIRM"
+                disabled={isTransacting}
+                className="gp-input gp-mono tracking-wider"
+              />
             </div>
-            <input 
-              type="text" 
-              value={confirmText} 
-              // Phone keyboards type "Confirm"; the check needs exact CONFIRM, so capitalise as they type.
-              onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
-              autoCapitalize="characters"
-              autoCorrect="off" 
-              placeholder="CONFIRM" 
-              aria-label="Type CONFIRM to release the payment"
-              disabled={isTransacting} 
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: confirmText === 'CONFIRM' ? '1px solid #10b981' : '1px solid var(--border)', background: 'rgba(0,0,0,0.4)', color: 'white', marginBottom: '1.25rem', letterSpacing: '1px', fontWeight: 'bold' }} 
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button 
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
                 type="button"
-                className="btn btn-outline" 
-                onClick={() => { if (!isTransacting) setTaskToApprove(null); }} 
-                disabled={isTransacting} 
-                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderColor: 'var(--text-muted)', color: 'var(--text-muted)', opacity: isTransacting ? 0.5 : 1 }}
+                className="gp-btn gp-btn-secondary"
+                onClick={() => { if (!isTransacting) setTaskToApprove(null); }}
+                disabled={isTransacting}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
-                className="btn" 
-                onClick={handleApprove} 
-                disabled={confirmText !== 'CONFIRM' || isTransacting} 
-                style={{ 
-                  padding: '0.45rem 1.1rem', 
-                  fontSize: '0.8rem', 
-                  backgroundColor: confirmText === 'CONFIRM' ? '#047857' : '#475569', 
-                  color: 'white', 
-                  cursor: (confirmText === 'CONFIRM' && !isTransacting) ? 'pointer' : 'not-allowed', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontWeight: 600 
-                }}
+                className="gp-btn gp-btn-money"
+                onClick={handleApprove}
+                disabled={confirmText !== 'CONFIRM' || isTransacting}
               >
-                {isTransacting ? 'Releasing payment (about 10 seconds)...' : 'Release Escrow Payout'}
+                {isTransacting ? 'Releasing…' : 'Release Escrow Payout'}
               </button>
             </div>
           </div>

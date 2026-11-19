@@ -371,14 +371,49 @@
     color: var(--signal-danger);
   }
 
+  /* Role selector cards (AuthPage) */
+  .gp-role-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .gp-role-card:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-subtle);
+  }
+
+  .gp-role-card--selected {
+    border-color: var(--signal-money);
+    background: var(--signal-money-bg);
+    box-shadow: 0 0 0 1px var(--signal-money);
+  }
+
+  .gp-role-card--selected:hover {
+    border-color: var(--signal-money);
+    background: var(--signal-money-bg);
+  }
+
   @media (max-width: 640px) {
     .gp-btn {
       min-height: 44px;
     }
 
     .gp-modal-backdrop {
-      align-items: flex-end;
-      padding: 0.5rem;
+      align-items: safe center;
+      padding: 0.75rem;
     }
 
     .gp-modal {

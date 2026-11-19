@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../lib/supabase';
-import { Save, User } from 'lucide-react';
+import { Save, User, AlertTriangle } from 'lucide-react';
 
 const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
 
 const ProfilePage = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fetchError, setFetchError] = useState(null);
@@ -18,7 +18,7 @@ const ProfilePage = () => {
     bio: '',
     company_name: '',
     portfolio_url: '',
-    role: ''
+    role: '',
   });
 
   const fetchProfile = useCallback(async () => {
@@ -27,11 +27,11 @@ const ProfilePage = () => {
     const isSim = !!(user.is_simulation_mode || user.user_metadata?.is_simulation_mode || !isUuid(user.id));
     if (isSim) {
       setProfile({
-        display_name: user.user_metadata?.display_name || (user.email?.includes?.('client') ? 'Demo client' : 'Demo freelancer'),
+        display_name: user.user_metadata?.display_name || (user.email?.includes?.('client') ? 'Demo Client' : 'Demo Freelancer'),
         bio: 'Demo account (simulation only, nothing on-chain).',
         company_name: '',
         portfolio_url: '',
-        role: user.user_metadata?.role || 'client'
+        role: user.user_metadata?.role || 'client',
       });
       setLoading(false);
       return;
@@ -44,7 +44,7 @@ const ProfilePage = () => {
         .select('*')
         .eq('id', user.id)
         .single();
-      
+
       if (error) throw error;
       if (data) {
         setProfile({
@@ -52,7 +52,7 @@ const ProfilePage = () => {
           bio: data.bio || '',
           company_name: data.company_name || '',
           portfolio_url: data.portfolio_url || '',
-          role: data.role || ''
+          role: data.role || '',
         });
       }
     } catch (error) {
@@ -71,9 +71,9 @@ const ProfilePage = () => {
   }, [user, fetchProfile]);
 
   const handleChange = (e) => {
-    setProfile(prev => ({
+    setProfile((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
@@ -87,20 +87,18 @@ const ProfilePage = () => {
 
     try {
       setSaving(true);
-      
       const { error } = await supabase
         .from('profiles')
         .update({
           display_name: profile.display_name,
           bio: profile.bio,
           company_name: profile.company_name,
-          portfolio_url: profile.portfolio_url
+          portfolio_url: profile.portfolio_url,
         })
         .eq('id', user.id);
 
       if (error) throw error;
-      
-      addToast('Profile updated successfully!', 'success');
+      addToast('Profile updated successfully.', 'success');
     } catch (error) {
       console.error('Error updating profile:', error);
       addToast(error.message || 'Failed to update profile', 'error');
@@ -109,15 +107,27 @@ const ProfilePage = () => {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}>Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-xl py-16 text-center text-[14px] text-[var(--text-muted)]">
+        Loading profile…
+      </div>
+    );
+  }
 
   if (fetchError) {
     return (
-      <div className="animate-fade-in" style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '2rem' }}>
-        <div className="glass-panel" role="alert" style={{ textAlign: 'center', padding: '2rem', border: '1px solid #ef4444' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#f87171' }}>Profile Unavailable</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem' }}>{fetchError}</p>
-          <button type="button" className="btn btn-primary" onClick={fetchProfile}>
+      <div className="animate-fade-in mx-auto max-w-xl py-8">
+        <div
+          className="gp-card border-[var(--signal-danger-border)] p-7 text-center"
+          role="alert"
+        >
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--signal-danger-bg)] text-[var(--signal-danger)]">
+            <AlertTriangle size={20} />
+          </div>
+          <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">Profile Unavailable</h2>
+          <p className="mt-2 mb-5 text-[14px] text-[var(--text-muted)]">{fetchError}</p>
+          <button type="button" className="gp-btn gp-btn-primary" onClick={fetchProfile}>
             Retry
           </button>
         </div>
@@ -128,110 +138,96 @@ const ProfilePage = () => {
   const isClient = profile.role === 'client';
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '2rem' }}>
-      <div className="glass-panel">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-          <div style={{ background: 'var(--primary)', padding: '1rem', borderRadius: '50%' }}>
-            <User size={32} color="white" />
+    <div className="animate-fade-in mx-auto max-w-xl py-4 sm:py-8">
+      <div className="gp-card p-6 sm:p-8">
+        <div className="mb-7 flex items-center gap-4 border-b border-[var(--border-subtle)] pb-6">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--bg-subtle)] text-[var(--text-primary)] ring-1 ring-[var(--border-subtle)]">
+            <User size={22} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.2rem' }}>Your Profile</h2>
-            <p style={{ color: 'var(--text-muted)', margin: 0, textTransform: 'capitalize' }}>
-              {profile.role} Account
+            <h1 className="m-0 text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+              Your Profile
+            </h1>
+            <p className="mt-0.5 mb-0 text-[13px] capitalize text-[var(--text-muted)]">
+              {profile.role || 'Member'} account
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="profile-display-name" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+        <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <div className="gp-field">
+            <label htmlFor="profile-display-name" className="gp-label">
               Display Name
             </label>
-            <input 
+            <input
               id="profile-display-name"
               type="text"
               name="display_name"
               value={profile.display_name}
               onChange={handleChange}
-              placeholder="John Doe"
-              style={{
-                width: '100%', padding: '0.75rem 1rem', borderRadius: '0.5rem',
-                background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',
-                color: 'white', fontSize: '1rem'
-              }}
+              placeholder="Maria Santos"
+              className="gp-input"
             />
+            {!isClient && (
+              <p className="gp-hint">
+                Displayed on your branded GigPay Pay QR card when clients scan to lock funds.
+              </p>
+            )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="profile-bio" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+          <div className="gp-field">
+            <label htmlFor="profile-bio" className="gp-label">
               Short Bio
             </label>
-            <textarea 
+            <textarea
               id="profile-bio"
               name="bio"
               value={profile.bio}
               onChange={handleChange}
-              placeholder="Tell us a little about yourself..."
+              placeholder="Tell clients or freelancers a little about your work…"
               rows={4}
-              style={{
-                width: '100%', padding: '0.75rem 1rem', borderRadius: '0.5rem',
-                background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',
-                color: 'white', fontSize: '1rem', resize: 'vertical'
-              }}
+              className="gp-textarea resize-y"
             />
           </div>
 
           {isClient ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="profile-company-name" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div className="gp-field">
+              <label htmlFor="profile-company-name" className="gp-label">
                 Company Name
               </label>
-              <input 
+              <input
                 id="profile-company-name"
                 type="text"
                 name="company_name"
                 value={profile.company_name}
                 onChange={handleChange}
-                placeholder="Company or school (optional)"
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', borderRadius: '0.5rem',
-                  background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',
-                  color: 'white', fontSize: '1rem'
-                }}
+                placeholder="Company or studio (optional)"
+                className="gp-input"
               />
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="profile-portfolio-url" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div className="gp-field">
+              <label htmlFor="profile-portfolio-url" className="gp-label">
                 Portfolio URL
               </label>
-              <input 
+              <input
                 id="profile-portfolio-url"
                 type="url"
                 name="portfolio_url"
                 value={profile.portfolio_url}
                 onChange={handleChange}
                 placeholder="https://myportfolio.com"
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', borderRadius: '0.5rem',
-                  background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',
-                  color: 'white', fontSize: '1rem'
-                }}
+                className="gp-input"
               />
             </div>
           )}
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={saving}
-            style={{ marginTop: '1rem', alignSelf: 'flex-start' }}
-          >
-            <Save size={18} />
-            {saving ? 'Saving...' : 'Save Profile'}
-          </button>
-
+          <div className="pt-2">
+            <button type="submit" className="gp-btn gp-btn-primary gp-btn-lg" disabled={saving}>
+              <Save size={16} />
+              {saving ? 'Saving…' : 'Save Profile'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

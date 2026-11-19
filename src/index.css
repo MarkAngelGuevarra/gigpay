@@ -184,10 +184,6 @@
     min-height: 44px;
   }
 
-  .client-metrics {
-    display: none !important;
-  }
-
   .create-task-panel {
     order: -1;
   }

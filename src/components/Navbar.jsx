@@ -1,10 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShieldAlert, LogOut, User, Download, Globe, Shield, ExternalLink, Wallet, FileSpreadsheet, ArrowLeftRight, Menu, X } from 'lucide-react';
+import {
+  ShieldAlert,
+  LogOut,
+  User,
+  Download,
+  Globe,
+  Shield,
+  ExternalLink,
+  Wallet,
+  FileSpreadsheet,
+  ArrowLeftRight,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Copy,
+  Check,
+  ChevronDown,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { getAccountBalance, isDemoWallet, isSimulatorWallet, ensureEphemeralAccountFunded, STELLAR_NETWORK_NAME, STELLAR_NETWORK_PASSPHRASE } from '../lib/stellar';
+import { useTheme } from '../context/ThemeContext';
+import { BrandLockup } from './BrandMark';
+import {
+  getAccountBalance,
+  isDemoWallet,
+  isSimulatorWallet,
+  ensureEphemeralAccountFunded,
+  buildExplorerAccountUrl,
+  STELLAR_NETWORK_NAME,
+  STELLAR_NETWORK_PASSPHRASE,
+} from '../lib/stellar';
 import VerificationLedgerModal from './VerificationLedgerModal';
 import { usePilotFeedbackState, PILOT_FORM_URL } from '../hooks/usePilotFeedbackState';
 import { isPilotToolsEnabled } from '../lib/env';
@@ -12,28 +40,51 @@ import { isPilotToolsEnabled } from '../lib/env';
 const Navbar = () => {
   const { user, signOut, publicKey, connectWallet, connectTesterWallet, switchRole, activeRole, isSimulationMode } = useAuth();
   const { addToast } = useToast();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const pilotToolsEnabled = isPilotToolsEnabled();
+
   const [error, setError] = useState('');
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [copiedWallet, setCopiedWallet] = useState(false);
   const [balance, setBalance] = useState(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  // Phones: secondary links live in a menu so the header stays one or two rows (CSS shows them inline on
-  // wider screens, where this state has no effect).
   const [menuOpen, setMenuOpen] = useState(false);
   const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const location = useLocation();
-  useEffect(() => { setMenuOpen(false); }, [location.pathname, location.search]);
+  const walletPopoverRef = useRef(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setWalletMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!walletMenuOpen) return undefined;
+    const handlePointerDown = (e) => {
+      if (walletPopoverRef.current && !walletPopoverRef.current.contains(e.target)) {
+        setWalletMenuOpen(false);
+      }
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setWalletMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [walletMenuOpen]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const triggerRefresh = () => setBalanceRefreshTick((n) => n + 1);
     window.addEventListener('gigpay:balance-refresh', triggerRefresh);
-    return () => {
-      window.removeEventListener('gigpay:balance-refresh', triggerRefresh);
-    };
+    return () => window.removeEventListener('gigpay:balance-refresh', triggerRefresh);
   }, []);
 
   useEffect(() => {
@@ -50,7 +101,7 @@ const Navbar = () => {
     isSnoozed: isPilotSnoozed,
     isFormOpened: isPilotFormOpened,
     openFormLink,
-    markCompleted: markPilotCompleted
+    markCompleted: markPilotCompleted,
   } = usePilotFeedbackState();
 
   useEffect(() => {
@@ -59,25 +110,22 @@ const Navbar = () => {
     if (!activeUserId || !publicKey) {
       setBalance(null);
       setIsLoadingBalance(false);
-      return () => {
-        controller.abort();
-      };
+      return () => controller.abort();
     }
 
     const isStale = () => controller.signal.aborted;
-
     setIsLoadingBalance(true);
+
     const showBalance = (res) => {
       if (isStale()) return;
-      // Horizon unreachable: say so instead of showing a placeholder number.
       if (res.unknown || (res.isDemo && isSimulatorWallet(publicKey))) setBalance('unavailable');
       else setBalance(res.balance);
       setIsLoadingBalance(false);
     };
+
     getAccountBalance(publicKey)
       .then(async (res) => {
         if (isStale()) return;
-        // A new practice wallet is still waiting on Friendbot: only fund real signed-in non-simulation accounts.
         if (!isSimulationMode && !isDemoWallet(publicKey) && !res.active && !res.unknown && isSimulatorWallet(publicKey)) {
           if (!isStale()) setBalance('Funding… (up to 30s)');
           const funded = await ensureEphemeralAccountFunded(publicKey);
@@ -98,10 +146,7 @@ const Navbar = () => {
         if (!isStale()) setIsLoadingBalance(false);
       });
 
-    return () => {
-      controller.abort();
-    };
-  // Re-run after sign-in or escrow fund/release so the pill stays current.
+    return () => controller.abort();
   }, [publicKey, user, user?.id, isSimulationMode, balanceRefreshTick]);
 
   const handleSignOut = async () => {
@@ -115,6 +160,12 @@ const Navbar = () => {
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const formatKey = (key) => {
+    if (!key) return '';
+    const str = typeof key === 'string' ? key : (key?.address || String(key));
+    return `${str.slice(0, 5)}…${str.slice(-4)}`;
   };
 
   const handleConnect = async () => {
@@ -149,419 +200,438 @@ const Navbar = () => {
     }
   };
 
-  const formatKey = (key) => {
-    if (!key) return '';
-    const str = typeof key === 'string' ? key : (key?.address || String(key));
-    return `${str.slice(0, 5)}...${str.slice(-4)}`;
+  const handleCopyWallet = async () => {
+    if (!publicKey) return;
+    try {
+      await navigator.clipboard.writeText(publicKey);
+      setCopiedWallet(true);
+      addToast('Wallet address copied.', 'success');
+      setTimeout(() => setCopiedWallet(false), 1800);
+    } catch {
+      addToast('Could not copy wallet address.', 'warning');
+    }
   };
 
+  const formattedBalance =
+    balance === null
+      ? null
+      : isLoadingBalance && !String(balance).startsWith('Funding')
+        ? '…'
+        : /^[\d,.]+$/.test(String(balance))
+          ? `${balance} XLM`
+          : balance;
+
+  const isSandbox = Boolean(user?.is_simulation_mode || isSimulationMode);
+  const explorerAccountUrl = publicKey && !isDemoWallet(publicKey) ? buildExplorerAccountUrl(publicKey) : null;
+  const isAuthRoute = location.pathname === '/auth';
+  const isClientRoute = location.pathname === '/client';
+  const isFreelancerRoute = location.pathname === '/freelancer';
+  const isProfileRoute = location.pathname === '/profile';
+
   return (
-    <nav className="navbar animate-fade-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-      <Link to="/" className="logo">
-        <img src="/logo.png" alt="GigPay Emblem" className="logo-img" />
-        <span className="logo-text">GigPay</span>
-      </Link>
-      {/* Phones only (see index.css): opens the feedback form, ledger, portals, role switch, profile and sign out. */}
-      <button
-        type="button"
-        className="btn btn-outline navbar-menu-toggle"
-        aria-expanded={menuOpen}
-        aria-controls="navbar-menu"
-        onClick={() => setMenuOpen(o => !o)}
-      >
-        {menuOpen ? <X size={16} /> : <Menu size={16} />} {menuOpen ? 'Close' : 'Menu'}
-      </button>
-      <div className="navbar-actions">
-        <div id="navbar-menu" className={`navbar-secondary${menuOpen ? ' is-open' : ''}`} onClick={(e) => { if (e.target.closest('a, button')) setMenuOpen(false); }}>
-        {/* Dynamic Pilot Feedback Status Pill */}
-        {pilotToolsEnabled && (isPilotCompleted ? (
-          <button
-            type="button"
-            onClick={() => addToast('✓ Feedback received. Thank you for shaping GigPay.', 'info')}
-            className="btn btn-outline"
-            title="Feedback sent"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.42rem 0.75rem',
-              borderColor: 'rgba(0, 245, 160, 0.45)',
-              background: 'rgba(0, 245, 160, 0.1)',
-              color: 'var(--accent, #00f5a0)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              boxShadow: '0 0 10px rgba(0, 245, 160, 0.15)'
-            }}
-          >
-            ✓ Feedback sent
-          </button>
-        ) : isPilotFormOpened ? (
-          <button
-            type="button"
-            onClick={() => {
-              markPilotCompleted();
-              addToast('🎉 Thanks for your feedback!', 'success');
-            }}
-            className="btn btn-outline"
-            title="Click to confirm you completed the form"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.42rem 0.75rem',
-              borderColor: 'rgba(245, 158, 11, 0.6)',
-              background: 'rgba(245, 158, 11, 0.15)',
-              color: '#fbbf24',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              cursor: 'pointer',
-              boxShadow: '0 0 10px rgba(245, 158, 11, 0.25)'
-            }}
-          >
-            ❓ Completed Form? Confirm
-          </button>
-        ) : isPilotSnoozed ? (
-          <a
-            href={PILOT_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => openFormLink('navbar_clicked')}
-            className="btn btn-outline"
-            title="Feedback form reminder snoozed - click to open"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.42rem 0.75rem',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: 'var(--text-muted, #94a3b8)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            ⏳ Feedback Form (Snoozed) <ExternalLink size={13} />
-          </a>
-        ) : (
-          <a
-            href={PILOT_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => openFormLink('navbar_clicked')}
-            className="btn btn-outline"
-            title="Complete 60s feedback form"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.42rem 0.75rem',
-              borderColor: 'rgba(0, 242, 254, 0.5)',
-              background: 'rgba(0, 242, 254, 0.12)',
-              color: '#00f2fe',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 0 12px rgba(0, 242, 254, 0.25)'
-            }}
-          >
-            🚀 Tester Feedback Form <ExternalLink size={13} />
-          </a>
-        ))}
-        <button
-          type="button"
-          onClick={() => setShowLedgerModal(true)}
-          className="btn btn-outline"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.42rem 0.75rem',
-            borderColor: 'rgba(99, 102, 241, 0.45)',
-            background: 'rgba(99, 102, 241, 0.08)',
-            color: '#818cf8',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            whiteSpace: 'nowrap'
-          }}
+    <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/92 backdrop-blur-md">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6">
+        <nav
+          className="navbar !mb-0 !py-2 flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap"
+          aria-label="Workspace navigation"
         >
-          <FileSpreadsheet size={13} /> 📜 Public Ledger
-        </button>
-        {user && (
-          (user?.is_simulation_mode || isSimulationMode) ? (
-            <>
-              <Link 
-                to="/client" 
-                className="btn btn-outline" 
-                style={{ 
-                  padding: '0.42rem 0.75rem', 
-                  fontSize: '0.8rem', 
-                  whiteSpace: 'nowrap',
-                  borderColor: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
-                  background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                  color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : 'var(--text-muted)'
-                }}
-              >
-                Client Portal
-              </Link>
-              <Link 
-                to="/freelancer" 
-                className="btn btn-outline" 
-                style={{ 
-                  padding: '0.42rem 0.75rem', 
-                  fontSize: '0.8rem', 
-                  whiteSpace: 'nowrap',
-                  borderColor: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255, 255, 255, 0.15)',
-                  background: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? 'rgba(139, 92, 246, 0.12)' : 'transparent',
-                  color: (user.user_metadata?.role === 'freelancer' || activeRole === 'freelancer') ? '#a78bfa' : 'var(--text-muted)'
-                }}
-              >
-                Freelancer Portal
-              </Link>
-              
-              {/* Interactive 1-Click Role Switcher Pill (sandbox accounts only) */}
-              <button
-                type="button"
-                onClick={() => {
-                  const nextRole = switchRole();
-                  if (!nextRole) return;
-                  addToast(`Active role switched to ${nextRole.toUpperCase()}!`, 'success');
-                  navigate(nextRole === 'client' ? '/client' : '/freelancer');
-                }}
-                title="Click to toggle active role between Client and Freelancer"
-                style={{
-                  background: (user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)',
-                  color: (user.user_metadata?.role === 'client' || activeRole === 'client') ? '#60a5fa' : '#a78bfa',
-                  padding: '0.28rem 0.65rem',
-                  borderRadius: '999px',
-                  fontSize: '0.72rem',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                  border: `1px solid ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  boxShadow: `0 0 10px ${(user.user_metadata?.role === 'client' || activeRole === 'client') ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <ArrowLeftRight size={11} />
-                <span>{user.user_metadata?.role || activeRole || 'client'}</span>
-                <span style={{ fontSize: '0.62rem', opacity: 0.75, textTransform: 'none', background: 'rgba(255,255,255,0.12)', padding: '0.08rem 0.3rem', borderRadius: '3px' }}>switch</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                to={activeRole === 'freelancer' ? '/freelancer' : '/client'}
-                className="btn btn-outline"
-                style={{
-                  padding: '0.42rem 0.75rem',
-                  fontSize: '0.8rem',
-                  whiteSpace: 'nowrap',
-                  borderColor: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.6)' : 'rgba(59, 130, 246, 0.6)',
-                  background: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.12)' : 'rgba(59, 130, 246, 0.12)',
-                  color: activeRole === 'freelancer' ? '#a78bfa' : '#60a5fa'
-                }}
-              >
-                {activeRole === 'freelancer' ? 'Freelancer Portal' : 'Client Portal'}
-              </Link>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <Link to="/" className="no-underline" aria-label="GigPay home">
+              <BrandLockup size={28} />
+            </Link>
+            {user && !isSandbox && (
               <span
                 data-testid="navbar-role-badge"
-                style={{
-                  background: activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                  color: activeRole === 'freelancer' ? '#a78bfa' : '#60a5fa',
-                  padding: '0.28rem 0.65rem',
-                  borderRadius: '999px',
-                  fontSize: '0.72rem',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                  border: `1px solid ${activeRole === 'freelancer' ? 'rgba(139, 92, 246, 0.45)' : 'rgba(59, 130, 246, 0.45)'}`,
-                  whiteSpace: 'nowrap'
-                }}
+                className="hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2.5 py-0.5 text-[12px] font-medium capitalize text-[var(--text-secondary)] sm:inline-flex"
               >
                 {activeRole === 'freelancer' ? 'freelancer' : 'client'}
               </span>
-            </>
-          )
-        )}
-        </div>
-        {user && (
-          <>
-            {publicKey ? (
-              <div className="navbar-wallet-pills" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {/* Live Testnet Network & Balance Pill */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid rgba(59, 130, 246, 0.35)',
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.78rem',
-                  color: '#93c5fd',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <Globe size={13} style={{ color: '#60a5fa' }} />
-                  <span style={{ fontWeight: '600' }}>{STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'}</span>
-                  {balance !== null && (
-                    <span style={{
-                      marginLeft: '0.25rem',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      padding: '0.12rem 0.4rem',
-                      borderRadius: '4px',
-                      color: '#ffffff',
-                      fontWeight: '700'
-                    }}>
-                      {isLoadingBalance && !String(balance).startsWith('Funding') ? '...' : /^[\d,.]+$/.test(String(balance)) ? `${balance} XLM` : balance}
-                    </span>
-                  )}
-                </div>
-
-                {/* Connected Wallet Address Pill */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--accent)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <span style={{ width: '7px', height: '7px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }}></span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'bold' }}>{formatKey(publicKey)}</span>
-                  {isSimulatorWallet(publicKey) && (
-                    <span title="A practice wallet created in this browser. Testnet only: no real money." style={{ fontSize: '0.66rem', fontWeight: 700, color: '#fbbf24', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
-                      Practice
-                    </span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <button className="btn btn-primary" onClick={handleConnect} style={{ padding: '0.42rem 0.85rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Connect Wallet</button>
             )}
+          </div>
 
-            <div className={`navbar-secondary navbar-secondary-end${menuOpen ? ' is-open' : ''}`}>
-              <Link to="/profile" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderColor: 'transparent', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                <User size={15} /> Profile
-              </Link>
+          <div className="flex items-center gap-1.5 sm:hidden">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="gp-btn gp-btn-ghost !min-h-[40px] !w-[40px] !p-0"
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+            <button
+              type="button"
+              className="gp-btn gp-btn-secondary navbar-menu-toggle"
+              aria-expanded={menuOpen}
+              aria-controls="navbar-menu"
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              {menuOpen ? <X size={16} /> : <Menu size={16} />}
+              <span>{menuOpen ? 'Close' : 'Menu'}</span>
+            </button>
+          </div>
+
+          <div className="navbar-actions">
+            <div
+              id="navbar-menu"
+              className={`navbar-secondary${menuOpen ? ' is-open' : ''}`}
+              onClick={(e) => {
+                if (e.target.closest('a, button')) setMenuOpen(false);
+              }}
+            >
+              {pilotToolsEnabled && (
+                isPilotCompleted ? (
+                  <button
+                    type="button"
+                    onClick={() => addToast('Feedback received. Thank you for shaping GigPay.', 'info')}
+                    className="gp-btn gp-btn-secondary !min-h-[36px] !px-2.5 text-[var(--signal-money-fg)]"
+                  >
+                    Feedback sent
+                  </button>
+                ) : isPilotFormOpened ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markPilotCompleted();
+                      addToast('Thanks for your feedback.', 'success');
+                    }}
+                    className="gp-btn gp-btn-secondary !min-h-[36px] !px-2.5 text-[var(--signal-warn)]"
+                  >
+                    Confirm feedback
+                  </button>
+                ) : isPilotSnoozed ? (
+                  <a
+                    href={PILOT_FORM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => openFormLink('navbar_clicked')}
+                    className="gp-btn gp-btn-ghost !min-h-[36px] !px-2.5"
+                  >
+                    Feedback Form (Snoozed)
+                    <ExternalLink size={13} />
+                  </a>
+                ) : (
+                  <a
+                    href={PILOT_FORM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => openFormLink('navbar_clicked')}
+                    className="gp-btn gp-btn-secondary !min-h-[36px] !px-2.5"
+                  >
+                    Tester Feedback Form
+                    <ExternalLink size={13} />
+                  </a>
+                )
+              )}
+
               <button
                 type="button"
-                onClick={handleSignOut}
-                disabled={isSigningOut}
-                className="btn btn-outline"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.4rem 0.6rem',
-                  fontSize: '0.8rem',
-                  borderColor: 'transparent',
-                  color: 'var(--text-muted)',
-                  whiteSpace: 'nowrap',
-                  opacity: isSigningOut ? 0.6 : 1,
-                  cursor: isSigningOut ? 'wait' : 'pointer'
-                }}
+                onClick={() => setShowLedgerModal(true)}
+                aria-label="Public ledger"
+                className="gp-btn gp-btn-ghost !min-h-[36px] !px-2.5"
               >
-                <LogOut size={15} /> {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                <FileSpreadsheet size={15} />
+                <span className="hidden lg:inline">Public ledger</span>
+                <span className="lg:hidden">Ledger</span>
               </button>
+
+              {user && isSandbox && (
+                <div className="inline-flex items-center gap-1.5">
+                  <div className="gp-segmented !p-0.5">
+                    <Link
+                      to="/client"
+                      aria-current={isClientRoute ? 'page' : undefined}
+                      className={`gp-segmented-btn !min-h-[30px] !px-2.5 no-underline ${
+                        isClientRoute ? '!bg-[var(--bg-surface)] !font-semibold !text-[var(--text-primary)] shadow-[var(--shadow-xs)]' : ''
+                      }`}
+                    >
+                      Client
+                    </Link>
+                    <Link
+                      to="/freelancer"
+                      aria-current={isFreelancerRoute ? 'page' : undefined}
+                      className={`gp-segmented-btn !min-h-[30px] !px-2.5 no-underline ${
+                        isFreelancerRoute ? '!bg-[var(--bg-surface)] !font-semibold !text-[var(--text-primary)] shadow-[var(--shadow-xs)]' : ''
+                      }`}
+                    >
+                      Freelancer
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextRole = switchRole();
+                      if (!nextRole) return;
+                      addToast(`Switched active role to ${nextRole}.`, 'success');
+                      navigate(nextRole === 'client' ? '/client' : '/freelancer');
+                    }}
+                    className="gp-btn gp-btn-secondary !min-h-[36px] !px-2.5"
+                    title="Toggle active role between Client and Freelancer"
+                    aria-label="Toggle active role between Client and Freelancer"
+                  >
+                    <ArrowLeftRight size={13} />
+                  </button>
+                </div>
+              )}
+
+              {user && !isSandbox && (
+                <Link
+                  to={activeRole === 'freelancer' ? '/freelancer' : '/client'}
+                  aria-current={isClientRoute || isFreelancerRoute ? 'page' : undefined}
+                  className={`gp-btn !min-h-[36px] !px-2.5 ${
+                    isClientRoute || isFreelancerRoute ? 'gp-btn-secondary' : 'gp-btn-ghost'
+                  }`}
+                >
+                  Workspace
+                </Link>
+              )}
             </div>
-          </>
-        )}
-        {!user && (
-          <Link to="/auth?mode=signup" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>Sign In / Sign Up</Link>
+
+            {user && (
+              <>
+                {publicKey ? (
+                  <div
+                    ref={walletPopoverRef}
+                    className="navbar-wallet-pills relative"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setWalletMenuOpen((o) => !o)}
+                      aria-expanded={walletMenuOpen}
+                      aria-haspopup="dialog"
+                      className="gp-btn gp-btn-secondary !min-h-[36px] !px-2.5"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-[var(--signal-money)]" />
+                      <span className="text-[12.5px] font-medium text-[var(--text-muted)]">
+                        {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'}
+                      </span>
+                      {formattedBalance && (
+                        <span className="text-[13px] font-semibold text-[var(--text-primary)] tabular-nums">
+                          {formattedBalance}
+                        </span>
+                      )}
+                      <span className="gp-mono hidden text-[12px] text-[var(--text-muted)] xl:inline">
+                        {formatKey(publicKey)}
+                      </span>
+                      <ChevronDown size={13} className="text-[var(--text-muted)]" />
+                    </button>
+
+                    {walletMenuOpen && (
+                      <div
+                        role="dialog"
+                        aria-label="Wallet details"
+                        className="absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow-lg)]"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[12.5px] font-medium text-[var(--text-muted)]">
+                            {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}
+                          </span>
+                          {isSimulatorWallet(publicKey) && (
+                            <span className="gp-status gp-status--warn !py-0.5 !text-[11.5px]">
+                              Practice wallet
+                            </span>
+                          )}
+                        </div>
+
+                        {formattedBalance && (
+                          <div className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums">
+                            {formattedBalance}
+                          </div>
+                        )}
+
+                        <div className="mt-3 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-2.5">
+                          <code className="gp-mono min-w-0 flex-1 truncate text-[12px] text-[var(--text-primary)]">
+                            {publicKey}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={handleCopyWallet}
+                            aria-label="Copy wallet address"
+                            className="gp-btn gp-btn-ghost !min-h-[30px] !w-[30px] !p-0"
+                          >
+                            {copiedWallet ? <Check size={14} className="text-[var(--signal-money)]" /> : <Copy size={14} />}
+                          </button>
+                        </div>
+
+                        {isSimulatorWallet(publicKey) && (
+                          <p className="mt-2.5 mb-0 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                            Browser-stored practice wallet with Testnet XLM only (no cash value).
+                          </p>
+                        )}
+
+                        <div className="mt-3 flex flex-col gap-1.5 border-t border-[var(--border-subtle)] pt-3">
+                          {explorerAccountUrl && (
+                            <a
+                              href={explorerAccountUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="gp-btn gp-btn-ghost w-full justify-between !px-2.5 text-[13px]"
+                            >
+                              View on Stellar Expert
+                              <ExternalLink size={13} />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWalletMenuOpen(false);
+                              handleConnect();
+                            }}
+                            className="gp-btn gp-btn-ghost w-full justify-between !px-2.5 text-[13px]"
+                          >
+                            Connect Varial wallet
+                            <Wallet size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button type="button" className="gp-btn gp-btn-primary" onClick={handleConnect}>
+                    Connect Wallet
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="gp-btn gp-btn-ghost hidden !min-h-[38px] !w-[38px] !p-0 sm:inline-flex"
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+
+                <div className={`navbar-secondary navbar-secondary-end${menuOpen ? ' is-open' : ''}`}>
+                  <Link
+                    to="/profile"
+                    aria-current={isProfileRoute ? 'page' : undefined}
+                    className={`gp-btn !min-h-[36px] !px-2.5 ${isProfileRoute ? 'gp-btn-secondary' : 'gp-btn-ghost'}`}
+                  >
+                    <User size={15} />
+                    Profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    aria-label={isSigningOut ? 'Signing Out' : 'Sign Out'}
+                    title="Sign Out"
+                    className="gp-btn gp-btn-ghost !min-h-[36px] !px-2.5 text-[var(--text-muted)]"
+                  >
+                    <LogOut size={15} />
+                    <span className="sm:hidden lg:inline">
+                      {isSigningOut ? 'Signing Out…' : 'Sign Out'}
+                    </span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {!user && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="gp-btn gp-btn-ghost hidden !min-h-[36px] !w-[36px] !p-0 sm:inline-flex"
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+                {!isAuthRoute && (
+                  <Link to="/auth?mode=signup" className="gp-btn gp-btn-primary !min-h-[36px] !px-3.5">
+                    Sign in
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+        </nav>
+
+        {error && (
+          <div
+            role="alert"
+            className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--signal-danger-border)] bg-[var(--signal-danger-bg)] px-3.5 py-2.5 text-[13.5px] text-[var(--signal-danger)]"
+          >
+            <ShieldAlert size={16} className="shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
       </div>
-      {error && (
-        <div style={{ width: '100%', marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <ShieldAlert size={16} /> {error}
-        </div>
-      )}
 
       {/* Wallet Onboarding Modal */}
       {showOnboardingModal && typeof document !== 'undefined' && createPortal(
-        <div 
+        <div
           role="dialog"
           aria-modal="true"
           aria-label="Connect Stellar Wallet"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowOnboardingModal(false);
           }}
-          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', backgroundColor: 'rgba(5,10,24,0.92)', display: 'flex', justifyContent: 'center', alignItems: 'safe center', overflowY: 'auto', padding: '1rem', boxSizing: 'border-box', zIndex: 99999, backdropFilter: 'blur(10px)' }}
+          className="gp-modal-backdrop"
+          style={{ zIndex: 100000 }}
         >
-          <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '500px', margin: 'auto 0', backgroundColor: '#0d1527', border: '1px solid rgba(0,242,254,0.3)', padding: 'clamp(1.25rem, 5vw, 2.5rem)', position: 'relative', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
+          <div className="gp-modal max-w-[480px]" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               aria-label="Close"
               onClick={() => setShowOnboardingModal(false)}
-              style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              className="gp-modal-close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--accent)' }}>
-              <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '0.75rem', borderRadius: '1rem' }}>
-                <Wallet size={32} />
-              </div>
-              <h2 style={{ margin: 0, color: 'white' }}>Welcome to Web3</h2>
-            </div>
-            
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.6' }}>
-              GigPay uses the Stellar blockchain to settle payments in about 5 seconds for a small network fee. To use this app, you need a secure digital wallet.
-            </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Download size={20} /></div>
-                <div>
-                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>1. Get Varial (formerly Freighter)</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Install the Stellar wallet browser extension built by the Stellar Development Foundation (Chrome, Edge, Firefox or Brave). Or skip this and use the built-in practice wallet.</p>
-                </div>
+            <div className="flex items-center gap-3 pr-10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--signal-money-bg)] text-[var(--signal-money)]">
+                <Wallet size={20} />
               </div>
-              
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Shield size={20} /></div>
-                <div>
-                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>2. Secure Your Account</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Create a password and safely write down your 12-word recovery phrase.</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ color: 'var(--accent)', marginTop: '0.25rem' }}><Globe size={20} /></div>
-                <div>
-                  <h4 style={{ marginBottom: '0.25rem', color: 'white' }}>3. Switch to {STELLAR_NETWORK_NAME}</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Open the wallet settings and switch your network to "{STELLAR_NETWORK_NAME}".</p>
-                </div>
+              <div>
+                <h2 className="m-0 text-lg font-semibold text-[var(--text-primary)]">Connect a Stellar Wallet</h2>
+                <p className="m-0 text-[13px] text-[var(--text-muted)]">
+                  Five-second milestone settlement on {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Stellar Testnet' : 'Stellar Local'}.
+                </p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <a 
-                href="https://varialwallet.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
-              >
-                Get Varial <ExternalLink size={16} />
-              </a>
-              <button 
-                onClick={() => setShowOnboardingModal(false)}
-                className="btn btn-outline"
-                style={{ flex: 1, borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-              >
-                I'll do it later
-              </button>
+            <div className="mt-5 flex flex-col gap-4">
+              <div className="flex gap-3">
+                <Download size={18} className="mt-0.5 shrink-0 text-[var(--signal-money)]" />
+                <div>
+                  <h4 className="m-0 text-[14px] font-semibold text-[var(--text-primary)]">
+                    1. Install Varial (formerly Freighter)
+                  </h4>
+                  <p className="mt-0.5 mb-0 text-[13px] text-[var(--text-muted)]">
+                    Install the Stellar browser wallet extension for Chrome, Edge, Firefox, or Brave, or use the built-in browser practice wallet below.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Shield size={18} className="mt-0.5 shrink-0 text-[var(--signal-money)]" />
+                <div>
+                  <h4 className="m-0 text-[14px] font-semibold text-[var(--text-primary)]">
+                    2. Back up your recovery phrase
+                  </h4>
+                  <p className="mt-0.5 mb-0 text-[13px] text-[var(--text-muted)]">
+                    Store your 12-word recovery phrase offline when setting up an extension wallet.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Globe size={18} className="mt-0.5 shrink-0 text-[var(--signal-money)]" />
+                <div>
+                  <h4 className="m-0 text-[14px] font-semibold text-[var(--text-primary)]">
+                    3. Switch network to {STELLAR_NETWORK_NAME}
+                  </h4>
+                  <p className="mt-0.5 mb-0 text-[13px] text-[var(--text-muted)]">
+                    Open wallet settings and select {STELLAR_NETWORK_NAME}.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -572,23 +642,41 @@ const Navbar = () => {
                     'success'
                   );
                 }}
-                className="btn btn-outline"
-                style={{ flex: '1 1 100%', borderColor: 'rgba(0, 242, 254, 0.45)', color: '#00f2fe', marginTop: '0.5rem', fontSize: '0.85rem' }}
+                className="gp-btn gp-btn-money gp-btn-lg w-full"
               >
-                ⚡ Use a {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'} practice wallet in this browser
+                Use {STELLAR_NETWORK_NAME === 'TESTNET' ? 'Testnet' : 'Local'} practice wallet in this browser
               </button>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href="https://varialwallet.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gp-btn gp-btn-secondary w-full"
+                >
+                  Get Varial
+                  <ExternalLink size={14} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardingModal(false)}
+                  className="gp-btn gp-btn-ghost w-full"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>,
         document.body
       )}
 
-      {/* Public Verification Ledger Modal (Deliverable 2) */}
-      <VerificationLedgerModal 
-        isOpen={showLedgerModal} 
-        onClose={() => setShowLedgerModal(false)} 
-      />
-    </nav>
+      {showLedgerModal && (
+        <VerificationLedgerModal
+          isOpen={showLedgerModal}
+          onClose={() => setShowLedgerModal(false)}
+        />
+      )}
+    </header>
   );
 };
 
