@@ -101,7 +101,7 @@ const LandingPage = () => {
             </h1>
 
             <p className="m-0 max-w-[46ch] text-[15px] leading-relaxed text-zinc-300 [text-shadow:0_2px_18px_rgba(9,9,11,0.95)] sm:text-base">
-              Scan a QR, lock milestone funds on Stellar, and release 100% straight to the freelancer in five seconds.
+              Scan a QR, lock milestone funds on Stellar Testnet, and release 100% straight to the freelancer in five seconds.
             </p>
 
             <div className="pointer-events-auto mt-2 flex flex-wrap items-center justify-center gap-3">
