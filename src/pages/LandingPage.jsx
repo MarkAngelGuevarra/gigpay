@@ -1,246 +1,237 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Zap, DollarSign } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-
-const features = [
-  {
-    id: 1,
-    icon: <Zap size={36} color="#00f2fe" style={{ marginBottom: '1.5rem' }} />,
-    bgIcon: <Zap size={100} />,
-    title: "Fast Settlement",
-    shortDesc: "Powered by Stellar network, payments settle in about 5 seconds, directly to your wallet.",
-    longDesc: "When a client approves your work, you don't want to wait a week for a bank wire. Using the Stellar network consensus protocol, GigPay settles payments in about 5 seconds. This pilot runs on Stellar Testnet with practice XLM; there are no banking hours, FX fees or SWIFT delays to wait for.",
-    shadowColor: "rgba(59,130,246,0.3)",
-    accentColor: "#00f2fe"
-  },
-  {
-    id: 2,
-    icon: <DollarSign size={36} color="#4ade80" style={{ marginBottom: '1.5rem' }} />,
-    bgIcon: <DollarSign size={100} />,
-    title: "No Platform Commission",
-    shortDesc: "Traditional platforms can take up to 20%. GigPay takes no cut: the freelancer receives the full escrow amount.",
-    longDesc: "Traditional gig platforms can take up to 20% of your earnings. GigPay takes no platform commission: the contract pays the freelancer the full amount the client locked. The client pays the Stellar network fee for locking and releasing, which the app estimates at about 0.03 XLM per transaction.",
-    shadowColor: "rgba(74,222,128,0.3)",
-    accentColor: "#4ade80"
-  },
-  {
-    id: 3,
-    icon: <ShieldCheck size={36} color="#c084fc" style={{ marginBottom: '1.5rem' }} />,
-    bgIcon: <ShieldCheck size={100} />,
-    title: "Smart Escrow",
-    shortDesc: "Funds are locked safely in a Soroban smart contract until the work is verified and approved.",
-    longDesc: "Trust is the biggest barrier in freelance work. Our Soroban smart contracts ensure clients must fund the escrow before you start working. Once the funds are locked on-chain, the contract can only pay your address, and only when the client approves (there is no refund or cancel in this pilot).",
-    shadowColor: "rgba(192,132,252,0.3)",
-    accentColor: "#c084fc"
-  }
-];
+import { BrandLockup } from '../components/BrandMark';
+import LandingShaderCanvas from '../components/LandingShaderCanvas';
+import EscrowPhoneShowcase from '../components/EscrowPhoneShowcase';
+import ZeroFeeSliceSection from '../components/ZeroFeeSliceSection';
+import SorobanBlueprintSection from '../components/SorobanBlueprintSection';
+import KineticLogoCanvas from '../components/KineticLogoCanvas';
+import VerificationLedgerModal from '../components/VerificationLedgerModal';
+import '../styles/landing.css';
 
 const LandingPage = () => {
   const { user, activeRole, isSimulationMode, switchRole } = useAuth();
-  const [selectedFeature, setSelectedFeature] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('freelancer');
+  const [showLedger, setShowLedger] = useState(false);
+  const reducedMotion = Boolean(useReducedMotion());
 
   useEffect(() => {
-    if (!selectedFeature || typeof window === 'undefined') return undefined;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setSelectedFeature(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFeature]);
+    if (typeof window === 'undefined') return undefined;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const signedInDashboardPath = activeRole === 'freelancer' ? '/freelancer' : '/client';
+  const roleCtaTo = user
+    ? (selectedRole === 'freelancer' ? '/freelancer' : '/client')
+    : `/auth?mode=signup&role=${selectedRole}`;
 
   return (
-    <div style={{ paddingTop: '2rem', overflowX: 'hidden' }}>
-      
-      {/* Hero Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        style={{ textAlign: 'center', marginBottom: '6rem', position: 'relative' }}
+    <div className="gp-landing" data-surface="dark">
+      {/* Borderless top navigation bar bleeding over y = 0 WebGL stage */}
+      <header
+        className={`fixed inset-x-0 top-0 z-50 h-16 border-b transition-[background-color,border-color,backdrop-filter] duration-200 ${
+          scrolled
+            ? 'border-zinc-800 bg-[#09090b]/85 backdrop-blur-md'
+            : 'border-transparent bg-transparent'
+        }`}
       >
-        <div style={{
-          position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)',
-          width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%)',
-          zIndex: -1, pointerEvents: 'none'
-        }} />
+        <div className="mx-auto flex h-full max-w-[1120px] items-center justify-between gap-6 px-4 sm:px-6">
+          <Link to="/" aria-label="GigPay home" className="no-underline">
+            <BrandLockup size={28} variant="dark" />
+          </Link>
 
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.4rem 0.85rem',
-            borderRadius: '999px',
-            background: 'rgba(0, 242, 254, 0.08)',
-            border: '1px solid rgba(0, 242, 254, 0.25)',
-            marginBottom: '1.5rem',
-            boxShadow: '0 0 20px rgba(0, 242, 254, 0.15)',
-            maxWidth: '100%',
-            boxSizing: 'border-box'
-          }}
-        >
-          <img src="/logo.png" alt="GigPay" style={{ width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0 }} />
-          <span style={{ fontSize: 'clamp(0.72rem, 3.2vw, 0.85rem)', fontWeight: 600, color: '#00f2fe', letterSpacing: '0.3px', textAlign: 'center', wordBreak: 'break-word' }}>
-            Built on Stellar Soroban · Stellar Philippines Instawards 2026 · Testnet pilot
-          </span>
-        </motion.div>
-
-        <motion.h1 
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          style={{ fontSize: 'clamp(2.1rem, 7.5vw, 4.5rem)', marginBottom: '1.5rem', lineHeight: 1.15, letterSpacing: '-1px', wordBreak: 'break-word' }}
-        >
-          Paid on Approval.<br />
-          <span style={{ background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Locked Before Work Starts.
-          </span>
-        </motion.h1>
-        
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          style={{ color: 'var(--text-muted)', fontSize: 'clamp(1rem, 3.5vw, 1.25rem)', maxWidth: '650px', margin: '0 auto 2.5rem auto', padding: '0 0.5rem' }}
-        >
-          Milestone escrow for Filipino freelancers on Stellar. The client locks the payment first, and it goes straight to your wallet the moment they approve your work. (Pilot on Stellar Testnet: practice money only.)
-        </motion.p>
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="hero-cta-group"
-          style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}
-        >
-          {user && !isSimulationMode ? (
-            <Link to={activeRole === 'freelancer' ? '/freelancer' : '/client'} className="btn btn-primary hero-btn" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}>
-              Go to {activeRole === 'freelancer' ? 'Freelancer' : 'Client'} Dashboard <ArrowRight size={20} />
-            </Link>
-          ) : (
-            <>
-              <Link
-                to={user ? '/freelancer' : '/auth?mode=signup&role=freelancer'}
-                onClick={user ? () => switchRole('freelancer') : undefined}
-                className="btn btn-primary hero-btn"
-                style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem' }}
-              >
-                I'm a Freelancer <ArrowRight size={20} />
+          <nav className="flex items-center gap-5 sm:gap-6" aria-label="Landing navigation">
+            <a
+              href="#how-it-works"
+              className="hidden text-[13px] font-medium text-zinc-400 no-underline transition-colors hover:text-zinc-50 sm:inline-block"
+            >
+              How it works
+            </a>
+            <a
+              href="#zero-fees"
+              className="hidden text-[13px] font-medium text-zinc-400 no-underline transition-colors hover:text-zinc-50 sm:inline-block"
+            >
+              Zero fees
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowLedger(true)}
+              className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-zinc-400 transition-colors hover:text-zinc-50"
+            >
+              Public ledger
+            </button>
+            {user && !isSimulationMode ? (
+              <Link to={signedInDashboardPath} className="gp-btn gp-btn-primary">
+                Dashboard
               </Link>
-              <Link
-                to={user ? '/client' : '/auth?mode=signup&role=client'}
-                onClick={user ? () => switchRole('client') : undefined}
-                className="btn btn-outline hero-btn"
-                style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.03)' }}
-              >
-                I'm a Client
+            ) : (
+              <Link to="/auth" className="gp-btn gp-btn-primary">
+                Sign in
               </Link>
-            </>
-          )}
-        </motion.div>
-      </motion.div>
-
-      {/* Feature Cards Grid */}
-      <motion.div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', textAlign: 'left', marginBottom: '4rem' }}>
-        {features.map((feature) => (
-          <motion.div 
-            key={feature.id}
-            role="button"
-            tabIndex={0}
-            aria-label={`Learn more about ${feature.title}`}
-            onClick={() => setSelectedFeature(feature)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setSelectedFeature(feature);
-              }
-            }}
-            whileHover={{ y: -10, scale: 1.02, boxShadow: `0 20px 40px -10px ${feature.shadowColor}` }}
-            whileTap={{ scale: 0.98 }}
-            className="glass-panel"
-            style={{ position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', height: '100%' }}
-          >
-            <div style={{ position: 'absolute', top: 0, right: 0, padding: '1rem', opacity: 0.1, pointerEvents: 'none' }}>{feature.bgIcon}</div>
-            <div>{feature.icon}</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{feature.title}</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>{feature.shortDesc}</p>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Trendy Feature Modal */}
-      {(() => {
-        const modalContent = (
-          <AnimatePresence>
-            {selectedFeature && (
-              <motion.div
-                role="dialog"
-                aria-modal="true"
-                aria-label={selectedFeature.title}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{
-                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                  background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-                  zIndex: 100000, display: 'flex', alignItems: 'safe center', justifyContent: 'center',
-                  overflowY: 'auto', padding: '1rem', boxSizing: 'border-box'
-                }}
-                onClick={() => setSelectedFeature(null)}
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  className="glass-panel"
-                  style={{
-                    maxWidth: '550px', width: '100%', position: 'relative', boxSizing: 'border-box',
-                    borderTop: `4px solid ${selectedFeature.accentColor}`,
-                    boxShadow: `0 25px 50px -12px ${selectedFeature.shadowColor}`
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button 
-                    type="button"
-                    aria-label="Close"
-                    onClick={() => setSelectedFeature(null)} 
-                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '2rem', lineHeight: 1, minWidth: '44px', minHeight: '44px' }}
-                  >
-                    &times;
-                  </button>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', paddingRight: '3rem' }}>
-                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '50%' }}>
-                      {React.cloneElement(selectedFeature.icon, { style: { marginBottom: 0 } })}
-                    </div>
-                    <h2 style={{ fontSize: '2rem', margin: 0 }}>{selectedFeature.title}</h2>
-                  </div>
-                  
-                  <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    {selectedFeature.shortDesc}
-                  </p>
-                  
-                  <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ color: 'white', lineHeight: 1.7, fontSize: '1.05rem', margin: 0 }}>
-                      {selectedFeature.longDesc}
-                    </p>
-                  </div>
-                </motion.div>
-              </motion.div>
             )}
-          </AnimatePresence>
-        );
-        return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
-      })()}
-      
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        {/* Section 1: Full-Viewport WebGL Hero (Restrained Twinkling Kinetic QR Matrix + Quiet Horizon) */}
+        <section
+          className="gp-hero-stage relative flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 pt-24 pb-20 sm:px-6"
+          aria-label="GigPay milestone escrow overview"
+        >
+          <LandingShaderCanvas />
+
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-none relative z-10 flex max-w-[920px] flex-col items-center gap-5 text-center"
+          >
+            <h1 className="gp-hero-title">
+              Locked before work.
+              <br />
+              Paid on approval.
+            </h1>
+
+            <p className="m-0 max-w-[46ch] text-[15px] leading-relaxed text-zinc-300 [text-shadow:0_2px_18px_rgba(9,9,11,0.95)] sm:text-base">
+              Scan a QR, lock milestone funds on Stellar, and release 100% straight to the freelancer in five seconds.
+            </p>
+
+            <div className="pointer-events-auto mt-2 flex flex-wrap items-center justify-center gap-3">
+              {user && !isSimulationMode ? (
+                <Link to={signedInDashboardPath} className="gp-btn gp-btn-primary gp-btn-lg">
+                  Open {activeRole === 'freelancer' ? 'Freelancer' : 'Client'} Workspace
+                  <ArrowRight size={17} />
+                </Link>
+              ) : (
+                <Link to="/auth?mode=signup&role=freelancer" className="gp-btn gp-btn-primary gp-btn-lg">
+                  Start an escrow
+                  <ArrowRight size={17} />
+                </Link>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Static scroll cue (reacts cleanly on hover without looping) */}
+          <a
+            href="#how-it-works"
+            aria-label="Scroll to see how GigPay works"
+            className="group absolute bottom-7 z-10 flex flex-col items-center gap-2 text-[12px] font-medium tracking-wide text-zinc-400 no-underline transition-colors hover:text-zinc-200"
+          >
+            <span>Scroll to explore</span>
+            <span className="block h-5 w-px bg-emerald-400/75 transition-[height,background-color] duration-200 group-hover:h-7 group-hover:bg-emerald-400" />
+          </a>
+        </section>
+
+        {/* Section 2: Scroll-Scrubbed Orthographic 9:19.5 Phone Reveal Choreography */}
+        <EscrowPhoneShowcase />
+
+        {/* Section 3: Zero-Control Scroll-Scrubbed "20% Slice" Commission Comparison */}
+        <ZeroFeeSliceSection />
+
+        {/* Section 4: Pointer-Illuminated Stellar Soroban Open Escrow Blueprint */}
+        <SorobanBlueprintSection onOpenLedger={() => setShowLedger(true)} />
+
+        {/* Section 5: Centered Closing Role CTA + Twinkling Kinetic Particle Brand Logo Finale */}
+        <section className="relative flex min-h-[82dvh] flex-col justify-between border-t border-zinc-800/80 bg-[#09090b] pt-20 sm:min-h-[88dvh] sm:pt-32">
+          <div className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 text-center sm:px-6">
+            <h2 className="m-0 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-5xl sm:leading-[1.08]">
+              Try a milestone escrow in under two minutes
+            </h2>
+            <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-zinc-400 sm:text-base">
+              Choose your role to start on Stellar Testnet with a built-in practice wallet or Varial extension.
+            </p>
+
+            {user && !isSimulationMode ? (
+              <div className="mt-8">
+                <Link to={signedInDashboardPath} className="gp-btn gp-btn-primary gp-btn-lg">
+                  Go to {activeRole === 'freelancer' ? 'Freelancer' : 'Client'} Workspace
+                  <ArrowRight size={17} />
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <div className="gp-segmented" role="tablist" aria-label="Choose starting role">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selectedRole === 'freelancer'}
+                    className="gp-segmented-btn"
+                    onClick={() => setSelectedRole('freelancer')}
+                  >
+                    Freelancer
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selectedRole === 'client'}
+                    className="gp-segmented-btn"
+                    onClick={() => setSelectedRole('client')}
+                  >
+                    Client
+                  </button>
+                </div>
+
+                <Link
+                  to={roleCtaTo}
+                  onClick={user ? () => switchRole(selectedRole) : undefined}
+                  className="gp-btn gp-btn-primary gp-btn-lg"
+                >
+                  Continue as {selectedRole === 'freelancer' ? 'Freelancer' : 'Client'}
+                  <ArrowRight size={17} />
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Interactive Twinkling Kinetic Particle Verified Payout Seal + GigPay Wordmark */}
+          <div className="mx-auto mt-8 w-full max-w-[1120px] px-4 sm:mt-16 sm:px-6">
+            <KineticLogoCanvas />
+          </div>
+        </section>
+      </main>
+
+      <footer className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-zinc-800/80 px-4 pt-7 pb-10 text-[13px] text-zinc-400 sm:px-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <BrandLockup size={22} variant="dark" />
+          <span>Stellar Testnet pilot · Practice XLM only (no cash value or fiat withdrawal).</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-5">
+          <button
+            type="button"
+            onClick={() => setShowLedger(true)}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-zinc-400 transition-colors hover:text-zinc-50"
+          >
+            Public ledger
+          </button>
+          <a
+            href="https://github.com/MarkAngelGuevarra/gigpay/blob/main/PRIVACY.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-medium text-zinc-400 no-underline transition-colors hover:text-zinc-50"
+          >
+            Privacy
+          </a>
+          <a
+            href="https://github.com/MarkAngelGuevarra/gigpay"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-medium text-zinc-400 no-underline transition-colors hover:text-zinc-50"
+          >
+            GitHub
+          </a>
+        </div>
+      </footer>
+
+      {showLedger && <VerificationLedgerModal isOpen={showLedger} onClose={() => setShowLedger(false)} />}
     </div>
   );
 };

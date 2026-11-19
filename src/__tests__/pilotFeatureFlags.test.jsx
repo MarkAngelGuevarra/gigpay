@@ -28,7 +28,7 @@ describe('Pilot tools feature flag and telemetry gating', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Smart Escrow/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Locked before work/i })).toBeInTheDocument();
     });
 
     expect(screen.queryByLabelText('Pilot Program Intake Banner')).not.toBeInTheDocument();
@@ -124,6 +124,7 @@ describe('Pilot tools feature flag and telemetry gating', () => {
       Analytics: () => <div data-testid="vercel-analytics" />,
     }));
 
+    window.history.pushState({}, '', '/auth');
     const { default: App } = await import('../App.jsx');
     render(<App />);
 
@@ -132,6 +133,7 @@ describe('Pilot tools feature flag and telemetry gating', () => {
     });
     expect(screen.getByText(/Tester Feedback Form/i)).toBeInTheDocument();
     expect(screen.getByText(/Testnet Guide/i)).toBeInTheDocument();
+    window.history.pushState({}, '', '/');
   });
 
   it('requires VITE_ENABLE_PILOT_TOOLS=true, non-empty webhook URL, and offline-false for Google Sheets sync', async () => {

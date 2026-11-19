@@ -22,6 +22,17 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   });
 }
 
+if (typeof window !== 'undefined' && typeof window.IntersectionObserver !== 'function') {
+  window.IntersectionObserver = class IntersectionObserver {
+    constructor() {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  };
+  globalThis.IntersectionObserver = window.IntersectionObserver;
+}
+
 afterEach(() => {
   cleanup();
 });

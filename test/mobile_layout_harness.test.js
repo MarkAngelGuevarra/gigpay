@@ -201,16 +201,13 @@ runTest(11, "Typography Math: clamp(2rem, 5vw, 3rem) scales correctly at 375px, 
   assert.strictEqual(desktopResolved, 48, "At 1200px desktop, clamp must resolve to 48px maximum");
 });
 
-runTest(12, "LandingPage: Hero h1 and badge specify clamp typography and word-break containment", () => {
-  // Check hero announcement badge
-  assert.ok(landingPageSrc.includes("fontSize: 'clamp(0.72rem, 3.2vw, 0.85rem)'"), "Badge must have responsive clamp font size");
-  assert.ok(landingPageSrc.includes("wordBreak: 'break-word'"), "Badge must have wordBreak: 'break-word'");
-  assert.ok(landingPageSrc.includes("maxWidth: '100%'"), "Badge must have maxWidth: '100%'");
-  assert.ok(landingPageSrc.includes("boxSizing: 'border-box'"), "Badge must have boxSizing: 'border-box'");
+const landingCssSrc = readProjectFile('src/styles/landing.css');
 
-  // Check hero h1
-  assert.ok(landingPageSrc.includes("fontSize: 'clamp(2.1rem, 7.5vw, 4.5rem)'"), "Hero h1 must have clamp typography");
-  assert.ok(landingPageSrc.includes("wordBreak: 'break-word'"), "Hero h1 must have wordBreak: 'break-word'");
+runTest(12, "LandingPage: Hero h1 specifies responsive clamp typography, word-break containment, and overflow clipping", () => {
+  assert.ok(landingPageSrc.includes('className="gp-hero-title"'), "LandingPage hero h1 must use .gp-hero-title");
+  assert.ok(/\.gp-hero-title\s*\{[\s\S]*?font-size:\s*clamp\([^)]+\)/.test(landingCssSrc), "Hero h1 must specify responsive clamp typography");
+  assert.ok(/\.gp-hero-title\s*\{[\s\S]*?word-break:\s*break-word/.test(landingCssSrc), "Hero h1 must specify word-break: break-word");
+  assert.ok(/\.gp-landing\s*\{[\s\S]*?overflow-x:\s*clip/.test(landingCssSrc), "Landing page root must clip horizontal overflow");
 });
 
 // -----------------------------------------------------------------

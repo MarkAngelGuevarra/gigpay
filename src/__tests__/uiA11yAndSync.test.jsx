@@ -350,19 +350,16 @@ describe('Phase 2 Slice 4: intra-tab sync, portals, double-submit guards, error 
       </MemoryRouter>
     );
 
-    // Feature modal stays open when clicking modal card text and closes on Escape
-    fireEvent.click(screen.getByText('Fast Settlement'));
-    const featureDialog = await screen.findByRole('dialog', { name: 'Fast Settlement' });
-    expect(featureDialog).toHaveAttribute('aria-modal', 'true');
-    fireEvent.click(screen.getByText(/Stellar network consensus protocol/i));
-    expect(screen.getByRole('dialog', { name: 'Fast Settlement' })).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'Escape' });
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Fast Settlement' })).not.toBeInTheDocument();
-    });
+    // Landing page renders the scroll-choreographed reveal beats, zero-fee comparison, and open ledger section
+    expect(screen.getByText('Being paid should be simple.')).toBeInTheDocument();
+    expect(screen.getByText('Scan a QR.')).toBeInTheDocument();
+    expect(screen.getByText('Deliver work.')).toBeInTheDocument();
+    expect(screen.getByText('Settle within seconds.')).toBeInTheDocument();
+    expect(screen.getByText('Keep 100% of every milestone.')).toBeInTheDocument();
+    expect(screen.getByText('Built on open escrow, not blind trust.')).toBeInTheDocument();
 
-    // Clicking I'm a Freelancer carries mode=signup&role=freelancer to AuthPage
-    const flCta = screen.getByRole('link', { name: /I'm a Freelancer/i });
+    // Selecting Freelancer role carries mode=signup&role=freelancer to AuthPage
+    const flCta = screen.getByRole('link', { name: /Continue as Freelancer/i });
     expect(flCta).toHaveAttribute('href', '/auth?mode=signup&role=freelancer');
     fireEvent.click(flCta);
 
