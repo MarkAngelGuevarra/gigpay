@@ -125,10 +125,10 @@ const buildQrMatrixParticles = (width, height) => {
   const isCompact = width < 640;
   const step = isCompact ? 14 : 15;
 
-  // Bound the QR matrix to a centered architectural frame so it frames the hero without spanning edge-to-edge
+  // Bound the QR matrix to a centered architectural frame so it frames the hero cleanly on all four sides
   const frameW = isCompact
-    ? Math.min(width * 0.86, 350)
-    : Math.min(width * 0.64, 780);
+    ? Math.min(width * 0.92, 376)
+    : Math.min(width * 0.78, 1020);
   const frameH = isCompact
     ? Math.min(height * 0.54, 410)
     : Math.min(height * 0.62, 500);
@@ -155,8 +155,8 @@ const buildQrMatrixParticles = (width, height) => {
       const speedRand = hash2(c * 5.3 + 19, r * 4.1 + 23);
       const phaseRand = hash2(c * 7.7 + 31, r * 6.3 + 37);
 
-      // Keep the center typography area calm while preserving crisp framing blocks around it
-      const normX = (x - cx) / Math.max(120, frameW * 0.44);
+      // Keep the inner typography zone calm while letting QR dots populate both horizontal and vertical margins
+      const normX = (x - cx) / Math.max(110, frameW * 0.37);
       const normY = (y - cy) / Math.max(100, frameH * 0.42);
       const centerDist = Math.hypot(normX, normY);
       const isData = centerDist > 0.86 ? frac > 0.64 : centerDist > 0.58 ? frac > 0.85 : false;
