@@ -76,15 +76,22 @@ runTest(4, "AuthContext.jsx persists publicKey on connectWallet and removes on d
 runTest(5, "ClientDashboard.jsx computes totalEscrowed, activeEscrows, and totalReleased", () => {
   const content = readSource('src/pages/ClientDashboard.jsx');
   assert.ok(content.includes('const totalEscrowed = fundedTasks.reduce(') && content.includes('const fundedTasks = ownTasks.filter('), "Must compute totalEscrowed via reduce");
-  assert.ok(content.includes("const activeEscrows = fundedTasks.filter(t => t.status === 'In Progress' || t.status === 'Under Review' || t.status === 'Disputed').length"), "Must compute activeEscrows strictly for active states");
-  assert.ok(content.includes("const completedTasks = fundedTasks.filter(t => t.status === 'Completed' || t.status === 'Paid')") && content.includes("const totalReleased = completedTasks.reduce("), "Must compute totalReleased across Completed and Paid tasks");
+  assert.ok(
+    /const activeEscrows = fundedTasks\.filter\(\s*\(?t\)?\s*=>\s*t\.status === 'In Progress'\s*\|\|\s*t\.status === 'Under Review'\s*\|\|\s*t\.status === 'Disputed'\s*\)\.length/.test(content),
+    "Must compute activeEscrows strictly for active states"
+  );
+  assert.ok(
+    /const completedTasks = fundedTasks\.filter\(\s*\(?t\)?\s*=>\s*t\.status === 'Completed'\s*\|\|\s*t\.status === 'Paid'\s*\)/.test(content) &&
+      content.includes("const totalReleased = completedTasks.reduce("),
+    "Must compute totalReleased across Completed and Paid tasks"
+  );
 });
 
 runTest(6, "ClientDashboard.jsx renders activeEscrows in aggregate summary cards", () => {
   const content = readSource('src/pages/ClientDashboard.jsx');
   assert.ok(content.includes('{activeEscrows}'), "Must render {activeEscrows} in JSX card");
-  assert.ok(content.includes('Total Escrowed'), "Must display Total Escrowed heading");
-  assert.ok(content.includes('Total Released'), "Must display Total Released heading");
+  assert.ok(content.includes('{totalEscrowed') && (content.includes('Escrowed on-chain') || content.includes('Total Escrowed')), "Must display Escrowed metric heading and value");
+  assert.ok(content.includes('{totalReleased') && (content.includes('Released on-chain') || content.includes('Total Released')), "Must display Released metric heading and value");
 });
 
 runTest(7, "ClientDashboard.jsx disables 'Approve & Release' button for tasks with 'Available' status", () => {
@@ -104,7 +111,10 @@ runTest(8, "FreelancerDashboard.jsx awaits updateTaskStatus in handleAcceptWork"
 runTest(9, "FreelancerDashboard provides handleAcceptWork with exact toast feedback", () => {
   const content = readSource('src/pages/FreelancerDashboard.jsx');
   assert.ok(content.includes("const handleAcceptWork = async"), "Must define handleAcceptWork handler");
-  assert.ok(content.includes("Task accepted. The payment stays locked in the escrow until the client releases it."), "Must display exact escrow confirmation toast");
+  assert.ok(
+    content.includes("Task accepted. Funds stay locked in Soroban escrow until your client approves release."),
+    "Must display exact escrow confirmation toast"
+  );
   assert.ok(content.includes("Failed to accept task:"), "Must catch errors and display error toast");
 });
 

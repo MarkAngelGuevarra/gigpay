@@ -58,7 +58,17 @@ runTest(1, "App.jsx imports and mounts PilotGuideWidget inside Router", () => {
   const routerIdx = appSrc.indexOf('<Router>');
   const widgetIdx = appSrc.indexOf('<PilotGuideWidget />');
   const routerCloseIdx = appSrc.indexOf('</Router>');
-  assert.ok(routerIdx !== -1 && widgetIdx > routerIdx && widgetIdx < routerCloseIdx, "PilotGuideWidget must be nested inside <Router>");
+  const appShellDefIdx = appSrc.indexOf('const AppShell');
+  const appShellMountIdx = routerIdx !== -1 ? appSrc.indexOf('<AppShell', routerIdx) : -1;
+  const directInRouter = routerIdx !== -1 && widgetIdx > routerIdx && widgetIdx < routerCloseIdx;
+  const viaAppShellInRouter =
+    routerIdx !== -1 &&
+    appShellDefIdx !== -1 &&
+    widgetIdx > appShellDefIdx &&
+    widgetIdx < routerIdx &&
+    appShellMountIdx > routerIdx &&
+    appShellMountIdx < routerCloseIdx;
+  assert.ok(directInRouter || viaAppShellInRouter, "PilotGuideWidget must be nested inside <Router>");
 });
 
 runTest(2, "PilotGuideWidget implements persistent state via gigpay_guide_state_v1", () => {
