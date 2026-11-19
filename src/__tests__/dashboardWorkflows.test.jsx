@@ -119,7 +119,7 @@ describe('Dashboard workflows and UI safety guards', () => {
 
     const metrics = document.querySelector('.client-metrics');
     expect(metrics.textContent).toContain('15.0 XLM');
-    expect(metrics.textContent).toContain('Active Escrows1');
+    expect(metrics.textContent).toContain('Active escrows1');
     expect(metrics.textContent).toContain('5.0 XLM');
     expect(metrics.textContent).toContain('50%');
     expect(metrics.textContent).not.toContain('99');
@@ -396,7 +396,8 @@ describe('Dashboard workflows and UI safety guards', () => {
     expect(screen.getByText(/Proof of work is paused while this dispute is open/i)).toBeInTheDocument();
 
     fireEvent.click(powButtons[0]);
-    fireEvent.click(screen.getByRole('button', { name: /1-Click Auto-Fill Sample/i }));
+    const notesInput = screen.getByLabelText(/Summary Notes/i);
+    fireEvent.change(notesInput, { target: { value: 'Note without deliverable link' } });
     fireEvent.click(screen.getByRole('button', { name: /Submit Deliverables/i }));
     expect(mockTaskState.submitProofOfWork).not.toHaveBeenCalled();
 
@@ -415,12 +416,12 @@ describe('Dashboard workflows and UI safety guards', () => {
     });
 
     fireEvent.click(screen.getByTestId('show-invite-qr'));
-    const qrImg = await screen.findByTestId('invite-qr-image');
-    expect(qrImg.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
-    expect(screen.getByRole('dialog', { name: 'Invite QR code' }).textContent).toMatch(/camera app/i);
+    const qrDialog = await screen.findByRole('dialog', { name: 'My Pay QR' });
+    expect(qrDialog).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /GigPay QR code/i })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Invite QR code' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'My Pay QR' })).not.toBeInTheDocument();
     });
   });
 });

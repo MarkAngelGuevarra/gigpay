@@ -87,7 +87,7 @@ try {
   await tabB.evaluate((title) => {
     const cardText = () => {
       const h = [...document.querySelectorAll('h4')].find((el) => el.textContent.trim() === title);
-      return h ? h.closest('.glass-panel')?.textContent || '' : null;
+      return h ? h.closest('.gp-card, .glass-panel')?.textContent || '' : null;
     };
     // Arms an observer and returns at once, so it is in place before tab A clicks.
     window.__armCardWatch = (wantDisputed) => {
@@ -101,7 +101,7 @@ try {
     };
   }, TASK_TITLE);
 
-  const cardA = tabA.locator('.glass-panel', { has: tabA.locator('h3', { hasText: TASK_TITLE }) }).first();
+  const cardA = tabA.locator('.gp-card, .glass-panel', { has: tabA.locator('h3', { hasText: TASK_TITLE }) }).first();
   await cardA.waitFor({ timeout: 15000 });
   await tabB.locator('h4', { hasText: TASK_TITLE }).waitFor({ timeout: 15000 });
 

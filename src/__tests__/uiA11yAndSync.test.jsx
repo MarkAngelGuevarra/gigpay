@@ -145,13 +145,13 @@ describe('Phase 2 Slice 4: intra-tab sync, portals, double-submit guards, error 
     const openButtons = await screen.findAllByRole('button', { name: /(Attach|Update) Proof of Work/i });
     fireEvent.click(openButtons[0]);
 
-    const docInputA = screen.getByLabelText(/1\. Document, Design, or Work Link/i);
+    const docInputA = screen.getByLabelText(/Document, Design, or Work Link/i);
     fireEvent.change(docInputA, { target: { value: 'https://docs.google.com/draft-only-for-a' } });
     expect(docInputA).toHaveValue('https://docs.google.com/draft-only-for-a');
 
     // Switch to Task B: must clear Task A's draft and hydrate Task B's stored link
     fireEvent.click(openButtons[1]);
-    const docInputB = screen.getByLabelText(/1\. Document, Design, or Work Link/i);
+    const docInputB = screen.getByLabelText(/Document, Design, or Work Link/i);
     expect(docInputB).toHaveValue('https://docs.google.com/existing-b');
   });
 
@@ -364,7 +364,7 @@ describe('Phase 2 Slice 4: intra-tab sync, portals, double-submit guards, error 
     fireEvent.click(flCta);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Freelancer \(Working\)/i })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /^Freelancer\b/i })).toHaveAttribute('aria-pressed', 'true');
     });
     expect(screen.getByRole('button', { name: 'Create Account' })).toBeInTheDocument();
 

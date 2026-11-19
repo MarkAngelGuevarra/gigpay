@@ -113,9 +113,10 @@ describe('Phase 2 Slice 1: role boundaries, Freighter v6 API, and auth confirmat
       expect(screen.getByTestId('navbar-role-badge')).toHaveTextContent('client');
     });
 
-    expect(screen.getByRole('link', { name: 'Client Portal' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Freelancer Portal' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /switch/i })).not.toBeInTheDocument();
+    const workspaceLink = screen.getByRole('link', { name: 'Workspace' });
+    expect(workspaceLink).toHaveAttribute('href', '/client');
+    expect(screen.queryByRole('link', { name: 'Freelancer' })).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Toggle active role/i)).not.toBeInTheDocument();
 
     let switched;
     act(() => {
@@ -132,9 +133,9 @@ describe('Phase 2 Slice 1: role boundaries, Freighter v6 API, and auth confirmat
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Client Portal' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Freelancer Portal' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /switch/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Client' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Freelancer' })).toBeInTheDocument();
+      expect(screen.getByTitle(/Toggle active role/i)).toBeInTheDocument();
     });
   });
 
@@ -343,11 +344,10 @@ describe('Phase 2 Slice 1: role boundaries, Freighter v6 API, and auth confirmat
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Client \(Hiring\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Client\b/i }));
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'student@school.edu' } });
-    const pwInputs = screen.getAllByPlaceholderText('••••••••');
-    fireEvent.change(pwInputs[0], { target: { value: 'StrongPass123!' } });
-    fireEvent.change(pwInputs[1], { target: { value: 'StrongPass123!' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'StrongPass123!' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'StrongPass123!' } });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
 

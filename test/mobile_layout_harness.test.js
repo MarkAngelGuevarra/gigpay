@@ -84,14 +84,10 @@ const VIEWPORTS = [
 const clientDashboardSrc = readProjectFile('src/pages/ClientDashboard.jsx');
 
 runTest(1, "ClientDashboard: Dispute Modal specifies fluid width and 100vw-capped maxWidth", () => {
-  const disputeModalMatch = clientDashboardSrc.match(/Raise Escrow Dispute[\s\S]*?className="glass-panel"[\s\S]*?style=\{\{([^}]+)\}\}/);
-  assert.ok(disputeModalMatch, "Dispute modal glass-panel must exist");
-  
-  // Search preceding panel definition
-  const panelRegex = /<div className="glass-panel" style=\{\{([^}]+)\}\}>\s*<h3[^>]*>\s*<AlertTriangle/g;
-  const match = panelRegex.exec(clientDashboardSrc);
-  assert.ok(match, "Dispute modal must be defined with inline glass-panel style");
-  
+  const disputePanelRegex = /aria-label="Raise Escrow Dispute"[\s\S]*?<div[\s\S]*?className="(?:gp-modal|glass-panel)[^"]*"[\s\S]*?style=\{\{([^}]+)\}\}[\s\S]*?<AlertTriangle/;
+  const match = disputePanelRegex.exec(clientDashboardSrc);
+  assert.ok(match, "Dispute modal must be defined with fluid inline modal dimensions");
+
   const styleStr = match[1];
   assert.ok(styleStr.includes("width: '100%'"), "Dispute modal must have width: '100%'");
   assert.ok(styleStr.includes("maxWidth: 'min(450px, calc(100vw - 2rem))'"), "Dispute modal must have fluid maxWidth");
@@ -99,10 +95,10 @@ runTest(1, "ClientDashboard: Dispute Modal specifies fluid width and 100vw-cappe
 });
 
 runTest(2, "ClientDashboard: Milestone Release Modal specifies fluid width and 100vw-capped maxWidth", () => {
-  const panelRegex = /<div className="glass-panel" style=\{\{([^}]+)\}\}>\s*<h3[^>]*>\s*<CheckCircle[^>]*\/> Milestone Release Confirmation/g;
-  const match = panelRegex.exec(clientDashboardSrc);
-  assert.ok(match, "Milestone Release modal must be defined with inline glass-panel style");
-  
+  const releasePanelRegex = /aria-label="Milestone Release Confirmation"[\s\S]*?<div[\s\S]*?className="(?:gp-modal|glass-panel)[^"]*"[\s\S]*?style=\{\{([^}]+)\}\}[\s\S]*?Milestone Release Confirmation/;
+  const match = releasePanelRegex.exec(clientDashboardSrc);
+  assert.ok(match, "Milestone Release modal must be defined with fluid inline modal dimensions");
+
   const styleStr = match[1];
   assert.ok(styleStr.includes("width: '100%'"), "Milestone release modal must have width: '100%'");
   assert.ok(styleStr.includes("maxWidth: 'min(450px, calc(100vw - 2rem))'"), "Milestone release modal must have fluid maxWidth");
@@ -170,7 +166,7 @@ runTest(8, "Navbar: index.css mobile media query governs .navbar-actions flex al
 });
 
 runTest(9, "Navbar: Wallet pills wrapper enables flexWrap: 'wrap' for multi-pill mobile rows", () => {
-  const walletPillsMatch = navbarSrc.match(/className="navbar-wallet-pills"[\s\S]*?style=\{\{([^}]+)\}\}/);
+  const walletPillsMatch = navbarSrc.match(/className="navbar-wallet-pills[^"]*"[\s\S]*?style=\{\{([^}]+)\}\}/);
   assert.ok(walletPillsMatch, "navbar-wallet-pills container must exist");
   const styleStr = walletPillsMatch[1];
   assert.ok(styleStr.includes("flexWrap: 'wrap'"), "navbar-wallet-pills must enable flexWrap: 'wrap'");
