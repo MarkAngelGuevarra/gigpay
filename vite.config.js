@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 const isLocalTargetConfigured = (env) => {
   const network = String(env.VITE_STELLAR_NETWORK || '').trim().toUpperCase();
@@ -56,7 +57,7 @@ export default defineConfig(({ command, mode }) => {
   const allowLocalhostConnect = command === 'serve' || isLocalTargetConfigured(env);
 
   return {
-    plugins: [react(), createCspPlugin({ allowInlineScript, allowLocalhostConnect })],
+    plugins: [react(), tailwindcss(), createCspPlugin({ allowInlineScript, allowLocalhostConnect })],
     server: {
       proxy: supabaseProxy,
     },
