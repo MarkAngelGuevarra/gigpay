@@ -31,7 +31,12 @@ const ITERATIONS = 20; // each iteration measures two transitions (dispute, reso
 const SLA_MS = 500;
 const TASK_ID = 'latency-probe-task'; // not a UUID, so TaskContext never sends it to Supabase
 const TASK_TITLE = 'Latency probe task';
-const DEMO_USER = { id: 'demo-client-uuid-001', email: 'latency@localhost', user_metadata: { role: 'client' } };
+const DEMO_USER = {
+  id: 'demo-client-uuid-001',
+  email: 'latency@localhost',
+  is_simulation_mode: true,
+  user_metadata: { role: 'client', is_simulation_mode: true },
+};
 
 let chromium;
 try {
@@ -69,10 +74,11 @@ try {
     client_id: DEMO_USER.id, freelancer_id: DEMO_USER.id, tx_hash: null, created_at: new Date().toISOString()
   };
   const tabA = await context.newPage();
-  await tabA.goto(origin + '/');
+  await tabA.goto(origin + '/favicon.svg');
   await tabA.evaluate(({ user, task }) => {
     localStorage.clear();
     localStorage.setItem('gigpay_demo_user', JSON.stringify(user));
+    localStorage.setItem('gigpay_tasks_owner_id', user.id);
     localStorage.setItem('gigpay_shared_tasks', JSON.stringify([task]));
   }, { user: DEMO_USER, task: seedTask });
 
