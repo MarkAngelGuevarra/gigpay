@@ -1,13 +1,21 @@
 import { useRef } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ExternalLink } from 'lucide-react';
-import { GIGPAY_ESCROW_CONTRACT_ID, EXPLORER_BASE_URL } from '../lib/stellar';
+import { GIGPAY_ESCROW_CONTRACT_ID, EXPLORER_BASE_URL, isStaticTestnetSnapshotEnabled } from '../lib/stellar';
+import onchainData from '../data/onchainEscrows.json';
 
-const SAMPLE_RECEIPTS = [
-  { hash: '9f3c81…4a1e', amount: '250.00 XLM' },
-  { hash: '4b19d2…8d02', amount: '500.00 XLM' },
-  { hash: '7e2a0c…1c90', amount: '120.00 XLM' },
-];
+// Real releases from the on-chain index (scripts/index_escrows.mjs): the three most recent
+// escrows where both sides are outside wallets. Each row links to its release transaction.
+const RECENT_RELEASES = (onchainData.escrows || [])
+  .filter((e) => e.released && e.releaseTxHash && e.walletKind === 'Outside wallet')
+  .slice(-3)
+  .reverse()
+  .map((e) => ({
+    id: e.onChainTaskId,
+    hash: `${e.releaseTxHash.slice(0, 6)}…${e.releaseTxHash.slice(-4)}`,
+    amount: `${e.amount} XLM`,
+    url: EXPLORER_BASE_URL ? `${EXPLORER_BASE_URL}/tx/${e.releaseTxHash}` : '',
+  }));
 
 const SpotlightCard = ({ children }) => {
   const cardRef = useRef(null);
@@ -147,18 +155,41 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
           <SpotlightCard>
             <div>
               <div className="flex flex-col gap-2">
-                {SAMPLE_RECEIPTS.map((row) => (
-                  <div
-                    key={row.hash}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800/90 bg-zinc-950/70 px-3 py-2 text-[12.5px] transition-colors duration-200 group-hover:border-zinc-700"
-                  >
-                    <span className="inline-flex items-center gap-2 font-mono text-zinc-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#00f0ff]" />
-                      {row.hash}
-                    </span>
-                    <span className="font-medium text-zinc-200 tabular-nums">{row.amount}</span>
-                  </div>
-                ))}
+                {(isStaticTestnetSnapshotEnabled() ? RECENT_RELEASES : []).map((row) => {
+                  const rowClass =
+                    'flex items-center justify-between rounded-lg border border-zinc-800/90 bg-zinc-950/70 px-3 py-2 text-[12.5px] no-underline transition-colors duration-200 group-hover:border-zinc-700';
+                  const content = (
+                    <>
+                      <span className="inline-flex items-center gap-2 font-mono text-zinc-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00f0ff]" />
+                        #{row.id} · {row.hash}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 font-medium text-zinc-200 tabular-nums">
+                        {row.amount}
+                        {row.url && <ExternalLink size={12} className="text-zinc-500" />}
+                      </span>
+                    </>
+                  );
+                  return row.url ? (
+                    <a
+                      key={row.id}
+                      href={row.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Escrow ${row.id} release transaction on Stellar Expert`}
+                      className={`${rowClass} hover:border-zinc-600`}
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <div key={row.id} className={rowClass}>
+                      {content}
+                    </div>
+                  );
+                })}
+                <div className="text-[12px] text-zinc-500">
+                  Latest releases between outside wallets (Stellar Testnet)
+                </div>
               </div>
               <h3 className="mt-6 mb-0 text-lg font-semibold tracking-tight text-zinc-50">
                 Open verification ledger
