@@ -138,9 +138,9 @@ const sampleBrandParticles = (width, height) => {
         vx: 0,
         vy: 0,
         isCheck,
-        r: isCheck ? 0.063 : 0.78 + rand * 0.16,
-        g: isCheck ? 0.74 + rand * 0.14 : 0.80 + rand * 0.15,
-        b: isCheck ? 0.52 + rand * 0.12 : 0.84 + rand * 0.14,
+        r: isCheck ? 0.0 : 0.78 + rand * 0.16,
+        g: isCheck ? 0.88 + rand * 0.12 : 0.80 + rand * 0.15,
+        b: isCheck ? 0.96 + rand * 0.04 : 0.84 + rand * 0.14,
         a: isCheck ? 0.78 : 0.50 + rand * 0.22,
         twinkleAmp: isCheck ? 0.20 : 0.18,
         twinkleSpeed: 0.65 + speedRand * 2.1,
@@ -303,10 +303,10 @@ const KineticLogoCanvas = () => {
           vertexData[o + 5] = Math.min(1, p.b + boost * 0.22);
           vertexData[o + 6] = Math.min(1, p.a + tw * p.twinkleAmp + boost * 0.25);
         } else {
-          // Shift energized wordmark particles smoothly into emerald glint
-          vertexData[o + 3] = Math.max(0.08, p.r - boost * 0.65);
-          vertexData[o + 4] = Math.min(1, p.g + boost * 0.14);
-          vertexData[o + 5] = Math.max(0.45, p.b - boost * 0.22);
+          // Shift energized wordmark particles smoothly into Pitch Deck cyan (#00F0FF) glint
+          vertexData[o + 3] = Math.max(0.04, p.r - boost * 0.68);
+          vertexData[o + 4] = Math.min(1, p.g + boost * 0.18);
+          vertexData[o + 5] = Math.min(1, p.b + boost * 0.22);
           vertexData[o + 6] = Math.min(0.95, p.a + tw * p.twinkleAmp + boost * 0.35);
         }
       }

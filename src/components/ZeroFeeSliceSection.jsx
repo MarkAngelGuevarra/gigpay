@@ -78,9 +78,9 @@ const ZeroFeeSliceSection = () => {
             <div>
               <div className="mb-3 flex items-center justify-between text-[13px]">
                 <span className="font-medium text-zinc-100">GigPay Escrow</span>
-                <span className="font-semibold text-emerald-400 tabular-nums">100% received · 0% cut</span>
+                <span className="font-semibold text-[#00f0ff] tabular-nums">100% received · 0% cut</span>
               </div>
-              <div className="flex h-14 w-full items-center justify-between rounded-xl bg-emerald-500 px-5 text-[14px] font-semibold text-zinc-950">
+              <div className="flex h-14 w-full items-center justify-between rounded-xl bg-[#00dceb] px-5 text-[14px] font-semibold text-zinc-950">
                 <span>100% straight to freelancer</span>
                 <span className="tabular-nums">0% cut</span>
               </div>
@@ -158,16 +158,16 @@ const ZeroFeeSliceSection = () => {
                 <span className="font-medium text-zinc-100">GigPay Escrow</span>
                 <motion.span
                   style={{ opacity: gigpayBadgeOpacity }}
-                  className="shrink-0 font-semibold text-emerald-400 tabular-nums whitespace-nowrap"
+                  className="shrink-0 font-semibold text-[#00f0ff] tabular-nums whitespace-nowrap"
                 >
                   100% received · 0% cut
                 </motion.span>
               </div>
 
-              <div className="relative h-14 w-full overflow-hidden rounded-xl border border-emerald-500/30 bg-emerald-500/10 sm:h-16">
+              <div className="relative h-14 w-full overflow-hidden rounded-xl border border-[#00f0ff]/30 bg-[#00f0ff]/10 sm:h-16">
                 <motion.div
                   style={{ scaleX: gigpayFillScale, transformOrigin: 'left center' }}
-                  className="absolute inset-0 bg-emerald-500"
+                  className="absolute inset-0 bg-[#00dceb]"
                 />
                 <motion.div
                   style={{ opacity: gigpayBadgeOpacity }}

@@ -45,11 +45,11 @@ const BG_FRAG_SRC = `
     float edgeFade = smoothstep(0.96, 0.16, abs(uv.x - 0.5) * 2.0);
 
     vec3 base = vec3(0.035, 0.035, 0.043);
-    vec3 emerald = vec3(0.063, 0.725, 0.506);
-    vec3 mist = vec3(0.45, 0.90, 0.75);
+    vec3 cyan = vec3(0.0, 0.941, 1.0);
+    vec3 mist = vec3(0.47, 0.97, 1.0);
 
     vec3 col = base;
-    col += emerald * bloom * 0.28 * drift * pulse * edgeFade;
+    col += cyan * bloom * 0.28 * drift * pulse * edgeFade;
     col += mist * hairline * 0.46 * drift * pulse * edgeFade;
     col += (hash(gl_FragCoord.xy) - 0.5) * 0.011;
     gl_FragColor = vec4(col, 1.0);
@@ -164,7 +164,7 @@ const buildQrMatrixParticles = (width, height) => {
       if (tl || tr || bl || br || isData) {
         const isFinder = tl || tr || bl || br;
 
-        // Subtle color palette tiers: quiet graphite, cool silver glint, soft teal-mint, Signal Green
+        // Subtle color palette tiers: quiet graphite, cool silver glint, sky cyan, Pitch Deck Electric Cyan (#00F0FF)
         let baseR = 0.24;
         let baseG = 0.25;
         let baseB = 0.29;
@@ -172,24 +172,24 @@ const buildQrMatrixParticles = (width, height) => {
         let twinkleAmp = isFinder ? 0.09 : 0.08;
 
         if (br) {
-          baseR = 0.07;
-          baseG = 0.68;
-          baseB = 0.48;
-          baseA = 0.34;
+          baseR = 0.0;
+          baseG = 0.88;
+          baseB = 0.96;
+          baseA = 0.36;
           twinkleAmp = 0.18;
         } else if (!isFinder && toneRand > 0.90) {
-          // Signal Green twinkling star dot
-          baseR = 0.09;
-          baseG = 0.74;
-          baseB = 0.53;
-          baseA = 0.24;
+          // Pitch Deck Electric Cyan (#00F0FF) twinkling star dot
+          baseR = 0.0;
+          baseG = 0.941;
+          baseB = 1.0;
+          baseA = 0.26;
           twinkleAmp = 0.28;
         } else if (!isFinder && toneRand > 0.78) {
-          // Soft teal-mint shimmer dot
-          baseR = 0.14;
-          baseG = 0.54;
-          baseB = 0.46;
-          baseA = 0.17;
+          // Soft sky-cyan shimmer dot
+          baseR = 0.055;
+          baseG = 0.647;
+          baseB = 0.914;
+          baseA = 0.18;
           twinkleAmp = 0.18;
         } else if (!isFinder && toneRand > 0.62) {
           // Subtle cool silver-slate glint
@@ -435,10 +435,10 @@ const LandingShaderCanvas = () => {
         vertexData[o + 1] = p.y * dpr;
         vertexData[o + 2] = (p.baseSize + twinkle * 0.55 + boost * 1.1) * dpr;
 
-        // Blend subtle resting tint toward luminous emerald when energized by cursor interaction
-        vertexData[o + 3] = Math.min(1, p.r * (0.9 + twinkle * 0.25) + boost * (0.14 - p.r * 0.35));
-        vertexData[o + 4] = Math.min(1, p.g * (0.9 + twinkle * 0.25) + boost * 0.52);
-        vertexData[o + 5] = Math.min(1, p.b * (0.9 + twinkle * 0.25) + boost * 0.36);
+        // Blend subtle resting tint toward luminous Pitch Deck cyan (#00F0FF) when energized by cursor interaction
+        vertexData[o + 3] = Math.min(1, p.r * (0.9 + twinkle * 0.25) + boost * (0.04 - p.r * 0.35));
+        vertexData[o + 4] = Math.min(1, p.g * (0.9 + twinkle * 0.25) + boost * 0.56);
+        vertexData[o + 5] = Math.min(1, p.b * (0.9 + twinkle * 0.25) + boost * 0.62);
         vertexData[o + 6] = Math.min(0.92, p.a + twinkle * p.twinkleAmp + boost * 0.55);
       }
 

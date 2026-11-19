@@ -83,6 +83,11 @@
     color: #ffffff;
   }
 
+  [data-theme='dark'] .gp-btn-money,
+  [data-surface='dark'] .gp-btn-money {
+    color: #09090b;
+  }
+
   .gp-btn-money:hover:not(:disabled) {
     background: var(--signal-money-hover);
   }

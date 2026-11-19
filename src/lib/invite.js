@@ -209,8 +209,8 @@ const drawVerifiedPayoutSeal = (ctx, x, y, size) => {
   ctx.arc(32, 32, 16, 0.15, 5.27, false);
   ctx.stroke();
 
-  // Signal Green checkmark breaking through the 2 o'clock negative-space gap
-  ctx.strokeStyle = '#10b981';
+  // Pitch Deck Electric Cyan (#00F0FF) checkmark breaking through the 2 o'clock negative-space gap
+  ctx.strokeStyle = '#00f0ff';
   ctx.lineWidth = 5.5;
   ctx.beginPath();
   ctx.moveTo(25.5, 32.5);
@@ -277,12 +277,12 @@ export const buildBrandedQrCardDataUrl = async ({
   ctx.font = '600 18px Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   const badgeW = ctx.measureText(badgeLabel).width + 36;
   drawRoundedRect(ctx, W - 80 - badgeW, 88, badgeW, 42, 21);
-  ctx.fillStyle = '#ecfdf5';
+  ctx.fillStyle = '#ecfeff';
   ctx.fill();
-  ctx.strokeStyle = '#a7f3d0';
+  ctx.strokeStyle = '#a5f3fc';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  ctx.fillStyle = '#047857';
+  ctx.fillStyle = '#0e7490';
   ctx.textAlign = 'center';
   ctx.fillText(badgeLabel, W - 80 - badgeW / 2, 109);
 
@@ -365,12 +365,12 @@ export const buildBrandedQrCardDataUrl = async ({
     ctx.font = '600 23px Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     const pillW = Math.min(W - 140, ctx.measureText(requestLabel).width + 56);
     drawRoundedRect(ctx, (W - pillW) / 2, 878, pillW, 56, 14);
-    ctx.fillStyle = '#ecfdf5';
+    ctx.fillStyle = '#ecfeff';
     ctx.fill();
-    ctx.strokeStyle = '#a7f3d0';
+    ctx.strokeStyle = '#a5f3fc';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.fillStyle = '#047857';
+    ctx.fillStyle = '#0e7490';
     ctx.fillText(requestLabel, W / 2, 906);
   } else {
     ctx.fillStyle = '#52525b';

@@ -35,13 +35,13 @@ const SpotlightCard = ({ children }) => {
       className="group relative flex flex-col justify-between bg-[#0c0c0f] p-7 sm:p-8"
       style={{ '--mx': '50%', '--my': '50%', '--spot-opacity': '0' }}
     >
-      {/* Pointer-only emerald radial illumination (completely still when pointer is idle) */}
+      {/* Pointer-only cyan radial illumination (completely still when pointer is idle) */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 transition-opacity duration-300"
         style={{
           opacity: 'var(--spot-opacity)',
-          background: 'radial-gradient(360px circle at var(--mx) var(--my), rgba(16, 185, 129, 0.11), transparent 72%)',
+          background: 'radial-gradient(360px circle at var(--mx) var(--my), rgba(0, 240, 255, 0.11), transparent 72%)',
         }}
       />
       <div className="relative z-10 flex h-full flex-col justify-between gap-8">{children}</div>
@@ -86,7 +86,7 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
           <SpotlightCard>
             <div>
               <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/90">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="#00f0ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="5" y="11" width="14" height="10" rx="2.5" />
                   <path d="M8 11V7a4 4 0 0 1 8 0v4" />
                 </svg>
@@ -106,7 +106,7 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
                   href={contractExplorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-400 no-underline transition-colors hover:text-emerald-300"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#00f0ff] no-underline transition-colors hover:text-cyan-300"
                 >
                   Inspect on Stellar Expert
                   <ExternalLink size={13} />
@@ -127,7 +127,7 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
                     scaleX: reducedMotion ? 1 : finalityRuleScale,
                     transformOrigin: 'left center',
                   }}
-                  className="h-full w-full bg-emerald-500"
+                  className="h-full w-full bg-[#00f0ff]"
                 />
               </div>
               <h3 className="mt-6 mb-0 text-lg font-semibold tracking-tight text-zinc-50">
@@ -153,7 +153,7 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
                     className="flex items-center justify-between rounded-lg border border-zinc-800/90 bg-zinc-950/70 px-3 py-2 text-[12.5px] transition-colors duration-200 group-hover:border-zinc-700"
                   >
                     <span className="inline-flex items-center gap-2 font-mono text-zinc-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#00f0ff]" />
                       {row.hash}
                     </span>
                     <span className="font-medium text-zinc-200 tabular-nums">{row.amount}</span>
@@ -172,7 +172,7 @@ const SorobanBlueprintSection = ({ onOpenLedger }) => {
               <button
                 type="button"
                 onClick={onOpenLedger}
-                className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-[13px] font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+                className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-[13px] font-medium text-[#00f0ff] transition-colors hover:text-cyan-300"
               >
                 Open public ledger
                 <ArrowRight size={13} />

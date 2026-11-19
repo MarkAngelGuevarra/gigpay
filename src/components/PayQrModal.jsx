@@ -247,7 +247,7 @@ const PayQrModal = ({ isOpen, onClose, payoutAddress, displayName = '', onToast 
             <div className="rounded-2xl border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
               <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
                 <BrandLockup size={24} variant="light" />
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-emerald-700">
+                <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-cyan-800">
                   {cleanAmount || cleanTitle ? 'MILESTONE QR' : 'PAY QR'}
                 </span>
               </div>
@@ -291,7 +291,7 @@ const PayQrModal = ({ isOpen, onClose, payoutAddress, displayName = '', onToast 
                 </div>
 
                 {cleanAmount || cleanTitle ? (
-                  <div className="mt-2.5 inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800">
+                  <div className="mt-2.5 inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1 text-[13px] font-semibold text-cyan-900">
                     {cleanTitle && <span className="truncate">{cleanTitle}</span>}
                     {cleanTitle && cleanAmount && <span aria-hidden="true">·</span>}
                     {cleanAmount && (

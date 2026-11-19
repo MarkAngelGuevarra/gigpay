@@ -363,14 +363,14 @@ const QrScannerModal = ({ isOpen, onClose, onConfirm }) => {
                     className={`h-full w-full object-cover ${cameraState === 'active' ? 'opacity-100' : 'opacity-0'}`}
                   />
 
-                  {/* Architectural emerald viewfinder brackets */}
+                  {/* Architectural cyan viewfinder brackets */}
                   {cameraState === 'active' && (
                     <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center p-10">
                       <div className="relative h-full w-full max-h-[240px] max-w-[240px]">
-                        <span className="absolute top-0 left-0 h-7 w-7 rounded-tl-lg border-t-[3px] border-l-[3px] border-emerald-400" />
-                        <span className="absolute top-0 right-0 h-7 w-7 rounded-tr-lg border-t-[3px] border-r-[3px] border-emerald-400" />
-                        <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-[3px] border-l-[3px] border-emerald-400" />
-                        <span className="absolute right-0 bottom-0 h-7 w-7 rounded-br-lg border-r-[3px] border-b-[3px] border-emerald-400" />
+                        <span className="absolute top-0 left-0 h-7 w-7 rounded-tl-lg border-t-[3px] border-l-[3px] border-[#00f0ff]" />
+                        <span className="absolute top-0 right-0 h-7 w-7 rounded-tr-lg border-t-[3px] border-r-[3px] border-[#00f0ff]" />
+                        <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-[3px] border-l-[3px] border-[#00f0ff]" />
+                        <span className="absolute right-0 bottom-0 h-7 w-7 rounded-br-lg border-r-[3px] border-b-[3px] border-[#00f0ff]" />
                       </div>
                     </div>
                   )}

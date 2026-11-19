@@ -49,9 +49,9 @@ const ScanScreenLayer = ({ progress }) => {
       >
         <defs>
           <linearGradient id="gpScrubBeam" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="50%" stopColor="#34d399" stopOpacity="0.52" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            <stop offset="0%" stopColor="#00f0ff" stopOpacity="0" />
+            <stop offset="50%" stopColor="#67e8f9" stopOpacity="0.52" />
+            <stop offset="100%" stopColor="#00f0ff" stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -84,12 +84,12 @@ const ScanScreenLayer = ({ progress }) => {
           {/* Center Verified Payout Seal badge inside QR */}
           <rect x="117" y="192" width="26" height="26" rx="6.5" fill="#09090b" stroke="#fafafa" strokeWidth="2.4" />
           <path d="M135.2 206.1 A 5.7 5.7 0 1 1 132.7 200.4" stroke="#fafafa" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M126.9 205.2 L129.1 207.3 L135.1 201" stroke="#10b981" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M126.9 205.2 L129.1 207.3 L135.1 201" stroke="#00f0ff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         </g>
 
-        {/* Scroll-tightening emerald viewfinder brackets */}
+        {/* Scroll-tightening cyan viewfinder brackets */}
         <motion.g
-          stroke="#10b981"
+          stroke="#00f0ff"
           strokeWidth="2.6"
           strokeLinecap="round"
           fill="none"
@@ -104,7 +104,7 @@ const ScanScreenLayer = ({ progress }) => {
         {/* Scroll-scrubbed scan beam (sweeps once top-to-bottom strictly with scroll) */}
         <motion.g style={{ y: beamY, opacity: beamOpacity }}>
           <rect x="56" y="128" width="148" height="22" fill="url(#gpScrubBeam)" />
-          <line x1="56" y1="139" x2="204" y2="139" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="56" y1="139" x2="204" y2="139" stroke="#67e8f9" strokeWidth="1.8" strokeLinecap="round" />
         </motion.g>
 
         {/* Scroll-revealed Recipient & Escrow Lock Sheet */}
@@ -141,10 +141,10 @@ const ScanScreenLayer = ({ progress }) => {
             width="192"
             height="40"
             rx="11"
-            fill="#059669"
+            fill="#00becd"
             style={{ scaleX: lockFillScale, transformOrigin: '34px 492px' }}
           />
-          <text x="130" y="496" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="600" fontFamily="Geist, sans-serif">
+          <text x="130" y="496" textAnchor="middle" fill="#09090b" fontSize="12" fontWeight="600" fontFamily="Geist, sans-serif">
             Locked in Soroban
           </text>
         </motion.g>
@@ -197,7 +197,7 @@ const DeliverScreenLayer = ({ progress }) => {
         <text x="34" y="115" fill="#d4d4d8" fontSize="11.5" fontWeight="500" fontFamily="Geist, sans-serif">
           Brand Identity &amp; UI
         </text>
-        <text x="226" y="115" textAnchor="end" fill="#34d399" fontSize="12" fontWeight="600" fontFamily="Geist, sans-serif">
+        <text x="226" y="115" textAnchor="end" fill="#00f0ff" fontSize="12" fontWeight="600" fontFamily="Geist, sans-serif">
           250 XLM
         </text>
 
@@ -210,20 +210,20 @@ const DeliverScreenLayer = ({ progress }) => {
             {item.icon === 'frame' && (
               <g stroke="#d4d4d8" strokeWidth="1.6" fill="none">
                 <rect x="44" y={item.y + 24} width="16" height="11" rx="2" />
-                <line x1="44" y1={item.y + 39} x2="60" y2={item.y + 39} stroke="#10b981" strokeLinecap="round" />
+                <line x1="44" y1={item.y + 39} x2="60" y2={item.y + 39} stroke="#00f0ff" strokeLinecap="round" />
               </g>
             )}
             {item.icon === 'branch' && (
               <g stroke="#d4d4d8" strokeWidth="1.6" fill="none" strokeLinecap="round">
                 <circle cx="47" cy={item.y + 27} r="2.3" />
                 <circle cx="47" cy={item.y + 39} r="2.3" />
-                <circle cx="57" cy={item.y + 33} r="2.3" stroke="#10b981" />
+                <circle cx="57" cy={item.y + 33} r="2.3" stroke="#00f0ff" />
                 <line x1="47" y1={item.y + 29.5} x2="47" y2={item.y + 36.5} />
-                <path d={`M49 ${item.y + 29} C53 ${item.y + 29} 55 ${item.y + 31} 55 ${item.y + 33}`} stroke="#10b981" />
+                <path d={`M49 ${item.y + 29} C53 ${item.y + 29} 55 ${item.y + 31} 55 ${item.y + 33}`} stroke="#00f0ff" />
               </g>
             )}
             {item.icon === 'play' && (
-              <polygon points={`48,${item.y + 25} 59,${item.y + 33} 48,${item.y + 41}`} fill="#10b981" />
+              <polygon points={`48,${item.y + 25} 59,${item.y + 33} 48,${item.y + 41}`} fill="#00f0ff" />
             )}
 
             <text x="82" y={item.y + 31} fill="#fafafa" fontSize="12" fontWeight="600" fontFamily="Geist, sans-serif">
@@ -234,10 +234,10 @@ const DeliverScreenLayer = ({ progress }) => {
             </text>
 
             {/* Scroll-drawn verification checkmark */}
-            <circle cx="218" cy={item.y + 33} r="10.5" fill="rgba(16,185,129,0.14)" />
+            <circle cx="218" cy={item.y + 33} r="10.5" fill="rgba(0,240,255,0.14)" />
             <motion.path
               d={`M213.2 ${item.y + 33.2} L216.5 ${item.y + 36.5} L223 ${item.y + 29.6}`}
-              stroke="#34d399"
+              stroke="#00f0ff"
               strokeWidth="2.1"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -256,8 +256,8 @@ const DeliverScreenLayer = ({ progress }) => {
           Ready for client approval
         </text>
 
-        <rect x="36" y="474" width="43" height="5" rx="2.5" fill="#10b981" />
-        <rect x="85" y="474" width="43" height="5" rx="2.5" fill="#10b981" />
+        <rect x="36" y="474" width="43" height="5" rx="2.5" fill="#00f0ff" />
+        <rect x="85" y="474" width="43" height="5" rx="2.5" fill="#00f0ff" />
         <rect x="134" y="474" width="43" height="5" rx="2.5" fill="#27272a" />
         <motion.rect
           x="134"
@@ -288,7 +288,7 @@ const SettleBackdropLayer = ({ progress }) => {
     <motion.div style={{ opacity: ringOpacity }} className="absolute inset-0 flex items-center justify-center">
       <svg viewBox="0 0 260 564" className="h-full w-full" aria-hidden="true">
         <g transform="translate(130, 282)">
-          <circle r="48" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.2)" strokeWidth="1" />
+          <circle r="48" fill="rgba(0,240,255,0.06)" stroke="rgba(0,240,255,0.22)" strokeWidth="1" />
           <motion.path
             d="M27.2 4.2 A 28 28 0 1 1 14.9 -23.6"
             stroke="#fafafa"
@@ -488,7 +488,7 @@ const EscrowPhoneShowcase = () => {
             <svg viewBox="0 0 88 88" className="h-24 w-24 sm:h-28 sm:w-28" fill="none">
               <motion.path
                 d="M21 45.5 L36.5 61 L69 27"
-                stroke="#10b981"
+                stroke="#00f0ff"
                 strokeWidth="6.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"

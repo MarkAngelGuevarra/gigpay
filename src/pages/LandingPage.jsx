@@ -126,7 +126,7 @@ const LandingPage = () => {
             className="group absolute bottom-7 z-10 flex flex-col items-center gap-2 text-[12px] font-medium tracking-wide text-zinc-400 no-underline transition-colors hover:text-zinc-200"
           >
             <span>Scroll to explore</span>
-            <span className="block h-5 w-px bg-emerald-400/75 transition-[height,background-color] duration-200 group-hover:h-7 group-hover:bg-emerald-400" />
+            <span className="block h-5 w-px bg-[#00f0ff]/75 transition-[height,background-color] duration-200 group-hover:h-7 group-hover:bg-[#00f0ff]" />
           </a>
         </section>
 

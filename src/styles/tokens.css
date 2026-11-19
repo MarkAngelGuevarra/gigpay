@@ -30,12 +30,12 @@
   --accent-primary-hover: #27272a;
   --accent-primary-fg: #fafafa;
 
-  /* Signal Green: strictly for locked, verified, and settled financial states */
-  --signal-money: #059669;
-  --signal-money-hover: #047857;
-  --signal-money-fg: #047857;
-  --signal-money-bg: #ecfdf5;
-  --signal-money-border: #a7f3d0;
+  /* Signal Cyan (Pitch Deck #00F0FF system): locked, verified, and settled financial states */
+  --signal-money: #0891b2;
+  --signal-money-hover: #0e7490;
+  --signal-money-fg: #0e7490;
+  --signal-money-bg: #ecfeff;
+  --signal-money-border: #a5f3fc;
 
   /* Semantic review / warning state */
   --signal-warn: #b45309;
@@ -50,10 +50,10 @@
   /* Brand mark tile */
   --brand-tile-bg: #09090b;
   --brand-tile-ring: #fafafa;
-  --brand-tile-check: #10b981;
+  --brand-tile-check: #00f0ff;
 
   /* Focus & elevation */
-  --focus-ring: #059669;
+  --focus-ring: #0891b2;
   --shadow-xs: 0 1px 2px rgba(9, 9, 11, 0.04);
   --shadow-sm: 0 2px 8px rgba(9, 9, 11, 0.06), 0 1px 2px rgba(9, 9, 11, 0.04);
   --shadow-lg: 0 20px 50px rgba(9, 9, 11, 0.14), 0 4px 14px rgba(9, 9, 11, 0.06);
@@ -105,11 +105,11 @@
   --accent-primary-hover: #e4e4e7;
   --accent-primary-fg: #09090b;
 
-  --signal-money: #10b981;
-  --signal-money-hover: #34d399;
-  --signal-money-fg: #34d399;
-  --signal-money-bg: rgba(16, 185, 129, 0.12);
-  --signal-money-border: rgba(16, 185, 129, 0.32);
+  --signal-money: #00dceb;
+  --signal-money-hover: #00f0ff;
+  --signal-money-fg: #00f0ff;
+  --signal-money-bg: rgba(0, 240, 255, 0.12);
+  --signal-money-border: rgba(0, 240, 255, 0.32);
 
   --signal-warn: #fbbf24;
   --signal-warn-bg: rgba(245, 158, 11, 0.12);
@@ -121,9 +121,9 @@
 
   --brand-tile-bg: #18181b;
   --brand-tile-ring: #fafafa;
-  --brand-tile-check: #10b981;
+  --brand-tile-check: #00f0ff;
 
-  --focus-ring: #10b981;
+  --focus-ring: #00f0ff;
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.32);
   --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.42);
   --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
